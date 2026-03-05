@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Complete Charlie Parker Songbook Trainer v5.0</title>
+<style>
+:root {
+  --bg:#121212;--panel:#1a1a1a;--ink:#eee;--ink-dim:#aaa;
+  --accent:#ff9800;--accent2:#42a5f5;--barline:#666;--sym:#ffb733;
+  --indigo:#6366f1;--green:#4caf50;--red:#ef5350;
+}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Courier New',monospace;padding:10px;}
+h1{text-align:center;color:var(--accent);margin:12px 0;font-size:22px;}
+h2{color:var(--accent2);font-size:18px;margin:12px 0 10px 0;}
+h3{color:var(--sym);font-size:14px;margin:10px 0 6px 0;}
+
+.card{background:var(–panel);border:2px solid var(–accent);border-radius:10px;padding:12px;
+max-width:1200px;margin:0 auto 12px auto;}
+
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center;}
+.controls label{color:var(–ink-dim);font-weight:bold;min-width:60px;font-size:13px;}
+.controls select,.controls button{background:#1e1e1e;color:var(–sym);border:1px solid var(–accent);
+padding:10px 12px;border-radius:6px;cursor:pointer;font-weight:bold;transition:.15s;
+font-family:‘Courier New’,monospace;font-size:13px;touch-action:manipulation;}
+.controls select:hover,.controls button:hover{background:var(–accent);color:#000;}
+.controls select{min-width:160px;flex:1;max-width:300px;}
+.btn-secondary{border-color:var(–accent2);color:#9fd2ff;}
+.btn-secondary:hover{background:var(–accent2);color:#000;}
+.btn-success{border-color:var(–green);color:#81c784;}
+.btn-success:hover{background:var(–green);color:#000;}
+
+/* Lead Sheet Styles */
+.sheet{background:var(–panel);border:2px solid var(–accent);border-radius:10px;padding:10px;
+margin:0 auto 12px auto;overflow-x:auto;}
+.tune-header{text-align:center;color:var(–accent);font-size:16px;margin-bottom:12px;
+border-bottom:2px solid var(–barline);padding-bottom:8px;}
+.row{display:grid;grid-template-columns:repeat(4,1fr);min-width:320px;gap:3px;margin-bottom:4px;}
+.bar{min-height:85px;border:2px solid var(–barline);display:flex;flex-direction:column;
+align-items:center;justify-content:center;cursor:pointer;transition:.12s;padding:8px 4px;
+background:#1e1e1e;border-radius:6px;position:relative;touch-action:manipulation;}
+.bar:hover{background:#2a2a2a;transform:translateY(-2px);box-shadow:0 4px 8px rgba(255,152,0,0.3);}
+.bar-number{position:absolute;top:2px;left:4px;font-size:9px;color:#666;}
+.chord{font-size:16px;font-weight:bold;color:var(–sym);}
+.roman{font-size:10px;color:var(–ink-dim);margin-top:3px;}
+.scale-suggestion{font-size:8px;color:#90caf9;margin-top:3px;font-style:italic;line-height:1.2;}
+.scale-suggestion.hidden{display:none;}
+
+/* Fretboard Styles */
+.fretboard-section{background:#1a1a1a;border:2px solid var(–accent);border-radius:8px;
+padding:12px;margin-top:12px;}
+.fretboard-title{text-align:center;color:var(–accent);margin-bottom:10px;font-size:14px;}
+.fretboard{display:flex;flex-direction:column;gap:2px;background:#2a2a2a;padding:10px;
+border-radius:4px;overflow-x:auto;}
+.string{display:flex;gap:1px;align-items:center;}
+.string-label{width:25px;text-align:right;color:#888;font-size:12px;font-weight:bold;}
+.fret{width:40px;height:32px;background:#3a3a3a;border:1px solid #555;display:flex;
+align-items:center;justify-content:center;font-size:9px;color:#666;text-align:center;
+white-space:pre-wrap;transition:.1s;flex-shrink:0;}
+.fret.highlighted{font-weight:bold;font-size:10px;border:2px solid #fff;}
+.fret.root{font-size:11px;}
+
+.legend{text-align:center;color:var(–ink-dim);font-size:11px;margin:8px 0;}
+.info-box{background:#2a2a2a;border-left:4px solid var(–indigo);padding:10px;
+margin-top:10px;border-radius:4px;font-size:11px;line-height:1.5;}
+.tune-info{background:#1e1e1e;padding:10px;border-radius:6px;margin-bottom:10px;
+border-left:3px solid var(–accent2);font-size:12px;line-height:1.5;}
+
+.form-section{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px;}
+
+@media (min-width:600px){
+h1{font-size:26px;}
+.card{padding:16px;}
+.chord{font-size:20px;}
+.roman{font-size:11px;}
+.bar{min-height:95px;padding:10px;}
+.fret{width:45px;height:34px;font-size:10px;}
+.controls select,.controls button{font-size:14px;}
+.tune-info{font-size:13px;}
+.info-box{font-size:12px;}
+}
+
+@media (min-width:800px){
+body{padding:20px;}
+h1{font-size:28px;}
+.card{padding:20px;}
+.controls{gap:12px;margin-bottom:20px;}
+.controls select{min-width:180px;}
+.row{min-width:720px;gap:4px;}
+.bar{min-height:100px;padding:10px;}
+.chord{font-size:22px;}
+.roman{font-size:12px;}
+.scale-suggestion{font-size:10px;}
+.fretboard-section{padding:20px;margin-top:20px;}
+.fretboard-title{font-size:18px;}
+.fretboard{padding:15px;gap:3px;}
+.fret{width:50px;height:35px;font-size:11px;}
+.fret.highlighted{font-size:12px;}
+.form-section{grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;}
+}
+
+@media print{
+body{background:#fff;color:#000;padding:10px;}
+.controls,.legend,.fretboard-section,.info-box{display:none;}
+.card{border:1px solid #000;background:#fff;page-break-inside:avoid;}
+h1{font-size:24px;color:#000;}
+.chord{color:#000}.roman{color:#222}
+.bar{border:1px solid #000;}
+}
+</style>
+
+</head>
+<body>
+<h1>🎷 Complete Charlie Parker Songbook Trainer v5.0</h1>
+
+<!-- MAIN SECTION: Complete Songbook -->
+
+<div class="card">
+  <h2>Charlie Parker Complete Songbook (18 Bebop Classics)</h2>
+
+  <div class="controls">
+    <label>Select Tune:</label>
+    <select id="tuneSel"></select>
+    <button id="randomTune" class="btn-secondary">🎲 Random Tune</button>
+  </div>
+
+  <div class="controls">
+    <label>Transpose to:</label>
+    <select id="keySel"></select>
+    <button id="generateBtn" class="btn-success">Generate Lead Sheet</button>
+    <button id="toggleScales" class="btn-secondary">Show Scale Suggestions</button>
+    <button id="printBtn" class="btn-secondary">🖨️ Print</button>
+  </div>
+
+  <div class="legend">Click any bar to hear the root note and view scale/chord tones on the fretboard below.</div>
+
+  <div id="tuneInfo" class="tune-info" style="display:none;"></div>
+  <div id="sheet" class="sheet"></div>
+
+  <div class="fretboard-section" id="fretboard-section" style="display:none;">
+    <div class="fretboard-title" id="fretboard-title">Click a bar to view scale/chord tones</div>
+    <div class="controls" style="justify-content:center;margin-bottom:15px;">
+      <button id="toggleMode" class="btn-secondary">View: Chord Tones</button>
+    </div>
+    <div class="fretboard" id="fretboard"></div>
+  </div>
+
+  <div class="info-box">
+    <strong style="color:var(--accent);">🎯 Practice Tips:</strong><br>
+    • Study the Roman numeral analysis to understand harmonic function<br>
+    • Practice each tune in multiple keys to build technique and theory knowledge<br>
+    • Use the scale suggestions to develop improvisational vocabulary<br>
+    • Focus on ii-V-I patterns and their variations throughout Bird's compositions<br>
+    • Pay attention to tritone substitutions and altered dominants
+  </div>
+</div>
+
+<script>
+/* ================================
+   COMPLETE CHARLIE PARKER SONGBOOK
+==================================*/
+const parkerSongbook={
+  "Anthropology (Rhythm Changes)":{
+    key:"Bb",
+    form:"AABA",
+    bars:32,
+    description:"Classic bebop contrafact on 'I Got Rhythm' changes",
+    progression:[
+      // A Section (8 bars)
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian / Major Bebop"},
+       {chord:"G7",roman:"VI7",scale:"Mixolydian / Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},
+       {chord:"F7",roman:"V7",scale:"Mixolydian / Bebop Dominant"}],
+      [{chord:"Fm7",roman:"v7",scale:"Dorian"},
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},
+       {chord:"EbΔ7",roman:"IVΔ7",scale:"Lydian"},
+       {chord:"Ab7",roman:"bVII7",scale:"Lydian Dominant"}],
+      // A Section repeat
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"G7",roman:"VI7",scale:"Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},
+       {chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Cm7",roman:"ii7",scale:"Dorian"},
+       {chord:"F7",roman:"V7",scale:"Mixolydian"},
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}],
+      // Bridge (8 bars)
+      [{chord:"D7",roman:"III7",scale:"Mixolydian / Altered"},
+       {chord:"D7",roman:"III7",scale:"Altered"},
+       {chord:"G7",roman:"VI7",scale:"Mixolydian"},
+       {chord:"G7",roman:"VI7",scale:"Altered"}],
+      [{chord:"C7",roman:"II7",scale:"Mixolydian"},
+       {chord:"C7",roman:"II7",scale:"Altered"},
+       {chord:"F7",roman:"V7",scale:"Mixolydian"},
+       {chord:"F7",roman:"V7",scale:"Altered"}],
+      // Final A (8 bars)
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"G7",roman:"VI7",scale:"Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},
+       {chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Cm7",roman:"ii7",scale:"Dorian"},
+       {chord:"F7",roman:"V7",scale:"Mixolydian"},
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}]
+    ]
+  },
+  
+  "Ornithology":{
+    key:"G",
+    form:"AABA",
+    bars:32,
+    description:"Bebop contrafact on 'How High the Moon'",
+    progression:[
+      [{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"Em7",roman:"vi7",scale:"Aeolian"},{chord:"Em7",roman:"vi7",scale:"Dorian"}],
+      [{chord:"Am7",roman:"ii7",scale:"Dorian"},{chord:"D7",roman:"V7",scale:"Mixolydian"},
+       {chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"}],
+      [{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"Em7",roman:"vi7",scale:"Dorian"},{chord:"A7",roman:"II7",scale:"Mixolydian"}],
+      [{chord:"Am7",roman:"ii7",scale:"Dorian"},{chord:"D7",roman:"V7",scale:"Mixolydian"},
+       {chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Am7",roman:"ii7",scale:"Dorian"}],
+      // Bridge
+      [{chord:"Bm7",roman:"iii7",scale:"Phrygian"},{chord:"E7",roman:"VI7",scale:"Mixolydian"},
+       {chord:"AΔ7",roman:"IIΔ7",scale:"Lydian"},{chord:"AΔ7",roman:"IIΔ7",scale:"Lydian"}],
+      [{chord:"Am7",roman:"ii7",scale:"Dorian"},{chord:"D7",roman:"V7",scale:"Mixolydian"},
+       {chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"}],
+      [{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"Em7",roman:"vi7",scale:"Dorian"},{chord:"A7",roman:"II7",scale:"Altered"}],
+      [{chord:"Am7",roman:"ii7",scale:"Dorian"},{chord:"D7",roman:"V7",scale:"Mixolydian"},
+       {chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"}]
+    ]
+  },
+  
+  "Blues for Alice":{
+    key:"F",
+    form:"Blues",
+    bars:12,
+    description:"Bird Blues with bebop changes",
+    progression:[
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Em7b5",roman:"vii°7",scale:"Locrian"},
+       {chord:"A7",roman:"III7",scale:"Altered"},{chord:"Dm7",roman:"vi7",scale:"Dorian"}],
+      [{chord:"G7",roman:"II7",scale:"Mixolydian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},
+       {chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Ab7",roman:"bIII7",scale:"Lydian b7"}],
+      [{chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},
+       {chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"C7",roman:"V7",scale:"Altered"}]
+    ]
+  },
+  
+  "Confirmation":{
+    key:"F",
+    form:"ABAC",
+    bars:32,
+    description:"Fast-tempo bebop original with complex harmony",
+    progression:[
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Em7b5",roman:"vii°7",scale:"Locrian"},
+       {chord:"A7b9",roman:"III7",scale:"Altered"},{chord:"Dm7",roman:"vi7",scale:"Dorian"}],
+      [{chord:"Bbm7",roman:"iv7",scale:"Dorian"},{chord:"Eb7",roman:"bVII7",scale:"Mixolydian"},
+       {chord:"Am7",roman:"iii7",scale:"Phrygian"},{chord:"D7",roman:"VI7",scale:"Altered"}],
+      [{chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},
+       {chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Gm7",roman:"ii7",scale:"Dorian"}],
+      [{chord:"C7",roman:"V7",scale:"Mixolydian"},{chord:"C7",roman:"V7",scale:"Altered"},
+       {chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"}],
+      // B section
+      [{chord:"Cm7",roman:"v7",scale:"Dorian"},{chord:"F7",roman:"I7",scale:"Mixolydian"},
+       {chord:"BbΔ7",roman:"IVΔ7",scale:"Lydian"},{chord:"BbΔ7",roman:"IVΔ7",scale:"Lydian"}],
+      [{chord:"Bbm7",roman:"iv7",scale:"Dorian"},{chord:"Eb7",roman:"bVII7",scale:"Mixolydian"},
+       {chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Am7",roman:"iii7",scale:"Phrygian"}],
+      [{chord:"D7",roman:"VI7",scale:"Altered"},{chord:"Gm7",roman:"ii7",scale:"Dorian"},
+       {chord:"C7",roman:"V7",scale:"Mixolydian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"}],
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"}]
+    ]
+  },
+
+  "Donna Lee":{
+    key:"Ab",
+    form:"AABA",
+    bars:32,
+    description:"Fast bebop line (disputed authorship with Miles Davis)",
+    progression:[
+      [{chord:"AbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"F7",roman:"VI7",scale:"Altered"},
+       {chord:"Bbm7",roman:"ii7",scale:"Dorian"},{chord:"Eb7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"AbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"F7",roman:"VI7",scale:"Altered"},
+       {chord:"Bbm7",roman:"ii7",scale:"Dorian"},{chord:"Eb7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Fm7",roman:"vi7",scale:"Aeolian"},{chord:"Bb7",roman:"II7",scale:"Mixolydian"},
+       {chord:"EbΔ7",roman:"VΔ7",scale:"Lydian"},{chord:"EbΔ7",roman:"VΔ7",scale:"Lydian"}],
+      [{chord:"Ebm7",roman:"v7",scale:"Dorian"},{chord:"Ab7",roman:"I7",scale:"Mixolydian"},
+       {chord:"DbΔ7",roman:"IVΔ7",scale:"Lydian"},{chord:"Dbm7",roman:"iv7",scale:"Dorian"}],
+      // Bridge
+      [{chord:"Cm7",roman:"iii7",scale:"Phrygian"},{chord:"F7",roman:"VI7",scale:"Altered"},
+       {chord:"Bbm7",roman:"ii7",scale:"Dorian"},{chord:"Eb7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"AbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Gm7",roman:"vii7",scale:"Locrian"},
+       {chord:"C7",roman:"III7",scale:"Altered"},{chord:"Fm7",roman:"vi7",scale:"Dorian"}],
+      [{chord:"AbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"F7",roman:"VI7",scale:"Altered"},
+       {chord:"Bbm7",roman:"ii7",scale:"Dorian"},{chord:"Eb7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"AbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Gm7",roman:"vii7",scale:"Locrian"},
+       {chord:"C7",roman:"III7",scale:"Altered"},{chord:"F7",roman:"VI7",scale:"Mixolydian"}]
+    ]
+  },
+
+  "Scrapple from the Apple":{
+    key:"F",
+    form:"AABA",
+    bars:32,
+    description:"Rhythm changes with Parker's signature melodic line",
+    progression:[
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Am7",roman:"iii7",scale:"Phrygian"},{chord:"D7",roman:"VI7",scale:"Altered"},
+       {chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"D7",roman:"VI7",scale:"Altered"},
+       {chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"}],
+      // Bridge
+      [{chord:"Cm7",roman:"v7",scale:"Dorian"},{chord:"F7",roman:"I7",scale:"Mixolydian"},
+       {chord:"BbΔ7",roman:"IVΔ7",scale:"Lydian"},{chord:"BbΔ7",roman:"IVΔ7",scale:"Lydian"}],
+      [{chord:"Am7",roman:"iii7",scale:"Phrygian"},{chord:"D7",roman:"VI7",scale:"Altered"},
+       {chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"D7",roman:"VI7",scale:"Altered"},
+       {chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"}]
+    ]
+  },
+
+  "Now's the Time":{
+    key:"F",
+    form:"Blues",
+    bars:12,
+    description:"Classic F blues, one of Bird's most famous compositions",
+    progression:[
+      [{chord:"F7",roman:"I7",scale:"Mixolydian / Blues"},{chord:"F7",roman:"I7",scale:"Mixolydian"},
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"}],
+      [{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"}],
+      [{chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"C7",roman:"V7",scale:"Altered"}]
+    ]
+  },
+
+  "Au Privave":{
+    key:"F",
+    form:"Blues",
+    bars:12,
+    description:"Blues with Bird's characteristic passing chords",
+    progression:[
+      [{chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"},
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"}],
+      [{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},{chord:"Bdim7",roman:"#IVdim7",scale:"Diminished"},
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"D7",roman:"VI7",scale:"Altered"}],
+      [{chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"C7",roman:"V7",scale:"Altered"}]
+    ]
+  },
+
+  "Billie's Bounce":{
+    key:"F",
+    form:"Blues",
+    bars:12,
+    description:"Bebop blues dedicated to Billie Holiday",
+    progression:[
+      [{chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"},
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"}],
+      [{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"Am7b5",roman:"iii°7",scale:"Locrian"}],
+      [{chord:"D7",roman:"VI7",scale:"Altered"},{chord:"Gm7",roman:"ii7",scale:"Dorian"},
+       {chord:"C7",roman:"V7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"}]
+    ]
+  },
+
+  "Ko-Ko":{
+    key:"Bb",
+    form:"Blues",
+    bars:12,
+    description:"Virtuosic bebop blues, one of Parker's most challenging tunes",
+    progression:[
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"A7",roman:"VII7",scale:"Altered"},
+       {chord:"D7",roman:"III7",scale:"Altered"},{chord:"G7",roman:"VI7",scale:"Altered"}],
+      [{chord:"C7",roman:"II7",scale:"Mixolydian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"F7",roman:"V7",scale:"Altered"}],
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"A7",roman:"VII7",scale:"Altered"},
+       {chord:"D7",roman:"III7",scale:"Altered"},{chord:"G7",roman:"VI7",scale:"Altered"}]
+    ]
+  },
+
+  "Yardbird Suite":{
+    key:"C",
+    form:"AABA",
+    bars:32,
+    description:"One of Parker's most recorded compositions",
+    progression:[
+      [{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Fm7",roman:"iv7",scale:"Dorian"},
+       {chord:"Bb7",roman:"bVII7",scale:"Mixolydian"},{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"}],
+      [{chord:"Cm7",roman:"i7",scale:"Dorian"},{chord:"F7",roman:"IV7",scale:"Mixolydian"},
+       {chord:"BbΔ7",roman:"bVIIΔ7",scale:"Lydian"},{chord:"BbΔ7",roman:"bVIIΔ7",scale:"Lydian"}],
+      [{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Fm7",roman:"iv7",scale:"Dorian"},
+       {chord:"Bb7",roman:"bVII7",scale:"Mixolydian"},{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"}],
+      [{chord:"Dm7",roman:"ii7",scale:"Dorian"},{chord:"G7",roman:"V7",scale:"Mixolydian"},
+       {chord:"CΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"V7",scale:"Altered"}],
+      // Bridge
+      [{chord:"Em7",roman:"iii7",scale:"Phrygian"},{chord:"A7",roman:"VI7",scale:"Altered"},
+       {chord:"DΔ7",roman:"IIΔ7",scale:"Lydian"},{chord:"DΔ7",roman:"IIΔ7",scale:"Lydian"}],
+      [{chord:"Dm7",roman:"ii7",scale:"Dorian"},{chord:"G7",roman:"V7",scale:"Mixolydian"},
+       {chord:"CΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"}],
+      [{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Fm7",roman:"iv7",scale:"Dorian"},
+       {chord:"Bb7",roman:"bVII7",scale:"Mixolydian"},{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"}],
+      [{chord:"Dm7",roman:"ii7",scale:"Dorian"},{chord:"G7",roman:"V7",scale:"Mixolydian"},
+       {chord:"CΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"}]
+    ]
+  },
+
+  "Dewey Square":{
+    key:"Bb",
+    form:"AABA",
+    bars:32,
+    description:"Contrafact on 'I Got Rhythm' with unique melodic approach",
+    progression:[
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Dm7",roman:"iii7",scale:"Phrygian"},{chord:"G7",roman:"VI7",scale:"Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}],
+      // Bridge
+      [{chord:"D7",roman:"III7",scale:"Altered"},{chord:"D7",roman:"III7",scale:"Altered"},
+       {chord:"G7",roman:"VI7",scale:"Mixolydian"},{chord:"G7",roman:"VI7",scale:"Altered"}],
+      [{chord:"C7",roman:"II7",scale:"Mixolydian"},{chord:"C7",roman:"II7",scale:"Altered"},
+       {chord:"F7",roman:"V7",scale:"Mixolydian"},{chord:"F7",roman:"V7",scale:"Altered"}],
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}]
+    ]
+  },
+
+  "Moose the Mooche":{
+    key:"Bb",
+    form:"AABA",
+    bars:32,
+    description:"Rhythm changes variation with unique A section",
+    progression:[
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Dm7",roman:"iii7",scale:"Phrygian"},{chord:"G7",roman:"VI7",scale:"Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      // Bridge
+      [{chord:"D7",roman:"III7",scale:"Mixolydian"},{chord:"D7",roman:"III7",scale:"Altered"},
+       {chord:"G7",roman:"VI7",scale:"Mixolydian"},{chord:"G7",roman:"VI7",scale:"Altered"}],
+      [{chord:"C7",roman:"II7",scale:"Mixolydian"},{chord:"C7",roman:"II7",scale:"Altered"},
+       {chord:"F7",roman:"V7",scale:"Mixolydian"},{chord:"F7",roman:"V7",scale:"Altered"}],
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}]
+    ]
+  },
+
+  "Cheryl":{
+    key:"Bb",
+    form:"AABA",
+    bars:32,
+    description:"Contrafact based on rhythm changes",
+    progression:[
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Dm7",roman:"iii7",scale:"Phrygian"},{chord:"G7",roman:"VI7",scale:"Altered"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}],
+      // Bridge
+      [{chord:"D7",roman:"III7",scale:"Mixolydian"},{chord:"D7",roman:"III7",scale:"Altered"},
+       {chord:"G7",roman:"VI7",scale:"Mixolydian"},{chord:"G7",roman:"VI7",scale:"Altered"}],
+      [{chord:"C7",roman:"II7",scale:"Mixolydian"},{chord:"C7",roman:"II7",scale:"Altered"},
+       {chord:"F7",roman:"V7",scale:"Mixolydian"},{chord:"F7",roman:"V7",scale:"Altered"}],
+      [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}]
+    ]
+  },
+
+  "Barbados":{
+    key:"F",
+    form:"Blues",
+    bars:12,
+    description:"Bebop blues with Parker's signature harmonic movement",
+    progression:[
+      [{chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"},
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"}],
+      [{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},{chord:"Bbm7",roman:"iv7",scale:"Dorian"},
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"D7",roman:"VI7",scale:"Altered"}],
+      [{chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"C7",roman:"V7",scale:"Altered"}]
+    ]
+  },
+
+  "Bloomdido":{
+    key:"Bb",
+    form:"Blues",
+    bars:12,
+    description:"Fast blues featuring characteristic Bird phrasing",
+    progression:[
+      [{chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"Bb7",roman:"I7",scale:"Mixolydian"},
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"Bb7",roman:"I7",scale:"Mixolydian"}],
+      [{chord:"Eb7",roman:"IV7",scale:"Mixolydian"},{chord:"Edim7",roman:"#IVdim7",scale:"Diminished"},
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"G7",roman:"VI7",scale:"Altered"}],
+      [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"V7",scale:"Altered"}]
+    ]
+  },
+
+  "Relaxin' at Camarillo":{
+    key:"Bb",
+    form:"Blues",
+    bars:12,
+    description:"Laid-back blues written during Parker's time in California",
+    progression:[
+      [{chord:"Bb7",roman:"I7",scale:"Mixolydian / Blues"},{chord:"Bb7",roman:"I7",scale:"Mixolydian"},
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"Bb7",roman:"I7",scale:"Mixolydian"}],
+      [{chord:"Eb7",roman:"IV7",scale:"Mixolydian"},{chord:"Edim7",roman:"#IVdim7",scale:"Diminished"},
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"G7",roman:"VI7",scale:"Altered"}],
+      [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"V7",scale:"Altered"}]
+    ]
+  },
+
+  "Chi Chi":{
+    key:"Bb",
+    form:"Blues",
+    bars:12,
+    description:"Blues with bebop passing chords",
+    progression:[
+      [{chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"Bb7",roman:"I7",scale:"Mixolydian"},
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"Bb7",roman:"I7",scale:"Mixolydian"}],
+      [{chord:"Eb7",roman:"IV7",scale:"Mixolydian"},{chord:"Edim7",roman:"#IVdim7",scale:"Diminished"},
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"G7",roman:"VI7",scale:"Altered"}],
+      [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"Bb7",roman:"I7",scale:"Mixolydian"}]
+    ]
+  }
+};
+
+/* ================================
+   CORE DATA & UTILITIES
+==================================*/
+const NOTE_INDEX={
+  'C':0,'B#':0,'C#':1,'Db':1,'D':2,'D#':3,'Eb':3,'E':4,'Fb':4,
+  'F':5,'E#':5,'F#':6,'Gb':6,'G':7,'G#':8,'Ab':8,'A':9,
+  'A#':10,'Bb':10,'B':11,'Cb':11
+};
+
+const noteNamesSharp=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const noteNamesFlat=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const flatKeys=['F','Bb','Eb','Ab','Db','Gb'];
+
+function getNoteName(idx,useFlats){
+  const arr=useFlats?noteNamesFlat:noteNamesSharp;
+  return arr[(idx%12+12)%12];
+}
+
+function transposeChord(chordObj,fromKey,toKey){
+  const interval=(NOTE_INDEX[toKey]-NOTE_INDEX[fromKey]+12)%12;
+  const useFlats=flatKeys.includes(toKey);
+  
+  // Parse chord root
+  const match=chordObj.chord.match(/^([A-G][b#]?)(.*)/);
+  if(!match)return chordObj;
+  
+  const[,root,quality]=match;
+  const newRootIdx=(NOTE_INDEX[root]+interval)%12;
+  const newRoot=getNoteName(newRootIdx,useFlats);
+  
+  return{
+    chord:newRoot+quality,
+    roman:chordObj.roman,
+    scale:chordObj.scale
+  };
+}
+
+/* Interval colors and names */
+const intervalColors={
+  'R':'#ff9800','♭2':'#00bcd4','2':'#4caf50','♯2':'#26c6da',
+  '♭3':'#00acc1','3':'#2196f3','4':'#9c27b0','♯4':'#ab47bc',
+  '♭5':'#e91e63','5':'#f44336','♯5':'#e57373','♭6':'#e57373','6':'#fafafa',
+  '♭7':'#fbc02d','7':'#fff59d','9':'#4caf50','11':'#9c27b0','13':'#e0e0e0'
+};
+
+const intervalNames={
+  0:'R',1:'♭2',2:'2',3:'♭3',4:'3',5:'4',6:'♯4/♭5',7:'5',8:'♯5/♭6',9:'6',10:'♭7',11:'7'
+};
+
+/* Scale intervals */
+const scaleIntervals={
+  'Ionian':[0,2,4,5,7,9,11],
+  'Dorian':[0,2,3,5,7,9,10],
+  'Phrygian':[0,1,3,5,7,8,10],
+  'Lydian':[0,2,4,6,7,9,11],
+  'Mixolydian':[0,2,4,5,7,9,10],
+  'Aeolian':[0,2,3,5,7,8,10],
+  'Locrian':[0,1,3,5,6,8,10],
+  'Altered':[0,1,3,4,6,8,10],
+  'Lydian Dominant':[0,2,4,6,7,9,10],
+  'Lydian b7':[0,2,4,6,7,9,10],
+  'Diminished':[0,1,3,4,6,7,9,10],
+  'Blues':[0,3,5,6,7,10]
+};
+
+/* ================================
+   AUDIO
+==================================*/
+const freqBase={
+  'C':261.63,'C#':277.18,'Db':277.18,'D':293.66,'D#':311.13,'Eb':311.13,
+  'E':329.63,'F':349.23,'F#':369.99,'Gb':369.99,'G':392,'G#':415.30,
+  'Ab':415.30,'A':440,'A#':466.16,'Bb':466.16,'B':493.88
+};
+
+const audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+let audioUnlocked=false;
+
+document.addEventListener('pointerdown',()=>{
+  if(!audioUnlocked){audioCtx.resume();audioUnlocked=true;}
+},{once:true});
+
+function playNote(note){
+  if(!audioUnlocked)return;
+  const freq=freqBase[note]||440;
+  const osc=audioCtx.createOscillator();
+  const gain=audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.frequency.value=freq;
+  osc.type='sine';
+  gain.gain.setValueAtTime(0.3,audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.5);
+  osc.start();
+  osc.stop(audioCtx.currentTime+0.5);
+}
+
+/* ================================
+   FRETBOARD
+==================================*/
+const stringNotes=['E','B','G','D','A','E'];
+let fretboardMode='chord'; // 'chord' or 'scale'
+
+function buildFretboard(){
+  const fb=document.getElementById('fretboard');
+  fb.innerHTML='';
+  const key=keySel.value;
+  const useFlats=flatKeys.includes(key);
+  
+  stringNotes.forEach(s=>{
+    const row=document.createElement('div');
+    row.className='string';
+    const lab=document.createElement('div');
+    lab.className='string-label';
+    lab.textContent=s;
+    row.appendChild(lab);
+    
+    for(let f=0;f<=12;f++){
+      const fr=document.createElement('div');
+      fr.className='fret';
+      const idx=(NOTE_INDEX[s]+f)%12;
+      const note=getNoteName(idx,useFlats);
+      fr.dataset.note=note;
+      fr.dataset.idx=idx;
+      if(f===0)fr.textContent=s;
+      row.appendChild(fr);
+    }
+    fb.appendChild(row);
+  });
+}
+
+function clearFretboard(){
+  document.querySelectorAll('.fret').forEach(fr=>{
+    fr.className='fret';
+    if(fr.textContent.length>1)fr.textContent='';
+    fr.style.background='';
+    fr.style.color='';
+  });
+}
+
+function showFretboard(root,scaleName){
+  clearFretboard();
+  const section=document.getElementById('fretboard-section');
+  const title=document.getElementById('fretboard-title');
+  section.style.display='block';
+  
+  // Get scale pattern
+  let pattern;
+  if(fretboardMode==='chord'){
+    // Show chord tones based on quality
+    if(/Δ|maj7/i.test(scaleName)){
+      pattern=[0,4,7,11]; // Maj7
+      title.textContent=`${root} Major 7 — Chord Tones (R, 3, 5, 7)`;
+    }else if(/m7b5|°/i.test(scaleName)){
+      pattern=[0,3,6,10]; // m7b5
+      title.textContent=`${root} m7♭5 — Chord Tones (R, ♭3, ♭5, ♭7)`;
+    }else if(/m7/i.test(scaleName)){
+      pattern=[0,3,7,10]; // m7
+      title.textContent=`${root} Minor 7 — Chord Tones (R, ♭3, 5, ♭7)`;
+    }else if(/dim/i.test(scaleName)){
+      pattern=[0,3,6,9]; // dim7
+      title.textContent=`${root} Diminished 7 — Chord Tones (R, ♭3, ♭5, ♭♭7)`;
+    }else{
+      pattern=[0,4,7,10]; // Dom7
+      title.textContent=`${root} Dominant 7 — Chord Tones (R, 3, 5, ♭7)`;
+    }
+  }else{
+    // Show full scale
+    const scaleKey=scaleName.split('/')[0].trim();
+    pattern=scaleIntervals[scaleKey]||scaleIntervals['Mixolydian'];
+    title.textContent=`${root} ${scaleKey} — Full Scale`;
+  }
+  
+  const rootIdx=NOTE_INDEX[root]%12;
+  const scaleIdxs=pattern.map(i=>(rootIdx+i)%12);
+  
+  document.querySelectorAll('.fret').forEach(fr=>{
+    const idx=parseInt(fr.dataset.idx);
+    if(isNaN(idx))return;
+    
+    if(scaleIdxs.includes(idx)){
+      const interval=(idx-rootIdx+12)%12;
+      const intervalName=intervalNames[interval];
+      fr.classList.add('highlighted');
+      fr.textContent=fr.dataset.note+'\n'+intervalName;
+      fr.style.background=intervalColors[intervalName]||'#4caf50';
+      fr.style.color='#000';
+      if(interval===0)fr.classList.add('root');
+    }
+  });
+}
+
+/* ================================
+   RENDER LEAD SHEET
+==================================*/
+let showScaleSuggestions=false;
+
+function renderLeadSheet(){
+  const tuneName=tuneSel.value;
+  const targetKey=keySel.value;
+  const tune=parkerSongbook[tuneName];
+  
+  if(!tune){
+    sheet.innerHTML='<p>Tune not found</p>';
+    return;
+  }
+  
+  const originalKey=tune.key;
+  const tuneInfo=document.getElementById('tuneInfo');
+  tuneInfo.style.display='block';
+  tuneInfo.innerHTML=`
+    <strong>${tuneName}</strong> — ${tune.description}<br>
+    Form: ${tune.form} | Bars: ${tune.bars} | Original Key: ${originalKey} | Transposed to: ${targetKey}
+  `;
+  
+  sheet.innerHTML='';
+  const header=document.createElement('div');
+  header.className='tune-header';
+  header.textContent=`${tuneName} in ${targetKey}`;
+  sheet.appendChild(header);
+  
+  let barNum=1;
+  tune.progression.forEach((row,ri)=>{
+    const rowDiv=document.createElement('div');
+    rowDiv.className='row';
+    
+    row.forEach((chordObj,ci)=>{
+      const transposed=transposeChord(chordObj,originalKey,targetKey);
+      
+      const bar=document.createElement('div');
+      bar.className='bar';
+      bar.dataset.root=transposed.chord.match(/^([A-G][b#]?)/)[1];
+      bar.dataset.scale=transposed.scale;
+      
+      const barNumDiv=document.createElement('div');
+      barNumDiv.className='bar-number';
+      barNumDiv.textContent=barNum++;
+      
+      const chordDiv=document.createElement('div');
+      chordDiv.className='chord';
+      chordDiv.textContent=transposed.chord;
+      
+      const romanDiv=document.createElement('div');
+      romanDiv.className='roman';
+      romanDiv.textContent=transposed.roman;
+      
+      const scaleDiv=document.createElement('div');
+      scaleDiv.className=showScaleSuggestions?'scale-suggestion':'scale-suggestion hidden';
+      scaleDiv.textContent=transposed.scale;
+      
+      bar.appendChild(barNumDiv);
+      bar.appendChild(chordDiv);
+      bar.appendChild(romanDiv);
+      bar.appendChild(scaleDiv);
+      
+      bar.addEventListener('click',()=>{
+        playNote(bar.dataset.root);
+        showFretboard(bar.dataset.root,bar.dataset.scale);
+      });
+      
+      rowDiv.appendChild(bar);
+    });
+    
+    sheet.appendChild(rowDiv);
+  });
+}
+
+/* ================================
+   INITIALIZATION
+==================================*/
+const tuneSel=document.getElementById('tuneSel');
+const keySel=document.getElementById('keySel');
+const sheet=document.getElementById('sheet');
+
+// Populate tunes dropdown
+Object.keys(parkerSongbook).sort().forEach(t=>{
+  const opt=document.createElement('option');
+  opt.value=t;
+  opt.textContent=t;
+  tuneSel.appendChild(opt);
+});
+
+// Populate keys dropdown
+['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'].forEach(k=>{
+  const opt=document.createElement('option');
+  opt.value=k;
+  opt.textContent=k;
+  keySel.appendChild(opt);
+});
+
+// Event listeners
+document.getElementById('generateBtn').addEventListener('click',()=>{
+  buildFretboard();
+  renderLeadSheet();
+});
+
+document.getElementById('randomTune').addEventListener('click',()=>{
+  const tunes=Object.keys(parkerSongbook);
+  tuneSel.value=tunes[Math.floor(Math.random()*tunes.length)];
+  keySel.value=parkerSongbook[tuneSel.value].key;
+  buildFretboard();
+  renderLeadSheet();
+});
+
+document.getElementById('toggleScales').addEventListener('click',e=>{
+  showScaleSuggestions=!showScaleSuggestions;
+  e.target.textContent=showScaleSuggestions?'Hide Scale Suggestions':'Show Scale Suggestions';
+  document.querySelectorAll('.scale-suggestion').forEach(s=>{
+    s.className=showScaleSuggestions?'scale-suggestion':'scale-suggestion hidden';
+  });
+});
+
+document.getElementById('toggleMode').addEventListener('click',e=>{
+  fretboardMode=fretboardMode==='chord'?'scale':'chord';
+  e.target.textContent=fretboardMode==='chord'?'View: Chord Tones':'View: Full Scale';
+  document.getElementById('fretboard-section').style.display='none';
+});
+
+document.getElementById('printBtn').addEventListener('click',()=>{
+  window.print();
+});
+
+// Initialize
+tuneSel.value='Anthropology (Rhythm Changes)';
+keySel.value='Bb';
+buildFretboard();
+renderLeadSheet();
+</script>
+
+</body>
+</html>
