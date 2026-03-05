@@ -34,16 +34,23 @@ font-family:‘Courier New’,monospace;font-size:13px;touch-action:manipulation
 /* Lead Sheet Styles */
 .sheet{background:var(–panel);border:2px solid var(–accent);border-radius:10px;padding:10px;
 margin:0 auto 12px auto;overflow-x:auto;}
-.tune-header{text-align:center;color:var(–accent);font-size:16px;margin-bottom:12px;
-border-bottom:2px solid var(–barline);padding-bottom:8px;}
-.row{display:grid;grid-template-columns:repeat(4,1fr);min-width:320px;gap:3px;margin-bottom:4px;}
-.bar{min-height:85px;border:2px solid var(–barline);display:flex;flex-direction:column;
-align-items:center;justify-content:center;cursor:pointer;transition:.12s;padding:8px 4px;
-background:#1e1e1e;border-radius:6px;position:relative;touch-action:manipulation;}
-.bar:hover{background:#2a2a2a;transform:translateY(-2px);box-shadow:0 4px 8px rgba(255,152,0,0.3);}
-.bar-number{position:absolute;top:2px;left:4px;font-size:9px;color:#666;}
-.chord{font-size:16px;font-weight:bold;color:var(–sym);}
-.roman{font-size:10px;color:var(–ink-dim);margin-top:3px;}
+.tune-header{text-align:center;color:var(--ink);font-size:16px;margin-bottom:14px;
+border-bottom:3px double var(--barline);padding-bottom:10px;letter-spacing:.02em;}
+.tune-title{font-size:24px;font-weight:700;line-height:1.2;font-family:'Times New Roman',serif;}
+.tune-meta{font-size:13px;color:var(--ink-dim);margin-top:4px;text-transform:uppercase;letter-spacing:.08em;}
+.lead-sheet-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));min-width:320px;border-top:1px solid var(--barline);border-left:1px solid var(--barline);}
+.bar{
+  min-height:88px;border-right:1px solid var(--barline);border-bottom:1px solid var(--barline);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+  transition:.12s;padding:8px 4px;background:#1e1e1e;position:relative;touch-action:manipulation;
+}
+.bar:hover{background:#2a2a2a;transform:translateY(-2px);box-shadow:0 4px 8px rgba(255,152,0,0.3);z-index:2;}
+.bar-number{position:absolute;top:4px;left:6px;font-size:9px;color:#777;}
+.section-label{position:absolute;top:-20px;left:6px;font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--accent2);}
+.bar.section-end{border-right:4px double var(--barline);}
+.bar.final-bar{border-right:3px solid var(--ink);}
+.chord{font-size:22px;font-weight:700;color:var(--sym);font-family:'Times New Roman',serif;line-height:1.1;}
+.roman{font-size:10px;color:var(--ink-dim);margin-top:5px;}
 .scale-suggestion{font-size:8px;color:#90caf9;margin-top:3px;font-style:italic;line-height:1.2;}
 .scale-suggestion.hidden{display:none;}
 
@@ -72,7 +79,7 @@ border-left:3px solid var(–accent2);font-size:12px;line-height:1.5;}
 @media (min-width:600px){
 h1{font-size:26px;}
 .card{padding:16px;}
-.chord{font-size:20px;}
+.chord{font-size:24px;}
 .roman{font-size:11px;}
 .bar{min-height:95px;padding:10px;}
 .fret{width:45px;height:34px;font-size:10px;}
@@ -87,9 +94,9 @@ h1{font-size:28px;}
 .card{padding:20px;}
 .controls{gap:12px;margin-bottom:20px;}
 .controls select{min-width:180px;}
-.row{min-width:720px;gap:4px;}
+.lead-sheet-grid{min-width:720px;}
 .bar{min-height:100px;padding:10px;}
-.chord{font-size:22px;}
+.chord{font-size:27px;}
 .roman{font-size:12px;}
 .scale-suggestion{font-size:10px;}
 .fretboard-section{padding:20px;margin-top:20px;}
@@ -101,12 +108,24 @@ h1{font-size:28px;}
 }
 
 @media print{
-body{background:#fff;color:#000;padding:10px;}
-.controls,.legend,.fretboard-section,.info-box{display:none;}
-.card{border:1px solid #000;background:#fff;page-break-inside:avoid;}
-h1{font-size:24px;color:#000;}
-.chord{color:#000}.roman{color:#222}
-.bar{border:1px solid #000;}
+@page{size:portrait;margin:12mm;}
+html,body{background:#fff;color:#000;padding:0;margin:0;}
+body *{visibility:hidden !important;}
+#sheet,#sheet *{visibility:visible !important;}
+#sheet{
+  position:absolute;left:0;top:0;width:100%;max-width:100%;
+  border:0;background:#fff;margin:0;padding:0;overflow:visible;
+}
+#sheet .tune-header{color:#000;border-bottom:2px solid #000;margin-bottom:9mm;}
+#sheet .tune-title,#sheet .chord{color:#000;}
+#sheet .tune-meta,#sheet .roman,#sheet .bar-number{color:#222;}
+#sheet .section-label{color:#000;}
+#sheet .lead-sheet-grid{border-color:#000;min-width:0;grid-template-columns:repeat(4,minmax(0,1fr));}
+#sheet .bar{background:#fff;border-color:#000;break-inside:avoid;page-break-inside:avoid;min-height:26mm;}
+#sheet .bar:hover{transform:none;box-shadow:none;}
+#sheet .bar.section-end{border-right:3px double #000;}
+#sheet .bar.final-bar{border-right:3px solid #000;}
+#sheet .scale-suggestion{display:none !important;}
 }
 </style>
 
@@ -746,6 +765,22 @@ function showFretboard(root,scaleName){
 ==================================*/
 let showScaleSuggestions=false;
 
+function getSectionLayout(tune){
+  const simpleForm=/^[A-Z]+$/.test(tune.form);
+  const totalBars=tune.progression.reduce((sum,row)=>sum+row.length,0);
+  if(!simpleForm||!tune.form.length||totalBars%tune.form.length!==0){
+    return {starts:{0:tune.form},ends:new Set([totalBars-1])};
+  }
+  const sectionBars=totalBars/tune.form.length;
+  const starts={};
+  const ends=new Set();
+  for(let i=0;i<tune.form.length;i++){
+    starts[i*sectionBars]=tune.form[i];
+    ends.add(((i+1)*sectionBars)-1);
+  }
+  return {starts,ends};
+}
+
 function renderLeadSheet(){
   const tuneName=tuneSel.value;
   const targetKey=keySel.value;
@@ -767,21 +802,39 @@ function renderLeadSheet(){
   sheet.innerHTML='';
   const header=document.createElement('div');
   header.className='tune-header';
-  header.textContent=`${tuneName} in ${targetKey}`;
+  header.innerHTML=`
+    <div class="tune-title">${tuneName}</div>
+    <div class="tune-meta">Key: ${targetKey} • Form: ${tune.form}</div>
+  `;
   sheet.appendChild(header);
+
+  const grid=document.createElement('div');
+  grid.className='lead-sheet-grid';
+  sheet.appendChild(grid);
+
+  const sectionLayout=getSectionLayout(tune);
   
   let barNum=1;
-  tune.progression.forEach((row,ri)=>{
-    const rowDiv=document.createElement('div');
-    rowDiv.className='row';
-    
-    row.forEach((chordObj,ci)=>{
+  const totalBars=tune.progression.reduce((sum,row)=>sum+row.length,0);
+  tune.progression.forEach(row=>{
+    row.forEach(chordObj=>{
       const transposed=transposeChord(chordObj,originalKey,targetKey);
+      const currentBar=barNum-1;
       
       const bar=document.createElement('div');
       bar.className='bar';
       bar.dataset.root=transposed.chord.match(/^([A-G][b#]?)/)[1];
       bar.dataset.scale=transposed.scale;
+
+      if(sectionLayout.ends.has(currentBar))bar.classList.add('section-end');
+      if(currentBar===totalBars-1)bar.classList.add('final-bar');
+
+      if(sectionLayout.starts[currentBar]){
+        const sectionDiv=document.createElement('div');
+        sectionDiv.className='section-label';
+        sectionDiv.textContent=sectionLayout.starts[currentBar];
+        bar.appendChild(sectionDiv);
+      }
       
       const barNumDiv=document.createElement('div');
       barNumDiv.className='bar-number';
@@ -809,10 +862,8 @@ function renderLeadSheet(){
         showFretboard(bar.dataset.root,bar.dataset.scale);
       });
       
-      rowDiv.appendChild(bar);
+      grid.appendChild(bar);
     });
-    
-    sheet.appendChild(rowDiv);
   });
 }
 
@@ -848,6 +899,12 @@ document.getElementById('generateBtn').addEventListener('click',()=>{
 document.getElementById('randomTune').addEventListener('click',()=>{
   const tunes=Object.keys(parkerSongbook);
   tuneSel.value=tunes[Math.floor(Math.random()*tunes.length)];
+  keySel.value=parkerSongbook[tuneSel.value].key;
+  buildFretboard();
+  renderLeadSheet();
+});
+
+tuneSel.addEventListener('change',()=>{
   keySel.value=parkerSongbook[tuneSel.value].key;
   buildFretboard();
   renderLeadSheet();
