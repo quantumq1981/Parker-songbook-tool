@@ -12,93 +12,93 @@
   --indigo:#6366f1;--green:#4caf50;--red:#ef5350;
 }
 *{box-sizing:border-box;}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:'Courier New',monospace;padding:10px;}
-h1{text-align:center;color:var(--accent);margin:12px 0;font-size:22px;}
-h2{color:var(--accent2);font-size:15px;margin:8px 0 6px 0;}
-.card{background:var(--panel);border:2px solid var(--accent);border-radius:10px;
+body{margin:0;background:var(---bg);color:var(---ink);font-family:'Courier New',monospace;padding:10px;}
+h1{text-align:center;color:var(---accent);margin:12px 0;font-size:22px;}
+h2{color:var(---accent2);font-size:15px;margin:8px 0 6px 0;}
+.card{background:var(---panel);border:2px solid var(---accent);border-radius:10px;
   padding:12px;max-width:1200px;margin:0 auto 12px auto;}
 
 /* Stats */
 .stats-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
-.stat-pill{background:#1e1e1e;border:1px solid var(–barline);border-radius:16px;
+.stat-pill{background:#1e1e1e;border:1px solid var(--barline);border-radius:16px;
 padding:4px 12px;font-size:11px;white-space:nowrap;}
-.stat-pill strong{color:var(–accent);}
+.stat-pill strong{color:var(--accent);}
 
 /* Collapsible panels */
-details.panel{background:#1e1e1e;border:1px solid var(–barline);
+details.panel{background:#1e1e1e;border:1px solid var(--barline);
 border-radius:8px;padding:10px 12px;margin-bottom:10px;}
 details.panel summary{cursor:pointer;font-weight:bold;font-size:13px;
 list-style:none;user-select:none;}
 details.panel summary::-webkit-details-marker{display:none;}
-details.panel summary::before{content:’▶  ’;}
-details.panel[open] summary::before{content:’▼  ’;}
-details.panel.filter-panel summary{color:var(–accent2);}
-details.panel.scale-lib summary{color:var(–accent);}
+details.panel summary::before{content:'▶  ';}
+details.panel[open] summary::before{content:'▼  ';}
+details.panel.filter-panel summary{color:var(--accent2);}
+details.panel.scale-lib summary{color:var(--accent);}
 .filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
 gap:8px;margin-top:10px;}
-.filter-grid label{color:var(–ink-dim);font-size:11px;display:block;margin-bottom:3px;}
-.filter-grid select{width:100%;background:#252525;color:var(–sym);
-border:1px solid var(–barline);padding:7px 8px;border-radius:5px;
-font-family:‘Courier New’,monospace;font-size:12px;cursor:pointer;}
+.filter-grid label{color:var(--ink-dim);font-size:11px;display:block;margin-bottom:3px;}
+.filter-grid select{width:100%;background:#252525;color:var(--sym);
+border:1px solid var(--barline);padding:7px 8px;border-radius:5px;
+font-family:'Courier New',monospace;font-size:12px;cursor:pointer;}
 
 /* Controls */
 .controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;}
-.controls label{color:var(–ink-dim);font-weight:bold;font-size:13px;}
+.controls label{color:var(--ink-dim);font-weight:bold;font-size:13px;}
 .controls select,.controls button,.controls input{
-background:#1e1e1e;color:var(–sym);border:1px solid var(–accent);
+background:#1e1e1e;color:var(--sym);border:1px solid var(--accent);
 padding:9px 12px;border-radius:6px;cursor:pointer;font-weight:bold;
-transition:.15s;font-family:‘Courier New’,monospace;font-size:13px;touch-action:manipulation;}
-.controls select:hover,.controls button:hover{background:var(–accent);color:#000;}
+transition:.15s;font-family:'Courier New',monospace;font-size:13px;touch-action:manipulation;}
+.controls select:hover,.controls button:hover{background:var(--accent);color:#000;}
 .controls select{min-width:160px;flex:1;max-width:300px;}
 .controls input[type=number]{width:75px;flex:none;}
-.btn-sec{border-color:var(–accent2)!important;color:#9fd2ff;}
-.btn-sec:hover{background:var(–accent2)!important;color:#000;}
-.btn-ok{border-color:var(–green)!important;color:#81c784;}
-.btn-ok:hover{background:var(–green)!important;color:#000;}
-.btn-stop{border-color:var(–red)!important;color:#ef9a9a;}
-.btn-stop:hover{background:var(–red)!important;color:#000;}
-.btn-loop-on{background:#0d2e0d!important;border-color:var(–green)!important;color:#81c784;}
-.btn-audio-scale{background:#0d1f2e!important;border-color:var(–accent2)!important;color:#9fd2ff;}
+.btn-sec{border-color:var(--accent2)!important;color:#9fd2ff;}
+.btn-sec:hover{background:var(--accent2)!important;color:#000;}
+.btn-ok{border-color:var(--green)!important;color:#81c784;}
+.btn-ok:hover{background:var(--green)!important;color:#000;}
+.btn-stop{border-color:var(--red)!important;color:#ef9a9a;}
+.btn-stop:hover{background:var(--red)!important;color:#000;}
+.btn-loop-on{background:#0d2e0d!important;border-color:var(--green)!important;color:#81c784;}
+.btn-audio-scale{background:#0d1f2e!important;border-color:var(--accent2)!important;color:#9fd2ff;}
 
 /* Playback */
-.playback-bar{background:#1e1e1e;border:2px solid var(–indigo);border-radius:8px;
+.playback-bar{background:#1e1e1e;border:2px solid var(--indigo);border-radius:8px;
 padding:10px 12px;margin-bottom:10px;}
-.playback-bar h3{color:var(–indigo);margin:0 0 8px 0;font-size:13px;}
-.play-status{text-align:center;color:var(–green);font-size:11px;
+.playback-bar h3{color:var(--indigo);margin:0 0 8px 0;font-size:13px;}
+.play-status{text-align:center;color:var(--green);font-size:11px;
 margin-top:6px;min-height:16px;letter-spacing:.4px;}
 
 /* Lead sheet */
-.sheet{background:var(–panel);border:2px solid var(–accent);border-radius:10px;
+.sheet{background:var(--panel);border:2px solid var(--accent);border-radius:10px;
 padding:10px;overflow-x:auto;}
-.tune-header{text-align:center;color:var(–accent);font-size:16px;margin-bottom:8px;
-border-bottom:2px solid var(–barline);padding-bottom:6px;}
+.tune-header{text-align:center;color:var(--accent);font-size:16px;margin-bottom:8px;
+border-bottom:2px solid var(--barline);padding-bottom:6px;}
 .tune-meta{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
 .meta-item{background:#252525;padding:4px 10px;border-radius:4px;font-size:11px;}
-.meta-lbl{color:var(–ink-dim);margin-right:3px;}
-.meta-val{color:var(–sym);font-weight:bold;}
-.diff-b{background:var(–green);color:#000;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold;}
-.diff-i{background:var(–accent);color:#000;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold;}
-.diff-a{background:var(–red);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold;}
-.section-label{font-size:11px;font-weight:bold;color:var(–accent2);
+.meta-lbl{color:var(--ink-dim);margin-right:3px;}
+.meta-val{color:var(--sym);font-weight:bold;}
+.diff-b{background:var(--green);color:#000;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold;}
+.diff-i{background:var(--accent);color:#000;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold;}
+.diff-a{background:var(--red);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold;}
+.section-label{font-size:11px;font-weight:bold;color:var(--accent2);
 margin:7px 0 2px 2px;text-transform:uppercase;letter-spacing:1px;}
 .row{display:grid;grid-template-columns:repeat(4,1fr);min-width:320px;gap:3px;margin-bottom:3px;}
-.bar{min-height:85px;border:2px solid var(–barline);display:flex;flex-direction:column;
+.bar{min-height:85px;border:2px solid var(--barline);display:flex;flex-direction:column;
 align-items:center;justify-content:center;cursor:pointer;transition:.12s;
 padding:8px 4px;background:#1e1e1e;border-radius:6px;position:relative;touch-action:manipulation;}
 .bar:hover{background:#2a2a2a;transform:translateY(-2px);box-shadow:0 4px 8px rgba(255,152,0,.3);}
-.bar.active{border-color:var(–accent)!important;}
-.bar.playing{background:#0d2e0d!important;border-color:var(–green)!important;}
-.bar.playing .chord{color:var(–green)!important;}
+.bar.active{border-color:var(--accent)!important;}
+.bar.playing{background:#0d2e0d!important;border-color:var(--green)!important;}
+.bar.playing .chord{color:var(--green)!important;}
 .bar-number{position:absolute;top:2px;left:4px;font-size:9px;color:#666;}
-.chord{font-size:16px;font-weight:bold;color:var(–sym);}
-.roman{font-size:10px;color:var(–ink-dim);margin-top:3px;}
+.chord{font-size:16px;font-weight:bold;color:var(--sym);}
+.roman{font-size:10px;color:var(--ink-dim);margin-top:3px;}
 .scale-sug{font-size:8px;color:#90caf9;margin-top:3px;font-style:italic;line-height:1.2;}
 .scale-sug.hidden{display:none;}
 
 /* Fretboard */
-.fb-section{background:#1a1a1a;border:2px solid var(–accent);border-radius:8px;
+.fb-section{background:#1a1a1a;border:2px solid var(--accent);border-radius:8px;
 padding:12px;margin-top:10px;}
-.fb-title{text-align:center;color:var(–accent);margin-bottom:8px;font-size:13px;min-height:18px;}
+.fb-title{text-align:center;color:var(--accent);margin-bottom:8px;font-size:13px;min-height:18px;}
 .fretboard{display:flex;flex-direction:column;gap:2px;background:#2a2a2a;
 padding:8px;border-radius:4px;overflow-x:auto;}
 .string{display:flex;gap:1px;align-items:center;}
@@ -112,7 +112,7 @@ color:#666;text-align:center;white-space:pre-wrap;transition:.1s;flex-shrink:0;}
 .fret-markers{display:flex;gap:1px;margin-top:3px;padding-left:26px;}
 .fret-dot{width:40px;height:15px;display:flex;align-items:center;justify-content:center;
 font-size:9px;color:#555;flex-shrink:0;}
-.fret-dot.marked{color:var(–accent);font-weight:bold;}
+.fret-dot.marked{color:var(--accent);font-weight:bold;}
 /* Functional harmony legend */
 .func-legend{display:none;flex-wrap:wrap;gap:10px;justify-content:center;
 font-size:11px;margin:6px 0;padding:4px 0;}
@@ -125,18 +125,18 @@ font-size:11px;margin:6px 0;padding:4px 0;}
 .lib-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
 gap:10px;margin-top:10px;}
 .lib-cat{background:#252525;border-radius:6px;padding:10px;}
-.lib-cat-title{color:var(–green);font-size:12px;font-weight:bold;
-margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(–barline);}
-.lib-item{padding:6px 8px;margin:3px 0;background:#1e1e1e;border:1px solid var(–barline);
+.lib-cat-title{color:var(--green);font-size:12px;font-weight:bold;
+margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--barline);}
+.lib-item{padding:6px 8px;margin:3px 0;background:#1e1e1e;border:1px solid var(--barline);
 border-radius:4px;cursor:pointer;transition:.15s;}
-.lib-item:hover{border-color:var(–accent2);background:#252525;}
-.lib-item.lib-active{border-color:var(–accent);background:#2a1a00;}
-.lib-name{font-size:12px;font-weight:bold;color:var(–ink);}
-.lib-notes{font-size:10px;color:var(–accent2);margin-top:2px;}
-.lib-note{color:var(–ink-dim);font-size:10px;text-align:center;margin-top:6px;}
+.lib-item:hover{border-color:var(--accent2);background:#252525;}
+.lib-item.lib-active{border-color:var(--accent);background:#2a1a00;}
+.lib-name{font-size:12px;font-weight:bold;color:var(--ink);}
+.lib-notes{font-size:10px;color:var(--accent2);margin-top:2px;}
+.lib-note{color:var(--ink-dim);font-size:10px;text-align:center;margin-top:6px;}
 
-.legend{text-align:center;color:var(–ink-dim);font-size:11px;margin:6px 0;}
-.info-box{background:#2a2a2a;border-left:4px solid var(–indigo);padding:10px;
+.legend{text-align:center;color:var(--ink-dim);font-size:11px;margin:6px 0;}
+.info-box{background:#2a2a2a;border-left:4px solid var(--indigo);padding:10px;
 margin-top:10px;border-radius:4px;font-size:11px;line-height:1.6;}
 
 @media(min-width:600px){
@@ -172,7 +172,7 @@ body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
     <div class="controls" style="margin-top:8px;margin-bottom:0;">
       <button id="applyFilter" class="btn-ok">Apply</button>
       <button id="clearFilter" class="btn-sec">Clear</button>
-      <span id="filterResults" style="color:var(--ink-dim);font-size:11px;"></span>
+      <span id="filterResults" style="color:var(---ink-dim);font-size:11px;"></span>
     </div>
   </details>
 
@@ -204,7 +204,7 @@ body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
   <div class="legend">Tap any bar to hear the chord or scale · Use Playback to sequence at tempo · Open Scale Library for bebop theory reference</div>
 
   <div id="sheet" class="sheet">
-    <div style="text-align:center;color:var(--ink-dim);padding:30px;">Select a tune and click Generate to begin.</div>
+    <div style="text-align:center;color:var(---ink-dim);padding:30px;">Select a tune and click Generate to begin.</div>
   </div>
 
   <div class="fb-section" id="fbSection" style="display:none;">
@@ -230,9 +230,9 @@ body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
   </details>
 
   <div class="info-box">
-    <strong style="color:var(--accent)">🎯 Practice Tips</strong><br>
+    <strong style="color:var(---accent)">🎯 Practice Tips</strong><br>
     Study Roman numerals for harmonic function · Transpose to all 12 keys ·
-    Focus on ii–V–I patterns and tritone substitutions · Use Playback at slow tempo first ·
+    Focus on ii-V-I patterns and tritone substitutions · Use Playback at slow tempo first ·
     Toggle <em>Mode</em> between Chord Tones, Full Scale, and Functional Harmony ·
     Toggle <em>Audio</em> between Chord Voicing and Scale Run ·
     Open Scale Library to visualise bebop scales across the neck ·
@@ -833,7 +833,7 @@ function buildScaleLibrary() {
       const item = document.createElement('div'); item.className = 'lib-item';
       const nm   = document.createElement('div'); nm.className = 'lib-name'; nm.textContent = sc.name;
       const nts  = document.createElement('div'); nts.className = 'lib-notes';
-      nts.textContent = sc.notes.join(' – ');
+      nts.textContent = sc.notes.join(' - ');
       item.append(nm, nts);
       item.addEventListener('click', () => {
         document.querySelectorAll('.lib-item.lib-active').forEach(el => el.classList.remove('lib-active'));
@@ -1010,21 +1010,19 @@ function printLeadSheet() {
     .bn{position:absolute;top:1px;left:2px;font-size:7px;color:#ccc;}.ch{font-size:17px;font-weight:bold;}.ro{font-size:8px;color:#555;margin-top:2px;}
     @page{size:A4 portrait;margin:12mm 10mm;}</style>
 
-```
 <h1>🎷 ${name}</h1><div class="meta">${tune.description} | Form: ${tune.form} | Key: ${key} | ${tune.bars} bars | ${tune.difficulty}</div>`;
-```
 
 let bn = 1;
 tune.progression.forEach((row, ri) => {
 const lbl = getSectionLabel(tune.form, ri);
 if (lbl) html += `<div class="sl">${lbl}</div>`;
-html += ‘<div class="row">’;
+html += '<div class="row">';
 row.forEach(obj => { const t = transposeChord(obj, tune.key, key);
 html += `<div class="bar"><div class="bn">${bn++}</div><div class="ch">${t.chord}</div><div class="ro">${t.roman}</div></div>`; });
-html += ‘</div>’;
+html += '</div>';
 });
-const w = window.open(’’,’_blank’,‘width=860,height=1120’);
-if (!w) { alert(‘Allow pop-ups to enable printing.’); return; }
+const w = window.open('','_blank','width=860,height=1120');
+if (!w) { alert('Allow pop-ups to enable printing.'); return; }
 w.document.write(`<!DOCTYPE html><html><head><title>${name}</title></head><body>${html}</body></html>`);
 w.document.close(); w.focus(); setTimeout(() => w.print(), 350);
 }
@@ -1032,11 +1030,11 @@ w.document.close(); w.focus(); setTimeout(() => w.print(), 350);
 /* ============================================================
 INITIALIZATION
 ============================================================ */
-const tuneSel = document.getElementById(‘tuneSel’);
-const keySel  = document.getElementById(‘keySel’);
+const tuneSel = document.getElementById('tuneSel');
+const keySel  = document.getElementById('keySel');
 
-[‘C’,‘Db’,‘D’,‘Eb’,‘E’,‘F’,‘F#’,‘G’,‘Ab’,‘A’,‘Bb’,‘B’].forEach(k => {
-const o = document.createElement(‘option’); o.value = k; o.textContent = k;
+['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'].forEach(k => {
+const o = document.createElement('option'); o.value = k; o.textContent = k;
 keySel.appendChild(o);
 });
 populateFilters();
@@ -1045,30 +1043,30 @@ renderStats();
 buildFretboard();
 buildScaleLibrary();
 
-tuneSel.addEventListener(‘change’, () => {
+tuneSel.addEventListener('change', () => {
 const t = SONGS[tuneSel.value];
 if (t) { keySel.value = t.key; buildFretboard(); renderLeadSheet(tuneSel.value, t.key); }
 });
-document.getElementById(‘generateBtn’).addEventListener(‘click’, () => {
+document.getElementById('generateBtn').addEventListener('click', () => {
 if (tuneSel.value) { buildFretboard(); renderLeadSheet(tuneSel.value, keySel.value); }
 });
-document.getElementById(‘randomTune’).addEventListener(‘click’, () => {
+document.getElementById('randomTune').addEventListener('click', () => {
 const entries = getFilteredTunes();
 if (!entries.length) return;
 const [name, t] = entries[Math.floor(Math.random() * entries.length)];
 tuneSel.value = name; keySel.value = t.key;
 buildFretboard(); renderLeadSheet(name, t.key);
 });
-document.getElementById(‘toggleScales’).addEventListener(‘click’, e => {
+document.getElementById('toggleScales').addEventListener('click', e => {
 showScales = !showScales;
-e.target.textContent = showScales ? ‘Hide Scales’ : ‘Show Scales’;
-document.querySelectorAll(’.scale-sug’).forEach(s => { s.className = showScales ? ‘scale-sug’ : ‘scale-sug hidden’; });
+e.target.textContent = showScales ? 'Hide Scales' : 'Show Scales';
+document.querySelectorAll('.scale-sug').forEach(s => { s.className = showScales ? 'scale-sug' : 'scale-sug hidden'; });
 });
 
 // 3-way fretboard mode cycle
-document.getElementById(‘toggleMode’).addEventListener(‘click’, e => {
-const modes  = [‘chord’,‘scale’,‘function’];
-const labels = [‘Mode: Chord Tones’,‘Mode: Full Scale’,‘Mode: Functional’];
+document.getElementById('toggleMode').addEventListener('click', e => {
+const modes  = ['chord','scale','function'];
+const labels = ['Mode: Chord Tones','Mode: Full Scale','Mode: Functional'];
 fbMode = modes[(modes.indexOf(fbMode) + 1) % 3];
 e.target.textContent = labels[modes.indexOf(fbMode)];
 updateFuncLegend();
@@ -1076,39 +1074,39 @@ if (lastBarData) showFretboard(lastBarData.root, lastBarData.scale, lastBarData.
 });
 
 // Audio mode toggle: chord voicing vs scale run
-document.getElementById(‘toggleAudio’).addEventListener(‘click’, e => {
-audioMode = audioMode === ‘voicing’ ? ‘scale’ : ‘voicing’;
-e.target.textContent = audioMode === ‘voicing’ ? ‘🎵 Audio: Chord’ : ‘🎵 Audio: Scale’;
-e.target.classList.toggle(‘btn-audio-scale’, audioMode === ‘scale’);
-e.target.classList.toggle(‘btn-sec’, audioMode === ‘voicing’);
+document.getElementById('toggleAudio').addEventListener('click', e => {
+audioMode = audioMode === 'voicing' ? 'scale' : 'voicing';
+e.target.textContent = audioMode === 'voicing' ? '🎵 Audio: Chord' : '🎵 Audio: Scale';
+e.target.classList.toggle('btn-audio-scale', audioMode === 'scale');
+e.target.classList.toggle('btn-sec', audioMode === 'voicing');
 });
 
 // Playback controls
-document.getElementById(‘playBtn’).addEventListener(‘click’, () => { if (isPlaying) stopPlayback(); else startPlayback(); });
-document.getElementById(‘stopBtn’).addEventListener(‘click’, stopPlayback);
-document.getElementById(‘loopBtn’).addEventListener(‘click’, e => {
+document.getElementById('playBtn').addEventListener('click', () => { if (isPlaying) stopPlayback(); else startPlayback(); });
+document.getElementById('stopBtn').addEventListener('click', stopPlayback);
+document.getElementById('loopBtn').addEventListener('click', e => {
 loopEnabled = !loopEnabled;
-e.target.textContent = loopEnabled ? ‘🔁 Loop: ON’ : ‘🔁 Loop: OFF’;
-e.target.classList.toggle(‘btn-loop-on’, loopEnabled);
-e.target.classList.toggle(‘btn-sec’, !loopEnabled);
+e.target.textContent = loopEnabled ? '🔁 Loop: ON' : '🔁 Loop: OFF';
+e.target.classList.toggle('btn-loop-on', loopEnabled);
+e.target.classList.toggle('btn-sec', !loopEnabled);
 });
 
 // Filters
-document.getElementById(‘applyFilter’).addEventListener(‘click’, () => {
+document.getElementById('applyFilter').addEventListener('click', () => {
 const entries = getFilteredTunes();
 populateTuneDropdown(entries); renderStats(entries);
-document.getElementById(‘filterResults’).textContent = `Showing ${entries.length} of ${Object.keys(SONGS).length} tunes`;
+document.getElementById('filterResults').textContent = `Showing ${entries.length} of ${Object.keys(SONGS).length} tunes`;
 });
-document.getElementById(‘clearFilter’).addEventListener(‘click’, () => {
-[‘filterForm’,‘filterDiff’,‘filterStyle’].forEach(id => document.getElementById(id).value = ‘’);
+document.getElementById('clearFilter').addEventListener('click', () => {
+['filterForm','filterDiff','filterStyle'].forEach(id => document.getElementById(id).value = '');
 populateTuneDropdown(); renderStats();
-document.getElementById(‘filterResults’).textContent = ‘’;
+document.getElementById('filterResults').textContent = '';
 });
-document.getElementById(‘printBtn’).addEventListener(‘click’, printLeadSheet);
+document.getElementById('printBtn').addEventListener('click', printLeadSheet);
 
 // Load on startup
-tuneSel.value = ‘Anthropology’; keySel.value = ‘Bb’;
-renderLeadSheet(‘Anthropology’,‘Bb’);
+tuneSel.value = 'Anthropology'; keySel.value = 'Bb';
+renderLeadSheet('Anthropology','Bb');
 </script>
 
 </body>
