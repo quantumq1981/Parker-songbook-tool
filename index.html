@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Charlie Parker Songbook Trainer v6.0</title>
+<title>Charlie Parker Songbook Trainer v7.0</title>
 <style>
 :root{
   --bg:#121212;--panel:#1a1a1a;--ink:#eee;--ink-dim:#aaa;
@@ -15,40 +15,39 @@
 body{margin:0;background:var(--bg);color:var(--ink);font-family:'Courier New',monospace;padding:10px;}
 h1{text-align:center;color:var(--accent);margin:12px 0;font-size:22px;}
 h2{color:var(--accent2);font-size:15px;margin:8px 0 6px 0;}
+.card{background:var(--panel);border:2px solid var(--accent);border-radius:10px;
+  padding:12px;max-width:1200px;margin:0 auto 12px auto;}
 
-.card{background:var(–panel);border:2px solid var(–accent);border-radius:10px;
-padding:12px;max-width:1200px;margin:0 auto 12px auto;}
-
-/* ── Stats ── */
+/* Stats */
 .stats-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
 .stat-pill{background:#1e1e1e;border:1px solid var(–barline);border-radius:16px;
 padding:4px 12px;font-size:11px;white-space:nowrap;}
 .stat-pill strong{color:var(–accent);}
 
-/* ── Filters ── */
-details.filter-panel{background:#1e1e1e;border:1px solid var(–barline);
+/* Collapsible panels */
+details.panel{background:#1e1e1e;border:1px solid var(–barline);
 border-radius:8px;padding:10px 12px;margin-bottom:10px;}
-details.filter-panel summary{cursor:pointer;color:var(–accent2);font-weight:bold;
-font-size:13px;list-style:none;user-select:none;}
-details.filter-panel summary::-webkit-details-marker{display:none;}
-details.filter-panel summary::before{content:’▶  ’;}
-details.filter-panel[open] summary::before{content:’▼  ’;}
+details.panel summary{cursor:pointer;font-weight:bold;font-size:13px;
+list-style:none;user-select:none;}
+details.panel summary::-webkit-details-marker{display:none;}
+details.panel summary::before{content:’▶  ’;}
+details.panel[open] summary::before{content:’▼  ’;}
+details.panel.filter-panel summary{color:var(–accent2);}
+details.panel.scale-lib summary{color:var(–accent);}
 .filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
 gap:8px;margin-top:10px;}
 .filter-grid label{color:var(–ink-dim);font-size:11px;display:block;margin-bottom:3px;}
 .filter-grid select{width:100%;background:#252525;color:var(–sym);
 border:1px solid var(–barline);padding:7px 8px;border-radius:5px;
 font-family:‘Courier New’,monospace;font-size:12px;cursor:pointer;}
-#filterResults{color:var(–ink-dim);font-size:11px;}
 
-/* ── Controls ── */
+/* Controls */
 .controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;}
 .controls label{color:var(–ink-dim);font-weight:bold;font-size:13px;}
 .controls select,.controls button,.controls input{
 background:#1e1e1e;color:var(–sym);border:1px solid var(–accent);
 padding:9px 12px;border-radius:6px;cursor:pointer;font-weight:bold;
-transition:.15s;font-family:‘Courier New’,monospace;font-size:13px;
-touch-action:manipulation;}
+transition:.15s;font-family:‘Courier New’,monospace;font-size:13px;touch-action:manipulation;}
 .controls select:hover,.controls button:hover{background:var(–accent);color:#000;}
 .controls select{min-width:160px;flex:1;max-width:300px;}
 .controls input[type=number]{width:75px;flex:none;}
@@ -59,15 +58,16 @@ touch-action:manipulation;}
 .btn-stop{border-color:var(–red)!important;color:#ef9a9a;}
 .btn-stop:hover{background:var(–red)!important;color:#000;}
 .btn-loop-on{background:#0d2e0d!important;border-color:var(–green)!important;color:#81c784;}
+.btn-audio-scale{background:#0d1f2e!important;border-color:var(–accent2)!important;color:#9fd2ff;}
 
-/* ── Playback ── */
+/* Playback */
 .playback-bar{background:#1e1e1e;border:2px solid var(–indigo);border-radius:8px;
 padding:10px 12px;margin-bottom:10px;}
 .playback-bar h3{color:var(–indigo);margin:0 0 8px 0;font-size:13px;}
 .play-status{text-align:center;color:var(–green);font-size:11px;
 margin-top:6px;min-height:16px;letter-spacing:.4px;}
 
-/* ── Sheet ── */
+/* Lead sheet */
 .sheet{background:var(–panel);border:2px solid var(–accent);border-radius:10px;
 padding:10px;overflow-x:auto;}
 .tune-header{text-align:center;color:var(–accent);font-size:16px;margin-bottom:8px;
@@ -76,19 +76,15 @@ border-bottom:2px solid var(–barline);padding-bottom:6px;}
 .meta-item{background:#252525;padding:4px 10px;border-radius:4px;font-size:11px;}
 .meta-lbl{color:var(–ink-dim);margin-right:3px;}
 .meta-val{color:var(–sym);font-weight:bold;}
-.diff-b{background:var(–green);color:#000;padding:1px 6px;border-radius:3px;
-font-size:9px;font-weight:bold;vertical-align:middle;}
-.diff-i{background:var(–accent);color:#000;padding:1px 6px;border-radius:3px;
-font-size:9px;font-weight:bold;vertical-align:middle;}
-.diff-a{background:var(–red);color:#fff;padding:1px 6px;border-radius:3px;
-font-size:9px;font-weight:bold;vertical-align:middle;}
+.diff-b{background:var(–green);color:#000;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold;}
+.diff-i{background:var(–accent);color:#000;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold;}
+.diff-a{background:var(–red);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold;}
 .section-label{font-size:11px;font-weight:bold;color:var(–accent2);
 margin:7px 0 2px 2px;text-transform:uppercase;letter-spacing:1px;}
 .row{display:grid;grid-template-columns:repeat(4,1fr);min-width:320px;gap:3px;margin-bottom:3px;}
 .bar{min-height:85px;border:2px solid var(–barline);display:flex;flex-direction:column;
 align-items:center;justify-content:center;cursor:pointer;transition:.12s;
-padding:8px 4px;background:#1e1e1e;border-radius:6px;position:relative;
-touch-action:manipulation;}
+padding:8px 4px;background:#1e1e1e;border-radius:6px;position:relative;touch-action:manipulation;}
 .bar:hover{background:#2a2a2a;transform:translateY(-2px);box-shadow:0 4px 8px rgba(255,152,0,.3);}
 .bar.active{border-color:var(–accent)!important;}
 .bar.playing{background:#0d2e0d!important;border-color:var(–green)!important;}
@@ -99,45 +95,72 @@ touch-action:manipulation;}
 .scale-sug{font-size:8px;color:#90caf9;margin-top:3px;font-style:italic;line-height:1.2;}
 .scale-sug.hidden{display:none;}
 
-/* ── Fretboard ── */
+/* Fretboard */
 .fb-section{background:#1a1a1a;border:2px solid var(–accent);border-radius:8px;
 padding:12px;margin-top:10px;}
-.fb-title{text-align:center;color:var(–accent);margin-bottom:8px;font-size:13px;}
+.fb-title{text-align:center;color:var(–accent);margin-bottom:8px;font-size:13px;min-height:18px;}
 .fretboard{display:flex;flex-direction:column;gap:2px;background:#2a2a2a;
 padding:8px;border-radius:4px;overflow-x:auto;}
 .string{display:flex;gap:1px;align-items:center;}
-.str-lbl{width:25px;text-align:right;color:#888;font-size:12px;font-weight:bold;}
+.str-lbl{width:25px;text-align:right;color:#888;font-size:12px;font-weight:bold;flex-shrink:0;}
 .fret{width:40px;height:32px;background:#3a3a3a;border:1px solid #555;
 display:flex;align-items:center;justify-content:center;font-size:9px;
 color:#666;text-align:center;white-space:pre-wrap;transition:.1s;flex-shrink:0;}
 .fret.hl{font-weight:bold;font-size:10px;border:2px solid #fff;}
 .fret.rt{font-size:11px;}
+/* Fret position markers */
+.fret-markers{display:flex;gap:1px;margin-top:3px;padding-left:26px;}
+.fret-dot{width:40px;height:15px;display:flex;align-items:center;justify-content:center;
+font-size:9px;color:#555;flex-shrink:0;}
+.fret-dot.marked{color:var(–accent);font-weight:bold;}
+/* Functional harmony legend */
+.func-legend{display:none;flex-wrap:wrap;gap:10px;justify-content:center;
+font-size:11px;margin:6px 0;padding:4px 0;}
+.fl-root{color:#ff9800;font-weight:bold;}
+.fl-sub{color:#42a5f5;font-weight:bold;}
+.fl-dom{color:#ef5350;font-weight:bold;}
+.fl-other{color:#ffee58;font-weight:bold;}
+
+/* Scale Library */
+.lib-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:10px;margin-top:10px;}
+.lib-cat{background:#252525;border-radius:6px;padding:10px;}
+.lib-cat-title{color:var(–green);font-size:12px;font-weight:bold;
+margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(–barline);}
+.lib-item{padding:6px 8px;margin:3px 0;background:#1e1e1e;border:1px solid var(–barline);
+border-radius:4px;cursor:pointer;transition:.15s;}
+.lib-item:hover{border-color:var(–accent2);background:#252525;}
+.lib-item.lib-active{border-color:var(–accent);background:#2a1a00;}
+.lib-name{font-size:12px;font-weight:bold;color:var(–ink);}
+.lib-notes{font-size:10px;color:var(–accent2);margin-top:2px;}
+.lib-note{color:var(–ink-dim);font-size:10px;text-align:center;margin-top:6px;}
+
 .legend{text-align:center;color:var(–ink-dim);font-size:11px;margin:6px 0;}
 .info-box{background:#2a2a2a;border-left:4px solid var(–indigo);padding:10px;
 margin-top:10px;border-radius:4px;font-size:11px;line-height:1.6;}
 
 @media(min-width:600px){
 h1{font-size:26px;} .chord{font-size:20px;} .bar{min-height:95px;}
-.fret{width:45px;height:34px;font-size:10px;}
+.fret{width:45px;height:34px;font-size:10px;} .fret-dot{width:45px;}
 }
 @media(min-width:800px){
 body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
 .row{min-width:720px;gap:4px;} .bar{min-height:100px;} .chord{font-size:22px;}
 .fret{width:50px;height:35px;font-size:11px;} .fret.hl{font-size:12px;}
+.fret-dot{width:50px;}
 }
 @media print{body>*{display:none!important;}}
 </style>
 
 </head>
 <body>
-<h1>🎷 Charlie Parker Songbook Trainer v6.0</h1>
+<h1>🎷 Charlie Parker Songbook Trainer v7.0</h1>
 <div class="card">
   <h2>18 Bebop Classics — PRO Edition</h2>
-
   <div class="stats-bar" id="statsBar"></div>
 
-  <details class="filter-panel">
-    <summary>Filter &amp; Search Tunes</summary>
+  <details class="panel filter-panel">
+    <summary>🔍 Filter &amp; Search Tunes</summary>
     <div class="filter-grid">
       <div><label>Form</label>
         <select id="filterForm"><option value="">All Forms</option></select></div>
@@ -149,7 +172,7 @@ body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
     <div class="controls" style="margin-top:8px;margin-bottom:0;">
       <button id="applyFilter" class="btn-ok">Apply</button>
       <button id="clearFilter" class="btn-sec">Clear</button>
-      <span id="filterResults"></span>
+      <span id="filterResults" style="color:var(--ink-dim);font-size:11px;"></span>
     </div>
   </details>
 
@@ -178,24 +201,41 @@ body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
     <div class="play-status" id="playStatus">Ready — generate a lead sheet to begin</div>
   </div>
 
-  <div class="legend">Tap any bar to hear the full chord voicing and view tones on the fretboard · Use Playback Engine to sequence the chart at tempo</div>
+  <div class="legend">Tap any bar to hear the chord or scale · Use Playback to sequence at tempo · Open Scale Library for bebop theory reference</div>
+
   <div id="sheet" class="sheet">
     <div style="text-align:center;color:var(--ink-dim);padding:30px;">Select a tune and click Generate to begin.</div>
   </div>
 
   <div class="fb-section" id="fbSection" style="display:none;">
     <div class="fb-title" id="fbTitle">Select a bar to view chord / scale tones</div>
-    <div class="controls" style="justify-content:center;margin-bottom:8px;">
+    <div class="controls" style="justify-content:center;margin-bottom:6px;flex-wrap:wrap;">
       <button id="toggleMode" class="btn-sec">Mode: Chord Tones</button>
+      <button id="toggleAudio" class="btn-sec">🎵 Audio: Chord</button>
+    </div>
+    <div class="func-legend" id="funcLegend">
+      <span class="fl-root">● Root (I)</span>
+      <span class="fl-sub">● Subdominant (II, IV)</span>
+      <span class="fl-dom">● Dominant (V, VII)</span>
+      <span class="fl-other">● Mediant / Other</span>
     </div>
     <div class="fretboard" id="fretboard"></div>
+    <div class="fret-markers" id="fretMarkers"></div>
   </div>
+
+  <details class="panel scale-lib" style="margin-top:10px;">
+    <summary>📖 Bebop Scale Library — Click any scale to visualise &amp; hear</summary>
+    <div class="lib-note">All scales shown in C as a reference. Functional harmony colouring: <span class="fl-root">Root</span> · <span class="fl-sub">Subdominant</span> · <span class="fl-dom">Dominant</span> · <span class="fl-other">Mediant</span></div>
+    <div class="lib-grid" id="libGrid"></div>
+  </details>
 
   <div class="info-box">
     <strong style="color:var(--accent)">🎯 Practice Tips</strong><br>
     Study Roman numerals for harmonic function · Transpose to all 12 keys ·
-    Focus on ii–V–I patterns and tritone substitutions · Use Playback Engine at slow tempo first ·
-    Note altered dominants and Bird Blues reharmonisations ·
+    Focus on ii–V–I patterns and tritone substitutions · Use Playback at slow tempo first ·
+    Toggle <em>Mode</em> between Chord Tones, Full Scale, and Functional Harmony ·
+    Toggle <em>Audio</em> between Chord Voicing and Scale Run ·
+    Open Scale Library to visualise bebop scales across the neck ·
     <span class="diff-b">B</span> Beginner &nbsp;
     <span class="diff-i">I</span> Intermediate &nbsp;
     <span class="diff-a">A</span> Advanced
@@ -204,12 +244,10 @@ body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
 
 <script>
 /* ============================================================
-   LAYER 1 — ENRICHED SONGBOOK DATA (difficulty · style · structure)
+   SONGBOOK DATA — 18 TUNES (v6.0 data model preserved)
 ============================================================ */
 const SONGS = {
-  "Anthropology":{
-    key:"Bb",form:"AABA",bars:32,
-    difficulty:"Intermediate",style:"Bebop",structure:"Rhythm Changes",
+  "Anthropology":{key:"Bb",form:"AABA",bars:32,difficulty:"Intermediate",style:"Bebop",structure:"Rhythm Changes",
     description:"Bebop contrafact on 'I Got Rhythm' changes",
     progression:[
       [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
@@ -227,11 +265,8 @@ const SONGS = {
       [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
        {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
       [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
-       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}]
-    ]},
-  "Au Privave":{
-    key:"F",form:"Blues",bars:12,
-    difficulty:"Beginner",style:"Blues",structure:"Standard Blues",
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}]]},
+  "Au Privave":{key:"F",form:"Blues",bars:12,difficulty:"Beginner",style:"Blues",structure:"Standard Blues",
     description:"Blues with Bird's characteristic passing chords",
     progression:[
       [{chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"},
@@ -239,11 +274,8 @@ const SONGS = {
       [{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},{chord:"Bdim7",roman:"#IVdim7",scale:"Diminished"},
        {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"D7",roman:"VI7",scale:"Altered"}],
       [{chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},
-       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"C7",roman:"V7",scale:"Altered"}]
-    ]},
-  "Barbados":{
-    key:"F",form:"Blues",bars:12,
-    difficulty:"Beginner",style:"Blues",structure:"Standard Blues",
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"C7",roman:"V7",scale:"Altered"}]]},
+  "Barbados":{key:"F",form:"Blues",bars:12,difficulty:"Beginner",style:"Blues",structure:"Standard Blues",
     description:"Bebop blues with Parker's signature harmonic movement",
     progression:[
       [{chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"},
@@ -251,11 +283,8 @@ const SONGS = {
       [{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},{chord:"Bbm7",roman:"iv7",scale:"Dorian"},
        {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"D7",roman:"VI7",scale:"Altered"}],
       [{chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},
-       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"C7",roman:"V7",scale:"Altered"}]
-    ]},
-  "Billie's Bounce":{
-    key:"F",form:"Blues",bars:12,
-    difficulty:"Beginner",style:"Blues",structure:"Standard Blues",
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"C7",roman:"V7",scale:"Altered"}]]},
+  "Billie's Bounce":{key:"F",form:"Blues",bars:12,difficulty:"Beginner",style:"Blues",structure:"Standard Blues",
     description:"Bebop blues dedicated to Billie Holiday",
     progression:[
       [{chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"},
@@ -263,11 +292,8 @@ const SONGS = {
       [{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},
        {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"Am7b5",roman:"iii°7",scale:"Locrian"}],
       [{chord:"D7",roman:"VI7",scale:"Altered"},{chord:"Gm7",roman:"ii7",scale:"Dorian"},
-       {chord:"C7",roman:"V7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"}]
-    ]},
-  "Bloomdido":{
-    key:"Bb",form:"Blues",bars:12,
-    difficulty:"Intermediate",style:"Blues",structure:"Standard Blues",
+       {chord:"C7",roman:"V7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"}]]},
+  "Bloomdido":{key:"Bb",form:"Blues",bars:12,difficulty:"Intermediate",style:"Blues",structure:"Standard Blues",
     description:"Fast blues featuring characteristic bebop phrasing",
     progression:[
       [{chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"Bb7",roman:"I7",scale:"Mixolydian"},
@@ -275,11 +301,8 @@ const SONGS = {
       [{chord:"Eb7",roman:"IV7",scale:"Mixolydian"},{chord:"Edim7",roman:"#IVdim7",scale:"Diminished"},
        {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"G7",roman:"VI7",scale:"Altered"}],
       [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
-       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"V7",scale:"Altered"}]
-    ]},
-  "Blues for Alice":{
-    key:"F",form:"Blues",bars:12,
-    difficulty:"Advanced",style:"Blues",structure:"Bird Blues",
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"V7",scale:"Altered"}]]},
+  "Blues for Alice":{key:"F",form:"Blues",bars:12,difficulty:"Advanced",style:"Blues",structure:"Bird Blues",
     description:"Bird Blues — bebop reharmonisation of a 12-bar form",
     progression:[
       [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Em7b5",roman:"vii°7",scale:"Locrian"},
@@ -287,11 +310,8 @@ const SONGS = {
       [{chord:"G7",roman:"II7",scale:"Mixolydian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},
        {chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Ab7",roman:"bIII7",scale:"Lydian Dominant"}],
       [{chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},
-       {chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"C7",roman:"V7",scale:"Altered"}]
-    ]},
-  "Cheryl":{
-    key:"Bb",form:"AABA",bars:32,
-    difficulty:"Intermediate",style:"Bebop",structure:"Rhythm Changes",
+       {chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"C7",roman:"V7",scale:"Altered"}]]},
+  "Cheryl":{key:"Bb",form:"AABA",bars:32,difficulty:"Intermediate",style:"Bebop",structure:"Rhythm Changes",
     description:"Contrafact on Rhythm Changes with lyrical melody",
     progression:[
       [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},
@@ -309,11 +329,8 @@ const SONGS = {
       [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},
        {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
       [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
-       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}]
-    ]},
-  "Chi Chi":{
-    key:"Bb",form:"Blues",bars:12,
-    difficulty:"Beginner",style:"Blues",structure:"Standard Blues",
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}]]},
+  "Chi Chi":{key:"Bb",form:"Blues",bars:12,difficulty:"Beginner",style:"Blues",structure:"Standard Blues",
     description:"Blues with bebop passing chords and Bird's signature lines",
     progression:[
       [{chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"Bb7",roman:"I7",scale:"Mixolydian"},
@@ -321,11 +338,8 @@ const SONGS = {
       [{chord:"Eb7",roman:"IV7",scale:"Mixolydian"},{chord:"Edim7",roman:"#IVdim7",scale:"Diminished"},
        {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"G7",roman:"VI7",scale:"Altered"}],
       [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
-       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"Bb7",roman:"I7",scale:"Mixolydian"}]
-    ]},
-  "Confirmation":{
-    key:"F",form:"ABAC",bars:32,
-    difficulty:"Advanced",style:"Bebop",structure:"Original",
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"Bb7",roman:"I7",scale:"Mixolydian"}]]},
+  "Confirmation":{key:"F",form:"ABAC",bars:32,difficulty:"Advanced",style:"Bebop",structure:"Original",
     description:"Fast-tempo bebop original with complex harmony",
     progression:[
       [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Em7b5",roman:"vii°7",scale:"Locrian"},
@@ -343,11 +357,8 @@ const SONGS = {
       [{chord:"D7",roman:"VI7",scale:"Altered"},{chord:"Gm7",roman:"ii7",scale:"Dorian"},
        {chord:"C7",roman:"V7",scale:"Mixolydian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"}],
       [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},
-       {chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"}]
-    ]},
-  "Dewey Square":{
-    key:"Bb",form:"AABA",bars:32,
-    difficulty:"Intermediate",style:"Bebop",structure:"Rhythm Changes",
+       {chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"}]]},
+  "Dewey Square":{key:"Bb",form:"AABA",bars:32,difficulty:"Intermediate",style:"Bebop",structure:"Rhythm Changes",
     description:"Contrafact on Rhythm Changes with unique melodic approach",
     progression:[
       [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
@@ -365,11 +376,8 @@ const SONGS = {
       [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
        {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
       [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
-       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}]
-    ]},
-  "Donna Lee":{
-    key:"Ab",form:"AABA",bars:32,
-    difficulty:"Advanced",style:"Contrafact",structure:"Indiana",
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}]]},
+  "Donna Lee":{key:"Ab",form:"AABA",bars:32,difficulty:"Advanced",style:"Contrafact",structure:"Indiana",
     description:"Fast bebop line attributed to Parker / Miles Davis",
     progression:[
       [{chord:"AbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"F7",roman:"VI7",scale:"Altered"},
@@ -387,11 +395,8 @@ const SONGS = {
       [{chord:"AbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"F7",roman:"VI7",scale:"Altered"},
        {chord:"Bbm7",roman:"ii7",scale:"Dorian"},{chord:"Eb7",roman:"V7",scale:"Mixolydian"}],
       [{chord:"AbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Gm7",roman:"vii7",scale:"Locrian"},
-       {chord:"C7",roman:"III7",scale:"Altered"},{chord:"F7",roman:"VI7",scale:"Mixolydian"}]
-    ]},
-  "Ko-Ko":{
-    key:"Bb",form:"Blues",bars:12,
-    difficulty:"Advanced",style:"Bebop",structure:"Bird Blues",
+       {chord:"C7",roman:"III7",scale:"Altered"},{chord:"F7",roman:"VI7",scale:"Mixolydian"}]]},
+  "Ko-Ko":{key:"Bb",form:"Blues",bars:12,difficulty:"Advanced",style:"Bebop",structure:"Bird Blues",
     description:"Virtuosic bebop — one of Parker's most demanding recordings",
     progression:[
       [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"A7",roman:"VII7",scale:"Altered"},
@@ -399,11 +404,8 @@ const SONGS = {
       [{chord:"C7",roman:"II7",scale:"Mixolydian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
        {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"F7",roman:"V7",scale:"Altered"}],
       [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"A7",roman:"VII7",scale:"Altered"},
-       {chord:"D7",roman:"III7",scale:"Altered"},{chord:"G7",roman:"VI7",scale:"Altered"}]
-    ]},
-  "Moose the Mooche":{
-    key:"Bb",form:"AABA",bars:32,
-    difficulty:"Intermediate",style:"Bebop",structure:"Rhythm Changes",
+       {chord:"D7",roman:"III7",scale:"Altered"},{chord:"G7",roman:"VI7",scale:"Altered"}]]},
+  "Moose the Mooche":{key:"Bb",form:"AABA",bars:32,difficulty:"Intermediate",style:"Bebop",structure:"Rhythm Changes",
     description:"Rhythm Changes variation with Parker's signature phrasing",
     progression:[
       [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
@@ -421,11 +423,8 @@ const SONGS = {
       [{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"G7",roman:"VI7",scale:"Altered"},
        {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"}],
       [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
-       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}]
-    ]},
-  "Now's the Time":{
-    key:"F",form:"Blues",bars:12,
-    difficulty:"Beginner",style:"Blues",structure:"Standard Blues",
+       {chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"BbΔ7",roman:"IΔ7",scale:"Ionian"}]]},
+  "Now's the Time":{key:"F",form:"Blues",bars:12,difficulty:"Beginner",style:"Blues",structure:"Standard Blues",
     description:"Classic F blues — one of Bird's most famous compositions",
     progression:[
       [{chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"},
@@ -433,11 +432,8 @@ const SONGS = {
       [{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},
        {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"}],
       [{chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},
-       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"C7",roman:"V7",scale:"Altered"}]
-    ]},
-  "Ornithology":{
-    key:"G",form:"AABA",bars:32,
-    difficulty:"Intermediate",style:"Contrafact",structure:"How High the Moon",
+       {chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"C7",roman:"V7",scale:"Altered"}]]},
+  "Ornithology":{key:"G",form:"AABA",bars:32,difficulty:"Intermediate",style:"Contrafact",structure:"How High the Moon",
     description:"Bebop contrafact on 'How High the Moon'",
     progression:[
       [{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},
@@ -455,11 +451,8 @@ const SONGS = {
       [{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},
        {chord:"Em7",roman:"vi7",scale:"Dorian"},{chord:"A7",roman:"II7",scale:"Altered"}],
       [{chord:"Am7",roman:"ii7",scale:"Dorian"},{chord:"D7",roman:"V7",scale:"Mixolydian"},
-       {chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"}]
-    ]},
-  "Relaxin' at Camarillo":{
-    key:"Bb",form:"Blues",bars:12,
-    difficulty:"Beginner",style:"Blues",structure:"Standard Blues",
+       {chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"}]]},
+  "Relaxin' at Camarillo":{key:"Bb",form:"Blues",bars:12,difficulty:"Beginner",style:"Blues",structure:"Standard Blues",
     description:"Laid-back blues written during Parker's time in California",
     progression:[
       [{chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"Bb7",roman:"I7",scale:"Mixolydian"},
@@ -467,11 +460,8 @@ const SONGS = {
       [{chord:"Eb7",roman:"IV7",scale:"Mixolydian"},{chord:"Edim7",roman:"#IVdim7",scale:"Diminished"},
        {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"G7",roman:"VI7",scale:"Altered"}],
       [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
-       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"V7",scale:"Altered"}]
-    ]},
-  "Scrapple from the Apple":{
-    key:"F",form:"AABA",bars:32,
-    difficulty:"Intermediate",style:"Bebop",structure:"Rhythm Changes",
+       {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"V7",scale:"Altered"}]]},
+  "Scrapple from the Apple":{key:"F",form:"AABA",bars:32,difficulty:"Intermediate",style:"Bebop",structure:"Rhythm Changes",
     description:"Rhythm Changes variation with Parker's signature melodic line",
     progression:[
       [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},
@@ -489,11 +479,8 @@ const SONGS = {
       [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},
        {chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"}],
       [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"D7",roman:"VI7",scale:"Altered"},
-       {chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"}]
-    ]},
-  "Yardbird Suite":{
-    key:"C",form:"AABA",bars:32,
-    difficulty:"Intermediate",style:"Bebop",structure:"Original",
+       {chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"}]]},
+  "Yardbird Suite":{key:"C",form:"AABA",bars:32,difficulty:"Intermediate",style:"Bebop",structure:"Original",
     description:"One of Parker's most recorded and beloved compositions",
     progression:[
       [{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Fm7",roman:"iv7",scale:"Dorian"},
@@ -511,8 +498,7 @@ const SONGS = {
       [{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Fm7",roman:"iv7",scale:"Dorian"},
        {chord:"Bb7",roman:"bVII7",scale:"Mixolydian"},{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"}],
       [{chord:"Dm7",roman:"ii7",scale:"Dorian"},{chord:"G7",roman:"V7",scale:"Mixolydian"},
-       {chord:"CΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"}]
-    ]}
+       {chord:"CΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"}]]}
 };
 
 /* ============================================================
@@ -545,8 +531,57 @@ function getSectionLabel(form, ri) {
 }
 
 /* ============================================================
-   LAYER 2 — CHORD VOICING AUDIO ENGINE
-   Plays all four chord tones simultaneously instead of just root
+   LAYER 1 — EXPANDED SCALE INTERVAL TABLE
+   Adds bebop scales, harmonic minor, melodic minor, whole tone
+============================================================ */
+const SCALE_IVS = {
+  // Diatonic modes
+  'Ionian':[0,2,4,5,7,9,11],'Dorian':[0,2,3,5,7,9,10],'Phrygian':[0,1,3,5,7,8,10],
+  'Lydian':[0,2,4,6,7,9,11],'Mixolydian':[0,2,4,5,7,9,10],'Aeolian':[0,2,3,5,7,8,10],
+  'Locrian':[0,1,3,5,6,8,10],
+  // Jazz / altered
+  'Altered':[0,1,3,4,6,8,10],'Lydian Dominant':[0,2,4,6,7,9,10],
+  'Diminished':[0,1,3,4,6,7,9,10],'Blues':[0,3,5,6,7,10],
+  // NEW: Bebop scales (characteristic chromatic passing tones)
+  'Major Bebop':[0,2,4,5,7,8,9,11],       // Ionian + ♯5 passing tone
+  'Dominant Bebop':[0,2,4,5,7,9,10,11],   // Mixolydian + maj7 passing tone
+  'Minor Bebop':[0,2,3,4,5,7,9,10],       // Dorian + maj3 passing tone
+  'Dorian Bebop':[0,2,3,4,5,7,9,10],      // Same as Minor Bebop
+  'Harmonic Minor Bebop':[0,2,3,5,7,8,9,11], // Harmonic Minor + nat6 passing tone
+  // NEW: Additional modal / jazz scales
+  'Harmonic Minor':[0,2,3,5,7,8,11],
+  'Melodic Minor':[0,2,3,5,7,9,11],
+  'Whole Tone':[0,2,4,6,8,10],
+  'Phrygian Dominant':[0,1,4,5,7,8,10],
+  'Ionian #5':[0,2,4,5,8,9,11],
+  'Dorian #4':[0,2,3,6,7,9,10],
+  'Lydian #2':[0,3,4,6,7,9,11]
+};
+
+/* ============================================================
+   LAYER 2 — FUNCTIONAL HARMONY COLOUR SYSTEM
+   Complements existing interval colour system as a 3rd fretboard mode
+============================================================ */
+const FUNC_CLASS = {
+  0:'root', 1:'sub', 2:'sub', 3:'other', 4:'other',
+  5:'sub',  6:'sub', 7:'dom', 8:'other', 9:'other',
+  10:'dom', 11:'dom'
+};
+const FUNC_COLORS = { root:'#ff9800', sub:'#42a5f5', dom:'#ef5350', other:'#ffee58' };
+const FUNC_LABEL  = {
+  0:'I',1:'♭II',2:'II',3:'♭III',4:'III',
+  5:'IV',6:'♯IV',7:'V',8:'♯V',9:'VI',10:'♭VII',11:'VII'
+};
+// Existing interval colour system (preserved from v6.0)
+const INT_COLORS = {
+  'R':'#ff9800','♭2':'#00bcd4','2':'#4caf50','♭3':'#00acc1',
+  '3':'#2196f3','4':'#9c27b0','♯4/♭5':'#ab47bc','5':'#f44336',
+  '♯5/♭6':'#e57373','6':'#fafafa','♭7':'#fbc02d','7':'#fff59d'
+};
+const INT_NAMES = {0:'R',1:'♭2',2:'2',3:'♭3',4:'3',5:'4',6:'♯4/♭5',7:'5',8:'♯5/♭6',9:'6',10:'♭7',11:'7'};
+
+/* ============================================================
+   AUDIO ENGINE — Chord voicing + scale run
 ============================================================ */
 const FREQ = {
   'C':261.63,'C#':277.18,'Db':277.18,'D':293.66,'D#':311.13,'Eb':311.13,
@@ -559,25 +594,21 @@ function getCtx() {
   return _actx;
 }
 
-function playChordVoicing(root, chordSymbol, dur = 0.9) {
-  const ctx = getCtx();
-  const base = FREQ[root] || 261.63;
+// LAYER 2A — Four-note chord voicing (preserved from v6.0)
+function playChordVoicing(root, chordSym, dur = 0.9) {
+  const ctx = getCtx(), base = FREQ[root] || 261.63;
   let ivs;
-  if (/Δ|maj7/i.test(chordSymbol))      ivs = [0,4,7,11];
-  else if (/m7b5|ø/.test(chordSymbol))  ivs = [0,3,6,10];
-  else if (/dim/.test(chordSymbol))      ivs = [0,3,6,9];
-  else if (/m7/.test(chordSymbol))       ivs = [0,3,7,10];
-  else                                   ivs = [0,4,7,10]; // dom7
-
+  if (/Δ|maj7/i.test(chordSym))     ivs = [0,4,7,11];
+  else if (/m7b5|ø/.test(chordSym)) ivs = [0,3,6,10];
+  else if (/dim/.test(chordSym))    ivs = [0,3,6,9];
+  else if (/m7/.test(chordSym))     ivs = [0,3,7,10];
+  else                               ivs = [0,4,7,10];
   ctx.resume().then(() => {
     ivs.forEach((semi, i) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.value = base * Math.pow(2, semi / 12);
-      // Stagger attack slightly per voice for a natural piano-like feel
-      const t0 = ctx.currentTime + i * 0.01;
+      osc.type = 'sine'; osc.frequency.value = base * Math.pow(2, semi / 12);
+      const t0 = ctx.currentTime + i * 0.012;
       gain.gain.setValueAtTime(0, t0);
       gain.gain.linearRampToValueAtTime(0.12, t0 + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
@@ -586,25 +617,54 @@ function playChordVoicing(root, chordSymbol, dur = 0.9) {
   });
 }
 
+// LAYER 2B — Descending scale run (from Bebop Trainer)
+function playScaleRun(root, scaleName) {
+  const ctx = getCtx(), base = FREQ[root] || 261.63;
+  const sk = scaleName.split('/')[0].trim();
+  const pattern = SCALE_IVS[sk] || SCALE_IVS['Mixolydian'];
+  // Ascending then back to root an octave up, played descending
+  const asc = [...pattern.map(iv => base * Math.pow(2, iv / 12)), base * 2];
+  const notes = [...asc].reverse();
+  const dur = 60 / 220; // ~220 BPM scale tempo
+  ctx.resume().then(() => {
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine'; osc.frequency.value = freq;
+      const t0 = ctx.currentTime + i * dur;
+      gain.gain.setValueAtTime(0.15, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur * 0.9);
+      osc.start(t0); osc.stop(t0 + dur + 0.05);
+    });
+  });
+}
+
+// LAYER 2C — Library scale playback (ascending, note names as input)
+function playLibraryScale(noteNames) {
+  const ctx = getCtx();
+  const freqs = noteNames.map(n => FREQ[n] || 261.63);
+  freqs.push((FREQ[noteNames[0]] || 261.63) * 2); // octave root
+  const dur = 60 / 200;
+  ctx.resume().then(() => {
+    freqs.forEach((freq, i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine'; osc.frequency.value = freq;
+      const t0 = ctx.currentTime + i * dur;
+      gain.gain.setValueAtTime(0.15, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur * 0.85);
+      osc.start(t0); osc.stop(t0 + dur + 0.05);
+    });
+  });
+}
+
 /* ============================================================
-   FRETBOARD ENGINE (all v5.1 fixes preserved)
+   FRETBOARD ENGINE — 3-mode display with fret position markers
 ============================================================ */
 const STRING_NOTES = ['E','B','G','D','A','E'];
-const INT_COLORS = {
-  'R':'#ff9800','♭2':'#00bcd4','2':'#4caf50','♭3':'#00acc1',
-  '3':'#2196f3','4':'#9c27b0','♯4/♭5':'#ab47bc','5':'#f44336',
-  '♯5/♭6':'#e57373','6':'#fafafa','♭7':'#fbc02d','7':'#fff59d'
-};
-const INT_NAMES = {0:'R',1:'♭2',2:'2',3:'♭3',4:'3',5:'4',6:'♯4/♭5',7:'5',8:'♯5/♭6',9:'6',10:'♭7',11:'7'};
-const SCALE_IVS = {
-  'Ionian':[0,2,4,5,7,9,11],'Dorian':[0,2,3,5,7,9,10],'Phrygian':[0,1,3,5,7,8,10],
-  'Lydian':[0,2,4,6,7,9,11],'Mixolydian':[0,2,4,5,7,9,10],'Aeolian':[0,2,3,5,7,8,10],
-  'Locrian':[0,1,3,5,6,8,10],'Altered':[0,1,3,4,6,8,10],
-  'Lydian Dominant':[0,2,4,6,7,9,10],'Diminished':[0,1,3,4,6,7,9,10],'Blues':[0,3,5,6,7,10]
-};
-
 let lastBarData = null;
-let fbMode = 'chord';
+let fbMode = 'chord'; // 'chord' | 'scale' | 'function'
+let audioMode = 'voicing'; // 'voicing' | 'scale'
 let showScales = false;
 
 function buildFretboard() {
@@ -617,56 +677,176 @@ function buildFretboard() {
     for (let f = 0; f <= 12; f++) {
       const fr = document.createElement('div'); fr.className = 'fret';
       const idx = (NOTE_IDX[s] + f) % 12;
-      fr.dataset.idx      = idx;
-      fr.dataset.fp       = f;
-      fr.dataset.nf       = noteName(idx, true);
-      fr.dataset.ns       = noteName(idx, false);
-      fr.dataset.open     = f === 0 ? s : '';
+      fr.dataset.idx  = idx;
+      fr.dataset.fp   = f;
+      fr.dataset.nf   = noteName(idx, true);
+      fr.dataset.ns   = noteName(idx, false);
+      fr.dataset.open = f === 0 ? s : '';
       if (f === 0) fr.textContent = s;
       row.appendChild(fr);
     }
     fb.appendChild(row);
   });
+  buildFretMarkers();
 }
+
+// LAYER 3 — Fret position markers (3, 5, 7, 9, 12)
+function buildFretMarkers() {
+  const el = document.getElementById('fretMarkers');
+  el.innerHTML = '';
+  for (let f = 0; f <= 12; f++) {
+    const d = document.createElement('div');
+    const isMarked = [3,5,7,9,12].includes(f);
+    d.className = 'fret-dot' + (isMarked ? ' marked' : '');
+    d.textContent = isMarked ? f : '';
+    el.appendChild(d);
+  }
+}
+
 function clearFretboard() {
   document.querySelectorAll('.fret').forEach(fr => {
     fr.className = 'fret'; fr.style.background = ''; fr.style.color = '';
     fr.textContent = fr.dataset.fp === '0' ? fr.dataset.open : '';
   });
 }
+
+function updateFuncLegend() {
+  document.getElementById('funcLegend').style.display =
+    (fbMode === 'function') ? 'flex' : 'none';
+}
+
 function showFretboard(root, scaleName, chordSym) {
   clearFretboard();
   document.getElementById('fbSection').style.display = 'block';
+  updateFuncLegend();
   const uf   = FLAT_KEYS.includes(root) || root.endsWith('b');
   const nKey = uf ? 'nf' : 'ns';
   let pattern, label;
 
   if (fbMode === 'chord') {
-    if (/Δ|maj7/i.test(chordSym))     { pattern=[0,4,7,11]; label=`${root} Maj7 — Chord Tones (R,3,5,7)`; }
-    else if (/m7b5|ø/.test(chordSym)) { pattern=[0,3,6,10]; label=`${root} m7♭5 — Chord Tones (R,♭3,♭5,♭7)`; }
-    else if (/dim/.test(chordSym))    { pattern=[0,3,6,9];  label=`${root} dim — Chord Tones (R,♭3,♭5,♭♭7)`; }
-    else if (/m7/.test(chordSym))     { pattern=[0,3,7,10]; label=`${root} m7 — Chord Tones (R,♭3,5,♭7)`; }
-    else                               { pattern=[0,4,7,10]; label=`${root} Dom7 — Chord Tones (R,3,5,♭7)`; }
+    if (/Δ|maj7/i.test(chordSym))     { pattern=[0,4,7,11]; label=`${root} Maj7 — Chord Tones`; }
+    else if (/m7b5|ø/.test(chordSym)) { pattern=[0,3,6,10]; label=`${root} m7♭5 — Chord Tones`; }
+    else if (/dim/.test(chordSym))    { pattern=[0,3,6,9];  label=`${root} dim — Chord Tones`; }
+    else if (/m7/.test(chordSym))     { pattern=[0,3,7,10]; label=`${root} m7 — Chord Tones`; }
+    else                               { pattern=[0,4,7,10]; label=`${root} Dom7 — Chord Tones`; }
   } else {
     const sk = scaleName.split('/')[0].trim();
     pattern = SCALE_IVS[sk] || SCALE_IVS['Mixolydian'];
-    label = `${root} ${sk} — Full Scale`;
+    label = fbMode === 'function'
+      ? `${root} ${sk} — Functional Harmony`
+      : `${root} ${sk} — Full Scale`;
   }
-
   document.getElementById('fbTitle').textContent = label;
+
   const ri  = NOTE_IDX[root] % 12;
   const tgt = new Set(pattern.map(i => (ri + i) % 12));
 
   document.querySelectorAll('.fret').forEach(fr => {
     const idx = parseInt(fr.dataset.idx, 10);
     if (isNaN(idx) || !tgt.has(idx)) return;
-    const iv  = (idx - ri + 12) % 12;
-    const iNm = INT_NAMES[iv];
+    const iv = (idx - ri + 12) % 12;
     fr.classList.add('hl');
-    fr.textContent      = (fr.dataset[nKey] || fr.dataset.nf) + '\n' + iNm;
-    fr.style.background = INT_COLORS[iNm] || '#4caf50';
+    if (fbMode === 'function') {
+      // LAYER 2 — functional harmony coloring
+      const fc = FUNC_CLASS[iv] || 'other';
+      fr.textContent      = (fr.dataset[nKey] || fr.dataset.nf) + '\n' + FUNC_LABEL[iv];
+      fr.style.background = FUNC_COLORS[fc];
+    } else {
+      // Interval colour system (v6.0)
+      const iNm = INT_NAMES[iv];
+      fr.textContent      = (fr.dataset[nKey] || fr.dataset.nf) + '\n' + iNm;
+      fr.style.background = INT_COLORS[iNm] || '#4caf50';
+    }
+    fr.style.color = '#000';
+    if (iv === 0) fr.classList.add('rt');
+  });
+}
+
+// Scale Library fretboard display — always functional coloring in C reference
+function showLibraryScale(scaleName, noteNames, rootName) {
+  clearFretboard();
+  document.getElementById('fbSection').style.display = 'block';
+  document.getElementById('funcLegend').style.display = 'flex';
+  document.getElementById('fbTitle').textContent = `📖 ${scaleName}  (C reference — functional harmony)`;
+  const rootIdx = NOTE_IDX[rootName] || 0;
+  const noteSet = new Set(noteNames.map(n => (NOTE_IDX[n] + 12) % 12));
+  document.querySelectorAll('.fret').forEach(fr => {
+    const idx = parseInt(fr.dataset.idx, 10);
+    if (isNaN(idx) || !noteSet.has(idx)) return;
+    const iv = (idx - rootIdx + 12) % 12;
+    const fc = FUNC_CLASS[iv] || 'other';
+    fr.classList.add('hl');
+    fr.textContent      = fr.dataset.ns + '\n' + FUNC_LABEL[iv]; // sharps for C reference
+    fr.style.background = FUNC_COLORS[fc];
     fr.style.color      = '#000';
     if (iv === 0) fr.classList.add('rt');
+  });
+}
+
+/* ============================================================
+   LAYER 4 — BEBOP SCALE LIBRARY
+============================================================ */
+const SCALE_LIBRARY = {
+  "Bebop Scales":[
+    {name:"Major Bebop",         notes:["C","D","E","F","G","G#","A","B"],       root:"C"},
+    {name:"Dominant Bebop",      notes:["C","D","E","F","G","A","Bb","B"],       root:"C"},
+    {name:"Minor Bebop",         notes:["C","D","Eb","E","F","G","A","Bb"],      root:"C"},
+    {name:"Dorian Bebop",        notes:["C","D","Eb","E","F","G","A","Bb"],      root:"C"},
+    {name:"Harmonic Minor Bebop",notes:["C","D","Eb","F","G","Ab","A","B"],      root:"C"}
+  ],
+  "Diatonic Modes":[
+    {name:"Ionian (Major)",       notes:["C","D","E","F","G","A","B"],            root:"C"},
+    {name:"Dorian",               notes:["C","D","Eb","F","G","A","Bb"],          root:"C"},
+    {name:"Phrygian",             notes:["C","Db","Eb","F","G","Ab","Bb"],        root:"C"},
+    {name:"Lydian",               notes:["C","D","E","F#","G","A","B"],           root:"C"},
+    {name:"Mixolydian",           notes:["C","D","E","F","G","A","Bb"],           root:"C"},
+    {name:"Aeolian (Nat. Minor)", notes:["C","D","Eb","F","G","Ab","Bb"],         root:"C"},
+    {name:"Locrian",              notes:["C","Db","Eb","F","Gb","Ab","Bb"],       root:"C"}
+  ],
+  "Harmonic Minor & Modes":[
+    {name:"Harmonic Minor",       notes:["C","D","Eb","F","G","Ab","B"],          root:"C"},
+    {name:"Locrian ♮6",          notes:["C","Db","Eb","F","Gb","A","Bb"],        root:"C"},
+    {name:"Ionian #5",            notes:["C","D","E","F","G#","A","B"],           root:"C"},
+    {name:"Dorian #4",            notes:["C","D","Eb","F#","G","A","Bb"],         root:"C"},
+    {name:"Phrygian Dominant",    notes:["C","Db","E","F","G","Ab","Bb"],         root:"C"},
+    {name:"Lydian #2",            notes:["C","D#","E","F#","G","A","B"],          root:"C"},
+    {name:"Altered Diminished",   notes:["C","Db","Eb","E","Gb","Ab","A"],        root:"C"}
+  ],
+  "Altered & Jazz Scales":[
+    {name:"Altered (Superlocrian)",notes:["C","Db","Eb","E","Gb","Ab","Bb"],      root:"C"},
+    {name:"Whole Tone",            notes:["C","D","E","F#","G#","A#"],            root:"C"},
+    {name:"Diminished (H-W)",      notes:["C","Db","Eb","E","F#","G","A","Bb"],  root:"C"},
+    {name:"Diminished (W-H)",      notes:["C","D","Eb","F","Gb","Ab","A","B"],   root:"C"},
+    {name:"Lydian Dominant",       notes:["C","D","E","F#","G","A","Bb"],         root:"C"},
+    {name:"Melodic Minor",         notes:["C","D","Eb","F","G","A","B"],          root:"C"}
+  ]
+};
+
+function buildScaleLibrary() {
+  const grid = document.getElementById('libGrid');
+  grid.innerHTML = '';
+  Object.entries(SCALE_LIBRARY).forEach(([catName, scales]) => {
+    const cat = document.createElement('div'); cat.className = 'lib-cat';
+    const title = document.createElement('div'); title.className = 'lib-cat-title';
+    title.textContent = catName; cat.appendChild(title);
+    scales.forEach(sc => {
+      const item = document.createElement('div'); item.className = 'lib-item';
+      const nm   = document.createElement('div'); nm.className = 'lib-name'; nm.textContent = sc.name;
+      const nts  = document.createElement('div'); nts.className = 'lib-notes';
+      nts.textContent = sc.notes.join(' – ');
+      item.append(nm, nts);
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.lib-item.lib-active').forEach(el => el.classList.remove('lib-active'));
+        item.classList.add('lib-active');
+        buildFretboard(); // reset fretboard first
+        showLibraryScale(sc.name, sc.notes, sc.root);
+        playLibraryScale(sc.notes);
+        // Scroll fretboard into view
+        document.getElementById('fbSection').scrollIntoView({behavior:'smooth',block:'nearest'});
+      });
+      cat.appendChild(item);
+    });
+    grid.appendChild(cat);
   });
 }
 
@@ -682,50 +862,42 @@ function diffBadge(d) {
 function renderLeadSheet(tuneName, targetKey) {
   const tune = SONGS[tuneName];
   if (!tune) return;
-
   stopPlayback();
   lastBarData = null;
   document.getElementById('fbSection').style.display = 'none';
+  document.getElementById('funcLegend').style.display = 'none';
 
   const sheet = document.getElementById('sheet');
   sheet.innerHTML = '';
 
-  // Header
   const hdr = document.createElement('div'); hdr.className = 'tune-header';
   hdr.innerHTML = `${tuneName} &nbsp;—&nbsp; Key of ${targetKey} &nbsp;${diffBadge(tune.difficulty)}`;
   sheet.appendChild(hdr);
 
-  // Metadata strip
   const meta = document.createElement('div'); meta.className = 'tune-meta';
-  meta.innerHTML = [
-    ['Form', tune.form], ['Bars', tune.bars], ['Structure', tune.structure],
-    ['Style', tune.style], ['Original Key', tune.key]
-  ].map(([l,v]) => `<div class="meta-item"><span class="meta-lbl">${l}</span><span class="meta-val">${v}</span></div>`).join('');
+  meta.innerHTML = [['Form',tune.form],['Bars',tune.bars],['Structure',tune.structure],
+    ['Style',tune.style],['Original Key',tune.key]].map(([l,v]) =>
+    `<div class="meta-item"><span class="meta-lbl">${l}</span><span class="meta-val">${v}</span></div>`).join('');
   sheet.appendChild(meta);
 
   let bn = 1;
   tune.progression.forEach((row, ri) => {
     const lbl = getSectionLabel(tune.form, ri);
     if (lbl) { const ld = document.createElement('div'); ld.className = 'section-label'; ld.textContent = lbl; sheet.appendChild(ld); }
-
     const rowDiv = document.createElement('div'); rowDiv.className = 'row';
-
     row.forEach(obj => {
-      const t   = transposeChord(obj, tune.key, targetKey);
+      const t = transposeChord(obj, tune.key, targetKey);
       const bar = document.createElement('div'); bar.className = 'bar';
       bar.dataset.root  = t.chord.match(/^([A-G][b#]?)/)?.[1] || 'C';
       bar.dataset.scale = t.scale;
       bar.dataset.chord = t.chord;
-
       const num = document.createElement('div'); num.className = 'bar-number'; num.textContent = bn++;
-      const ch  = document.createElement('div'); ch.className = 'chord'; ch.textContent = t.chord;
-      const ro  = document.createElement('div'); ro.className = 'roman'; ro.textContent = t.roman;
+      const ch  = document.createElement('div'); ch.className  = 'chord'; ch.textContent = t.chord;
+      const ro  = document.createElement('div'); ro.className  = 'roman'; ro.textContent = t.roman;
       const sc  = document.createElement('div');
       sc.className = showScales ? 'scale-sug' : 'scale-sug hidden'; sc.textContent = t.scale;
       bar.append(num, ch, ro, sc);
-
       bar.addEventListener('click', () => {
-        // If auto-playing, clicking a bar jumps playback to that position
         if (isPlaying) {
           const allBars = Array.from(document.querySelectorAll('#sheet .bar'));
           playIdx = allBars.indexOf(bar);
@@ -734,7 +906,9 @@ function renderLeadSheet(tuneName, targetKey) {
         bar.classList.add('active');
         const { root, scale, chord } = bar.dataset;
         lastBarData = { root, scale, chord };
-        playChordVoicing(root, chord);
+        // Audio mode toggle determines what plays on click
+        if (audioMode === 'voicing') playChordVoicing(root, chord);
+        else playScaleRun(root, scale);
         showFretboard(root, scale, chord);
       });
       rowDiv.appendChild(bar);
@@ -744,12 +918,9 @@ function renderLeadSheet(tuneName, targetKey) {
 }
 
 /* ============================================================
-   LAYER 3 — BPM PLAYBACK ENGINE WITH LOOP
+   PLAYBACK ENGINE (v6.0 preserved — always plays chord voicings)
 ============================================================ */
-let isPlaying   = false;
-let loopEnabled = false;
-let playTimer   = null;
-let playIdx     = 0;
+let isPlaying = false, loopEnabled = false, playTimer = null, playIdx = 0;
 
 function stopPlayback() {
   isPlaying = false;
@@ -761,152 +932,101 @@ function stopPlayback() {
 
 function startPlayback() {
   const bars = Array.from(document.querySelectorAll('#sheet .bar'));
-  if (!bars.length) {
-    document.getElementById('playStatus').textContent = 'Generate a lead sheet first.';
-    return;
-  }
-  isPlaying = true;
-  playIdx   = 0;
+  if (!bars.length) { document.getElementById('playStatus').textContent = 'Generate a lead sheet first.'; return; }
+  isPlaying = true; playIdx = 0;
   document.getElementById('playBtn').textContent = '⏸ Pause';
-
   function tick() {
     if (!isPlaying) return;
     bars.forEach(b => b.classList.remove('playing'));
-
     if (playIdx >= bars.length) {
-      if (loopEnabled) { playIdx = 0; }
+      if (loopEnabled) playIdx = 0;
       else { stopPlayback(); return; }
     }
-
     const bar = bars[playIdx];
     bar.classList.add('playing');
-    bar.scrollIntoView({ behavior:'smooth', block:'nearest' });
-
+    bar.scrollIntoView({behavior:'smooth',block:'nearest'});
     const { root, chord, scale } = bar.dataset;
-    playChordVoicing(root, chord);
-    // Auto-update fretboard during playback
+    playChordVoicing(root, chord); // playback always uses chord voicing
     lastBarData = { root, scale, chord };
-    if (document.getElementById('fbSection').style.display !== 'none') {
-      showFretboard(root, scale, chord);
-    }
+    if (document.getElementById('fbSection').style.display !== 'none') showFretboard(root, scale, chord);
     document.getElementById('playStatus').textContent =
       `♩ Bar ${playIdx + 1} / ${bars.length}${loopEnabled ? ' · Loop ON' : ''}`;
-
     playIdx++;
-    const bpm   = Math.max(40, Math.min(320, parseInt(document.getElementById('bpmInput').value) || 120));
-    const barMs = (60000 / bpm) * 4;
-    playTimer = setTimeout(tick, barMs);
+    const bpm = Math.max(40, Math.min(320, parseInt(document.getElementById('bpmInput').value) || 120));
+    playTimer = setTimeout(tick, (60000 / bpm) * 4);
   }
   tick();
 }
 
-function togglePlayback() {
-  if (isPlaying) stopPlayback();
-  else startPlayback();
-}
-
 /* ============================================================
-   LAYER 4 — FILTER SYSTEM
+   FILTER, STATS & PRINT (v6.0 preserved)
 ============================================================ */
 function getFilteredTunes() {
   const form  = document.getElementById('filterForm').value;
   const diff  = document.getElementById('filterDiff').value;
   const style = document.getElementById('filterStyle').value;
-  return Object.entries(SONGS).filter(([, t]) =>
-    (!form  || t.form === form) &&
-    (!diff  || t.difficulty === diff) &&
-    (!style || t.style === style)
-  );
+  return Object.entries(SONGS).filter(([,t]) =>
+    (!form || t.form === form) && (!diff || t.difficulty === diff) && (!style || t.style === style));
 }
-
 function populateFilters() {
   const forms  = [...new Set(Object.values(SONGS).map(t => t.form))].sort();
-  const diffs  = ['Beginner','Intermediate','Advanced'];
   const styles = [...new Set(Object.values(SONGS).map(t => t.style))].sort();
-
   forms.forEach(v  => { const o = document.createElement('option'); o.value = v; o.textContent = v; document.getElementById('filterForm').appendChild(o); });
-  diffs.forEach(v  => { const o = document.createElement('option'); o.value = v; o.textContent = v; document.getElementById('filterDiff').appendChild(o); });
+  ['Beginner','Intermediate','Advanced'].forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; document.getElementById('filterDiff').appendChild(o); });
   styles.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; document.getElementById('filterStyle').appendChild(o); });
 }
-
 function populateTuneDropdown(filtered = null) {
-  const sel    = document.getElementById('tuneSel');
-  const active = sel.value;
+  const sel = document.getElementById('tuneSel'), active = sel.value;
   sel.innerHTML = '';
-  const entries = (filtered || Object.entries(SONGS)).sort(([a],[b]) => a.localeCompare(b));
-  entries.forEach(([name, t]) => {
+  (filtered || Object.entries(SONGS)).sort(([a],[b]) => a.localeCompare(b)).forEach(([name, t]) => {
     const o = document.createElement('option'); o.value = name;
     o.textContent = `${name}  (${t.key} · ${t.form} · ${t.difficulty.charAt(0)})`;
     sel.appendChild(o);
   });
-  // Restore selection if still present
   if ([...sel.options].some(o => o.value === active)) sel.value = active;
-  return entries;
 }
-
-/* ============================================================
-   STATS BAR
-============================================================ */
 function renderStats(entries = null) {
   const data = entries ? entries.map(([,t])=>t) : Object.values(SONGS);
-  const total = data.length;
-  const beg   = data.filter(t => t.difficulty === 'Beginner').length;
-  const int_  = data.filter(t => t.difficulty === 'Intermediate').length;
-  const adv   = data.filter(t => t.difficulty === 'Advanced').length;
-  const blues = data.filter(t => t.form === 'Blues').length;
-  const aaba  = data.filter(t => t.form === 'AABA').length;
+  const beg = data.filter(t=>t.difficulty==='Beginner').length;
+  const int = data.filter(t=>t.difficulty==='Intermediate').length;
+  const adv = data.filter(t=>t.difficulty==='Advanced').length;
   document.getElementById('statsBar').innerHTML = `
-    <div class="stat-pill">🎷 <strong>${total}</strong> Tunes</div>
-    <div class="stat-pill"><strong>${blues}</strong> Blues · <strong>${aaba}</strong> AABA</div>
-    <div class="stat-pill"><span class="diff-b">B</span> <strong>${beg}</strong> Beginner</div>
-    <div class="stat-pill"><span class="diff-i">I</span> <strong>${int_}</strong> Intermediate</div>
-    <div class="stat-pill"><span class="diff-a">A</span> <strong>${adv}</strong> Advanced</div>`;
+    <div class="stat-pill">🎷 <strong>${data.length}</strong> Tunes</div>
+    <div class="stat-pill"><strong>${data.filter(t=>t.form==='Blues').length}</strong> Blues · <strong>${data.filter(t=>t.form==='AABA').length}</strong> AABA</div>
+    <div class="stat-pill"><span class="diff-b">B</span> <strong>${beg}</strong></div>
+    <div class="stat-pill"><span class="diff-i">I</span> <strong>${int}</strong></div>
+    <div class="stat-pill"><span class="diff-a">A</span> <strong>${adv}</strong></div>
+    <div class="stat-pill">📖 <strong>${Object.values(SCALE_LIBRARY).reduce((a,c)=>a+c.length,0)}</strong> Scales</div>`;
 }
-
-/* ============================================================
-   PRINT — popup window (v5.1 implementation preserved)
-============================================================ */
 function printLeadSheet() {
   const name = document.getElementById('tuneSel').value;
   const key  = document.getElementById('keySel').value;
   const tune = SONGS[name];
   if (!tune) { alert('Generate a lead sheet first.'); return; }
+  let html = `<style>*{box-sizing:border-box;}body{font-family:'Courier New',monospace;padding:10mm;margin:0;background:#fff;color:#000;}
+    h1{text-align:center;font-size:20px;margin:0 0 4px;}.meta{text-align:center;font-size:10px;color:#555;border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:8px;}
+    .sl{font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin:6px 0 2px;}.row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-bottom:1px;}
+    .bar{border:1px solid #ccc;padding:4px;min-height:50px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .bn{position:absolute;top:1px;left:2px;font-size:7px;color:#ccc;}.ch{font-size:17px;font-weight:bold;}.ro{font-size:8px;color:#555;margin-top:2px;}
+    @page{size:A4 portrait;margin:12mm 10mm;}</style>
 
-  let html = `<style>
-    *{box-sizing:border-box;}
-    body{font-family:'Courier New',monospace;padding:10mm;margin:0;background:#fff;color:#000;}
-    h1{text-align:center;font-size:20px;margin:0 0 4px;}
-    .meta{text-align:center;font-size:10px;color:#555;border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:8px;}
-    .sl{font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin:6px 0 2px;}
-    .row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-bottom:1px;}
-    .bar{border:1px solid #ccc;padding:4px;min-height:50px;position:relative;display:flex;
-      flex-direction:column;align-items:center;justify-content:center;}
-    .bn{position:absolute;top:1px;left:2px;font-size:7px;color:#ccc;}
-    .ch{font-size:17px;font-weight:bold;}
-    .ro{font-size:8px;color:#555;margin-top:2px;}
-    @page{size:A4 portrait;margin:12mm 10mm;}
-  </style>
-
-  <h1>🎷 ${name}</h1>
-  <div class="meta">${tune.description} | Form: ${tune.form} | Key: ${key} | ${tune.bars} bars | ${tune.difficulty}</div>`;
+```
+<h1>🎷 ${name}</h1><div class="meta">${tune.description} | Form: ${tune.form} | Key: ${key} | ${tune.bars} bars | ${tune.difficulty}</div>`;
+```
 
 let bn = 1;
 tune.progression.forEach((row, ri) => {
 const lbl = getSectionLabel(tune.form, ri);
 if (lbl) html += `<div class="sl">${lbl}</div>`;
 html += ‘<div class="row">’;
-row.forEach(obj => {
-const t = transposeChord(obj, tune.key, key);
-html += `<div class="bar"><div class="bn">${bn++}</div> <div class="ch">${t.chord}</div><div class="ro">${t.roman}</div></div>`;
-});
+row.forEach(obj => { const t = transposeChord(obj, tune.key, key);
+html += `<div class="bar"><div class="bn">${bn++}</div><div class="ch">${t.chord}</div><div class="ro">${t.roman}</div></div>`; });
 html += ‘</div>’;
 });
-
-const w = window.open(’’, ‘_blank’, ‘width=860,height=1120’);
-if (!w) { alert(‘Please allow pop-ups to enable printing.’); return; }
+const w = window.open(’’,’_blank’,‘width=860,height=1120’);
+if (!w) { alert(‘Allow pop-ups to enable printing.’); return; }
 w.document.write(`<!DOCTYPE html><html><head><title>${name}</title></head><body>${html}</body></html>`);
-w.document.close(); w.focus();
-setTimeout(() => w.print(), 350);
+w.document.close(); w.focus(); setTimeout(() => w.print(), 350);
 }
 
 /* ============================================================
@@ -915,27 +1035,23 @@ INITIALIZATION
 const tuneSel = document.getElementById(‘tuneSel’);
 const keySel  = document.getElementById(‘keySel’);
 
-// Key dropdown
 [‘C’,‘Db’,‘D’,‘Eb’,‘E’,‘F’,‘F#’,‘G’,‘Ab’,‘A’,‘Bb’,‘B’].forEach(k => {
 const o = document.createElement(‘option’); o.value = k; o.textContent = k;
 keySel.appendChild(o);
 });
-
 populateFilters();
 populateTuneDropdown();
 renderStats();
 buildFretboard();
+buildScaleLibrary();
 
-// Auto-set key and re-render when tune changes
 tuneSel.addEventListener(‘change’, () => {
 const t = SONGS[tuneSel.value];
-if (t) { keySel.value = t.key; buildFretboard(); renderLeadSheet(tuneSel.value, keySel.value); }
+if (t) { keySel.value = t.key; buildFretboard(); renderLeadSheet(tuneSel.value, t.key); }
 });
-
 document.getElementById(‘generateBtn’).addEventListener(‘click’, () => {
 if (tuneSel.value) { buildFretboard(); renderLeadSheet(tuneSel.value, keySel.value); }
 });
-
 document.getElementById(‘randomTune’).addEventListener(‘click’, () => {
 const entries = getFilteredTunes();
 if (!entries.length) return;
@@ -943,53 +1059,56 @@ const [name, t] = entries[Math.floor(Math.random() * entries.length)];
 tuneSel.value = name; keySel.value = t.key;
 buildFretboard(); renderLeadSheet(name, t.key);
 });
-
 document.getElementById(‘toggleScales’).addEventListener(‘click’, e => {
 showScales = !showScales;
 e.target.textContent = showScales ? ‘Hide Scales’ : ‘Show Scales’;
-document.querySelectorAll(’.scale-sug’).forEach(s => {
-s.className = showScales ? ‘scale-sug’ : ‘scale-sug hidden’;
-});
+document.querySelectorAll(’.scale-sug’).forEach(s => { s.className = showScales ? ‘scale-sug’ : ‘scale-sug hidden’; });
 });
 
-// Playback
-document.getElementById(‘playBtn’).addEventListener(‘click’, togglePlayback);
+// 3-way fretboard mode cycle
+document.getElementById(‘toggleMode’).addEventListener(‘click’, e => {
+const modes  = [‘chord’,‘scale’,‘function’];
+const labels = [‘Mode: Chord Tones’,‘Mode: Full Scale’,‘Mode: Functional’];
+fbMode = modes[(modes.indexOf(fbMode) + 1) % 3];
+e.target.textContent = labels[modes.indexOf(fbMode)];
+updateFuncLegend();
+if (lastBarData) showFretboard(lastBarData.root, lastBarData.scale, lastBarData.chord);
+});
+
+// Audio mode toggle: chord voicing vs scale run
+document.getElementById(‘toggleAudio’).addEventListener(‘click’, e => {
+audioMode = audioMode === ‘voicing’ ? ‘scale’ : ‘voicing’;
+e.target.textContent = audioMode === ‘voicing’ ? ‘🎵 Audio: Chord’ : ‘🎵 Audio: Scale’;
+e.target.classList.toggle(‘btn-audio-scale’, audioMode === ‘scale’);
+e.target.classList.toggle(‘btn-sec’, audioMode === ‘voicing’);
+});
+
+// Playback controls
+document.getElementById(‘playBtn’).addEventListener(‘click’, () => { if (isPlaying) stopPlayback(); else startPlayback(); });
 document.getElementById(‘stopBtn’).addEventListener(‘click’, stopPlayback);
 document.getElementById(‘loopBtn’).addEventListener(‘click’, e => {
 loopEnabled = !loopEnabled;
 e.target.textContent = loopEnabled ? ‘🔁 Loop: ON’ : ‘🔁 Loop: OFF’;
 e.target.classList.toggle(‘btn-loop-on’, loopEnabled);
 e.target.classList.toggle(‘btn-sec’, !loopEnabled);
-if (isPlaying) document.getElementById(‘playStatus’).textContent =
-`♩ Bar ${playIdx} / ${document.querySelectorAll('#sheet .bar').length}${loopEnabled ? ' · Loop ON' : ''}`;
-});
-
-// Fretboard mode toggle — re-renders current bar
-document.getElementById(‘toggleMode’).addEventListener(‘click’, e => {
-fbMode = fbMode === ‘chord’ ? ‘scale’ : ‘chord’;
-e.target.textContent = fbMode === ‘chord’ ? ‘Mode: Chord Tones’ : ‘Mode: Full Scale’;
-if (lastBarData) showFretboard(lastBarData.root, lastBarData.scale, lastBarData.chord);
 });
 
 // Filters
 document.getElementById(‘applyFilter’).addEventListener(‘click’, () => {
 const entries = getFilteredTunes();
-populateTuneDropdown(entries);
-renderStats(entries);
+populateTuneDropdown(entries); renderStats(entries);
 document.getElementById(‘filterResults’).textContent = `Showing ${entries.length} of ${Object.keys(SONGS).length} tunes`;
 });
 document.getElementById(‘clearFilter’).addEventListener(‘click’, () => {
 [‘filterForm’,‘filterDiff’,‘filterStyle’].forEach(id => document.getElementById(id).value = ‘’);
-populateTuneDropdown();
-renderStats();
+populateTuneDropdown(); renderStats();
 document.getElementById(‘filterResults’).textContent = ‘’;
 });
-
 document.getElementById(‘printBtn’).addEventListener(‘click’, printLeadSheet);
 
-// Load first tune
+// Load on startup
 tuneSel.value = ‘Anthropology’; keySel.value = ‘Bb’;
-renderLeadSheet(‘Anthropology’, ‘Bb’);
+renderLeadSheet(‘Anthropology’,‘Bb’);
 </script>
 
 </body>
