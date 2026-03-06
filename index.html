@@ -11,12 +11,13 @@
   --accent:#ff9800;--accent2:#42a5f5;--barline:#666;--sym:#ffb733;
   --indigo:#6366f1;--green:#4caf50;--red:#ef5350;
 }
-*{box-sizing:border-box;}
-body{margin:0;background:var(---bg);color:var(---ink);font-family:'Courier New',monospace;padding:10px;}
-h1{text-align:center;color:var(---accent);margin:12px 0;font-size:22px;}
-h2{color:var(---accent2);font-size:15px;margin:8px 0 6px 0;}
-.card{background:var(---panel);border:2px solid var(---accent);border-radius:10px;
-  padding:12px;max-width:1200px;margin:0 auto 12px auto;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{margin:0;background:radial-gradient(circle at top,#1f2433 0%,#111827 50%,#090b11 100%);color:var(--ink);font-family:'Courier New',monospace;padding:10px;line-height:1.35;}
+
+h1{text-align:center;color:var(--accent);margin:12px 0;font-size:22px;}
+h2{color:var(--accent2);font-size:15px;margin:8px 0 6px 0;}
+.card{background:rgba(20,24,35,.94);border:1px solid rgba(255,152,0,.65);border-radius:14px;
+  padding:12px;max-width:1200px;margin:0 auto 12px auto;box-shadow:0 12px 24px rgba(0,0,0,.25);backdrop-filter:blur(4px);}
 
 /* Stats */
 .stats-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
@@ -133,6 +134,7 @@ border-radius:4px;cursor:pointer;transition:.15s;}
 .lib-item.lib-active{border-color:var(--accent);background:#2a1a00;}
 .lib-name{font-size:12px;font-weight:bold;color:var(--ink);}
 .lib-notes{font-size:10px;color:var(--accent2);margin-top:2px;}
+.lib-ivs{font-size:10px;color:#fbc02d;margin-top:2px;}
 .lib-note{color:var(--ink-dim);font-size:10px;text-align:center;margin-top:6px;}
 
 .legend{text-align:center;color:var(--ink-dim);font-size:11px;margin:6px 0;}
@@ -148,6 +150,21 @@ body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
 .row{min-width:720px;gap:4px;} .bar{min-height:100px;} .chord{font-size:22px;}
 .fret{width:50px;height:35px;font-size:11px;} .fret.hl{font-size:12px;}
 .fret-dot{width:50px;}
+}
+
+@media(max-width:768px){
+body{padding:8px;} 
+.card{padding:10px;border-radius:12px;}
+.controls{gap:6px;}
+.controls button,.controls select,.controls input{min-height:42px;font-size:14px;padding:10px;}
+.controls label{width:100%;font-size:12px;}
+.row{grid-template-columns:repeat(2,minmax(140px,1fr));min-width:0;}
+.bar{min-height:92px;}
+.tune-meta{gap:4px;}
+.meta-item{font-size:10px;padding:4px 8px;}
+.lib-grid{grid-template-columns:1fr;}
+.fret{width:42px;height:34px;}
+.fret-dot{width:42px;}
 }
 @media print{body>*{display:none!important;}}
 </style>
@@ -172,7 +189,7 @@ body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
     <div class="controls" style="margin-top:8px;margin-bottom:0;">
       <button id="applyFilter" class="btn-ok">Apply</button>
       <button id="clearFilter" class="btn-sec">Clear</button>
-      <span id="filterResults" style="color:var(---ink-dim);font-size:11px;"></span>
+      <span id="filterResults" style="color:var(--ink-dim);font-size:11px;"></span>
     </div>
   </details>
 
@@ -204,7 +221,7 @@ body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
   <div class="legend">Tap any bar to hear the chord or scale · Use Playback to sequence at tempo · Open Scale Library for bebop theory reference</div>
 
   <div id="sheet" class="sheet">
-    <div style="text-align:center;color:var(---ink-dim);padding:30px;">Select a tune and click Generate to begin.</div>
+    <div style="text-align:center;color:var(--ink-dim);padding:30px;">Select a tune and click Generate to begin.</div>
   </div>
 
   <div class="fb-section" id="fbSection" style="display:none;">
@@ -230,7 +247,7 @@ body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
   </details>
 
   <div class="info-box">
-    <strong style="color:var(---accent)">🎯 Practice Tips</strong><br>
+    <strong style="color:var(--accent)">🎯 Practice Tips</strong><br>
     Study Roman numerals for harmonic function · Transpose to all 12 keys ·
     Focus on ii-V-I patterns and tritone substitutions · Use Playback at slow tempo first ·
     Toggle <em>Mode</em> between Chord Tones, Full Scale, and Functional Harmony ·
@@ -579,6 +596,8 @@ const INT_COLORS = {
   '♯5/♭6':'#e57373','6':'#fafafa','♭7':'#fbc02d','7':'#fff59d'
 };
 const INT_NAMES = {0:'R',1:'♭2',2:'2',3:'♭3',4:'3',5:'4',6:'♯4/♭5',7:'5',8:'♯5/♭6',9:'6',10:'♭7',11:'7'};
+const INT_DEGREES = {0:'1',1:'♭2',2:'2',3:'♭3',4:'3',5:'4',6:'♯4',7:'5',8:'♭6',9:'6',10:'♭7',11:'7'};
+function intervalDegree(iv){ return INT_DEGREES[((iv % 12) + 12) % 12] || ''; }
 
 /* ============================================================
    AUDIO ENGINE — Chord voicing + scale run
@@ -754,7 +773,8 @@ function showFretboard(root, scaleName, chordSym) {
     } else {
       // Interval colour system (v6.0)
       const iNm = INT_NAMES[iv];
-      fr.textContent      = (fr.dataset[nKey] || fr.dataset.nf) + '\n' + iNm;
+      const degree = intervalDegree(iv);
+      fr.textContent      = (fr.dataset[nKey] || fr.dataset.nf) + '\n' + degree;
       fr.style.background = INT_COLORS[iNm] || '#4caf50';
     }
     fr.style.color = '#000';
@@ -776,7 +796,7 @@ function showLibraryScale(scaleName, noteNames, rootName) {
     const iv = (idx - rootIdx + 12) % 12;
     const fc = FUNC_CLASS[iv] || 'other';
     fr.classList.add('hl');
-    fr.textContent      = fr.dataset.ns + '\n' + FUNC_LABEL[iv]; // sharps for C reference
+    fr.textContent      = fr.dataset.ns + '\n' + intervalDegree(iv); // sharps for C reference
     fr.style.background = FUNC_COLORS[fc];
     fr.style.color      = '#000';
     if (iv === 0) fr.classList.add('rt');
@@ -834,7 +854,9 @@ function buildScaleLibrary() {
       const nm   = document.createElement('div'); nm.className = 'lib-name'; nm.textContent = sc.name;
       const nts  = document.createElement('div'); nts.className = 'lib-notes';
       nts.textContent = sc.notes.join(' - ');
-      item.append(nm, nts);
+      const ivs = document.createElement('div'); ivs.className = 'lib-ivs';
+      ivs.textContent = `Intervals: ${sc.notes.map(n => intervalDegree((NOTE_IDX[n] - NOTE_IDX[sc.root] + 12) % 12)).join(' - ')}`;
+      item.append(nm, nts, ivs);
       item.addEventListener('click', () => {
         document.querySelectorAll('.lib-item.lib-active').forEach(el => el.classList.remove('lib-active'));
         item.classList.add('lib-active');
@@ -946,11 +968,12 @@ function startPlayback() {
     bar.classList.add('playing');
     bar.scrollIntoView({behavior:'smooth',block:'nearest'});
     const { root, chord, scale } = bar.dataset;
-    playChordVoicing(root, chord); // playback always uses chord voicing
+    if (audioMode === 'voicing') playChordVoicing(root, chord);
+    else playScaleRun(root, scale);
     lastBarData = { root, scale, chord };
     if (document.getElementById('fbSection').style.display !== 'none') showFretboard(root, scale, chord);
     document.getElementById('playStatus').textContent =
-      `♩ Bar ${playIdx + 1} / ${bars.length}${loopEnabled ? ' · Loop ON' : ''}`;
+      `♩ Bar ${playIdx + 1} / ${bars.length}${loopEnabled ? ' · Loop ON' : ''} · ${audioMode === 'voicing' ? 'Chord Audio' : 'Scale Audio'}`;
     playIdx++;
     const bpm = Math.max(40, Math.min(320, parseInt(document.getElementById('bpmInput').value) || 120));
     playTimer = setTimeout(tick, (60000 / bpm) * 4);
