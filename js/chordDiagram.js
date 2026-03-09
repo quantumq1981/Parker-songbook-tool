@@ -139,7 +139,8 @@
           barres: position.barres || [],
           position: position.baseFret || 1,
           frets: position.frets
-        });
+        })
+        .draw();
       log('info', `Rendered voicing tile: ${title || 'Voicing'}.`);
     } catch (err) {
       log('error', `Render failed for ${title || 'Voicing'}.`, err);
