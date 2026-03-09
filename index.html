@@ -799,9 +799,31 @@ const FREQ = {
   'Ab':415.30,'A':440,'A#':466.16,'Bb':466.16,'B':493.88
 };
 let _actx = null;
+let _audioPrimed = false;
 function getCtx() {
   if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
   return _actx;
+}
+
+async function ensureAudioReady() {
+  const ctx = getCtx();
+  if (ctx.state === 'suspended') await ctx.resume();
+  if (_audioPrimed) return true;
+
+  // iOS/mobile browsers can require a short user-gesture-triggered sound before
+  // scheduled playback becomes audible.
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = 880;
+  gain.gain.value = 0.0001;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  const t0 = ctx.currentTime;
+  osc.start(t0);
+  osc.stop(t0 + 0.02);
+  _audioPrimed = true;
+  return true;
 }
 
 // LAYER 2A — Four-note chord voicing (preserved from v6.0)
@@ -820,7 +842,7 @@ function playChordVoicing(root, chordSym, dur = 0.9) {
       osc.type = 'sine'; osc.frequency.value = base * Math.pow(2, semi / 12);
       const t0 = ctx.currentTime + i * 0.012;
       gain.gain.setValueAtTime(0, t0);
-      gain.gain.linearRampToValueAtTime(0.12, t0 + 0.02);
+      gain.gain.linearRampToValueAtTime(0.22, t0 + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
       osc.start(t0); osc.stop(t0 + dur + 0.05);
     });
@@ -842,7 +864,7 @@ function playScaleRun(root, scaleName) {
       osc.connect(gain); gain.connect(ctx.destination);
       osc.type = 'sine'; osc.frequency.value = freq;
       const t0 = ctx.currentTime + i * dur;
-      gain.gain.setValueAtTime(0.15, t0);
+      gain.gain.setValueAtTime(0.22, t0);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur * 0.9);
       osc.start(t0); osc.stop(t0 + dur + 0.05);
     });
@@ -861,7 +883,7 @@ function playLibraryScale(noteNames) {
       osc.connect(gain); gain.connect(ctx.destination);
       osc.type = 'sine'; osc.frequency.value = freq;
       const t0 = ctx.currentTime + i * dur;
-      gain.gain.setValueAtTime(0.15, t0);
+      gain.gain.setValueAtTime(0.22, t0);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur * 0.85);
       osc.start(t0); osc.stop(t0 + dur + 0.05);
     });
@@ -1278,6 +1300,14 @@ async function runCountIn(beats, bpm) {
 async function startPlayback() {
   const bars = Array.from(document.querySelectorAll('#sheet .bar'));
   if (!bars.length) { document.getElementById('playStatus').textContent = 'Generate a lead sheet first.'; return; }
+  try {
+    await ensureAudioReady();
+    setAudioStatus('✅ Audio enabled', true);
+  } catch {
+    setAudioStatus('⚠️ Audio blocked. Tap the page, then press Play again.');
+    document.getElementById('playStatus').textContent = 'Audio is blocked until a user gesture enables it.';
+    return;
+  }
   const bpmInput = document.getElementById('bpmInput');
   if (tempoTrainerEnabled) {
     currentTrainerTier = 0;
@@ -1413,13 +1443,10 @@ function setAudioStatus(message, ready = false) {
 }
 
 function unlockAudio() {
-  const ctx = getCtx();
-  if (ctx.state === 'suspended') {
-    setAudioStatus('🎵 Enabling audio...');
-    ctx.resume().then(() => setAudioStatus('✅ Audio enabled', true));
-    return;
-  }
-  setAudioStatus('✅ Audio enabled', true);
+  setAudioStatus('🎵 Enabling audio...');
+  ensureAudioReady()
+    .then(() => setAudioStatus('✅ Audio enabled', true))
+    .catch(() => setAudioStatus('⚠️ Tap Play to retry audio unlock.'));
 }
 
 document.addEventListener('click', unlockAudio, { once: true, passive: true });
