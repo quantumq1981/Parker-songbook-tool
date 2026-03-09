@@ -13,6 +13,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{margin:0;background:radial-gradient(circle at top,#1f2433 0%,#111827 50%,#090b11 100%);color:var(--ink);font-family:'Courier New',monospace;padding:10px;line-height:1.35;}
+select option{background:#1e1e1e;color:var(--sym);}
 
 h1{text-align:center;color:var(--accent);margin:12px 0;font-size:22px;}
 h2{color:var(--accent2);font-size:15px;margin:8px 0 6px 0;}
@@ -67,6 +68,8 @@ padding:10px 12px;margin-bottom:10px;}
 .playback-bar h3{color:var(--indigo);margin:0 0 8px 0;font-size:13px;}
 .play-status{text-align:center;color:var(--green);font-size:11px;
 margin-top:6px;min-height:16px;letter-spacing:.4px;}
+.audio-status{text-align:center;color:var(--accent2);font-size:11px;min-height:16px;margin-top:4px;}
+.audio-status.ready{color:var(--green);}
 
 /* Lead sheet */
 .sheet{background:var(--panel);border:2px solid var(--accent);border-radius:10px;
@@ -156,7 +159,7 @@ body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
 body{padding:8px;} 
 .card{padding:10px;border-radius:12px;}
 .controls{gap:6px;}
-.controls button,.controls select,.controls input{min-height:42px;font-size:14px;padding:10px;}
+.controls button,.controls select,.controls input{min-height:44px;font-size:14px;padding:10px;}
 .controls label{width:100%;font-size:12px;}
 .row{grid-template-columns:repeat(2,minmax(140px,1fr));min-width:0;}
 .bar{min-height:92px;}
@@ -216,6 +219,7 @@ body{padding:8px;}
       <button id="loopBtn" class="btn-sec">🔁 Loop: OFF</button>
     </div>
     <div class="play-status" id="playStatus">Ready — generate a lead sheet to begin</div>
+    <div class="audio-status" id="audioStatus">🎵 Tap anywhere to enable audio</div>
   </div>
 
   <div class="legend">Tap any bar to hear the chord or scale · Use Playback to sequence at tempo · Open Scale Library for bebop theory reference</div>
@@ -597,6 +601,7 @@ const INT_COLORS = {
 };
 const INT_NAMES = {0:'R',1:'♭2',2:'2',3:'♭3',4:'3',5:'4',6:'♯4/♭5',7:'5',8:'♯5/♭6',9:'6',10:'♭7',11:'7'};
 const INT_DEGREES = {0:'1',1:'♭2',2:'2',3:'♭3',4:'3',5:'4',6:'♯4',7:'5',8:'♭6',9:'6',10:'♭7',11:'7'};
+const INT_NUMERIC = {0:'R',1:'b2',2:'2',3:'b3',4:'3',5:'4',6:'#4',7:'5',8:'b6',9:'6',10:'b7',11:'7'};
 function intervalDegree(iv){ return INT_DEGREES[((iv % 12) + 12) % 12] || ''; }
 
 /* ============================================================
@@ -774,7 +779,7 @@ function showFretboard(root, scaleName, chordSym) {
       // Interval colour system (v6.0)
       const iNm = INT_NAMES[iv];
       const degree = intervalDegree(iv);
-      fr.textContent      = (fr.dataset[nKey] || fr.dataset.nf) + '\n' + degree;
+      fr.textContent      = (fr.dataset[nKey] || fr.dataset.nf) + '\n' + `${degree} (${INT_NUMERIC[iv] || degree})`;
       fr.style.background = INT_COLORS[iNm] || '#4caf50';
     }
     fr.style.color = '#000';
@@ -796,7 +801,8 @@ function showLibraryScale(scaleName, noteNames, rootName) {
     const iv = (idx - rootIdx + 12) % 12;
     const fc = FUNC_CLASS[iv] || 'other';
     fr.classList.add('hl');
-    fr.textContent      = fr.dataset.ns + '\n' + intervalDegree(iv); // sharps for C reference
+    const degree = intervalDegree(iv);
+    fr.textContent      = fr.dataset.ns + '\n' + `${degree} (${INT_NUMERIC[iv] || degree})`; // sharps for C reference
     fr.style.background = FUNC_COLORS[fc];
     fr.style.color      = '#000';
     if (iv === 0) fr.classList.add('rt');
@@ -913,13 +919,16 @@ function renderLeadSheet(tuneName, targetKey) {
       bar.dataset.root  = t.chord.match(/^([A-G][b#]?)/)?.[1] || 'C';
       bar.dataset.scale = t.scale;
       bar.dataset.chord = t.chord;
+      bar.tabIndex = 0;
+      bar.setAttribute('role', 'button');
+      bar.setAttribute('aria-label', `Bar ${bn}: ${t.chord}, ${t.roman}, suggested scale ${t.scale}`);
       const num = document.createElement('div'); num.className = 'bar-number'; num.textContent = bn++;
       const ch  = document.createElement('div'); ch.className  = 'chord'; ch.textContent = t.chord;
       const ro  = document.createElement('div'); ro.className  = 'roman'; ro.textContent = t.roman;
       const sc  = document.createElement('div');
       sc.className = showScales ? 'scale-sug' : 'scale-sug hidden'; sc.textContent = t.scale;
       bar.append(num, ch, ro, sc);
-      bar.addEventListener('click', () => {
+      const selectBar = () => {
         if (isPlaying) {
           const allBars = Array.from(document.querySelectorAll('#sheet .bar'));
           playIdx = allBars.indexOf(bar);
@@ -932,6 +941,13 @@ function renderLeadSheet(tuneName, targetKey) {
         if (audioMode === 'voicing') playChordVoicing(root, chord);
         else playScaleRun(root, scale);
         showFretboard(root, scale, chord);
+      };
+      bar.addEventListener('click', selectBar);
+      bar.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          selectBar();
+        }
       });
       rowDiv.appendChild(bar);
     });
@@ -1055,6 +1071,28 @@ INITIALIZATION
 ============================================================ */
 const tuneSel = document.getElementById('tuneSel');
 const keySel  = document.getElementById('keySel');
+const audioStatusEl = document.getElementById('audioStatus');
+
+function setAudioStatus(message, ready = false) {
+  if (!audioStatusEl) return;
+  audioStatusEl.textContent = message;
+  audioStatusEl.classList.toggle('ready', ready);
+}
+
+function unlockAudio() {
+  const ctx = getCtx();
+  if (ctx.state === 'suspended') {
+    setAudioStatus('🎵 Enabling audio...');
+    ctx.resume().then(() => setAudioStatus('✅ Audio enabled', true));
+    return;
+  }
+  setAudioStatus('✅ Audio enabled', true);
+}
+
+document.addEventListener('click', unlockAudio, { once: true, passive: true });
+document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
+document.addEventListener('keydown', unlockAudio, { once: true });
+
 
 ['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'].forEach(k => {
 const o = document.createElement('option'); o.value = k; o.textContent = k;
@@ -1126,6 +1164,18 @@ populateTuneDropdown(); renderStats();
 document.getElementById('filterResults').textContent = '';
 });
 document.getElementById('printBtn').addEventListener('click', printLeadSheet);
+
+[
+  ['tuneSel','Tune selector'],['keySel','Key selector'],['randomTune','Choose a random tune'],
+  ['generateBtn','Generate lead sheet'],['toggleScales','Toggle scale suggestions'],['printBtn','Print lead sheet'],
+  ['bpmInput','Playback tempo in BPM'],['playBtn','Play progression'],['stopBtn','Stop playback'],
+  ['loopBtn','Toggle loop playback'],['toggleMode','Toggle fretboard mode'],['toggleAudio','Toggle audio mode'],
+  ['applyFilter','Apply tune filters'],['clearFilter','Clear tune filters'],['filterForm','Filter by form'],
+  ['filterDiff','Filter by difficulty'],['filterStyle','Filter by style']
+].forEach(([id,label]) => {
+  const el = document.getElementById(id);
+  if (el) el.setAttribute('aria-label', label);
+});
 
 // Load on startup
 tuneSel.value = 'Anthropology'; keySel.value = 'Bb';
