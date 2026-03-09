@@ -13,3 +13,21 @@ A ready-made curriculum tool for teaching bebop harmony. You can use it to demon
 
 The through-line for all three:
 It bridges the gap between theory on the page and sound on the instrument — which is exactly where most jazz learning breaks down.
+
+## Guitar chord voicing viewer
+
+This app now includes a dynamic chord voicing modal for lead-sheet chords.
+
+- Chord dictionary file: `data/chords.json` (fetched once and cached in memory).
+- Lookup path: lead-sheet chord symbol → parser normalization → dictionary lookup by root/suffix → voicing list.
+- Parser handles aliases such as:
+  - `min7`, `m7`, `-7` → `m7`
+  - `maj7`, `Δ7`, `Δ`, `^7`, `^` → `maj7`
+  - `m`, `min`, `-` → `m`
+  - `dim`, `°` → `dim`
+  - `dim7`, `°7` → `dim7`
+  - `aug`, `+` → `aug`
+  - `m7b5`, `ø`, `ø7` → `m7b5`
+- Slash-chord behavior: slash bass is preserved for display (e.g. `C7/E`) while lookup is done against the main chord (`C7`).
+- Enharmonic limitation: voicing availability depends on dictionary spellings (e.g. some uncommon spellings may map imperfectly).
+- Diagram rendering uses SVGuitar loaded from CDN (`https://cdn.jsdelivr.net/npm/svguitar@2.0.3/dist/svguitar.umd.js`).

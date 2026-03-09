@@ -161,6 +161,21 @@ border-radius:4px;cursor:pointer;transition:.15s;}
 .info-box{background:#2a2a2a;border-left:4px solid var(--indigo);padding:10px;
 margin-top:10px;border-radius:4px;font-size:11px;line-height:1.6;}
 
+/* Chord voicings modal */
+body.modal-open{overflow:hidden;}
+#chordVoicingsModal{position:fixed;inset:0;z-index:9999;}
+#chordVoicingsBackdrop{position:absolute;inset:0;background:rgba(4,8,18,.72);}
+.chord-voicings-panel{position:relative;margin:4vh auto;background:#101725;border:1px solid var(--accent2);
+border-radius:12px;width:min(980px,94vw);max-height:92vh;display:flex;flex-direction:column;padding:12px;}
+.chord-voicings-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;}
+.chord-voicings-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ink-dim);}
+#chordVoicingsClose{background:#1e1e1e;border:1px solid var(--accent);color:var(--sym);border-radius:6px;padding:6px 10px;cursor:pointer;}
+#chordVoicingsBody{overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px;padding-right:4px;}
+.chord-diagram-tile,.chord-diagram-empty{background:#18233a;border:1px solid #355a8f;border-radius:10px;padding:8px;min-height:190px;}
+.chord-diagram-title{font-size:11px;color:var(--accent2);margin-bottom:6px;}
+.chord-voicings-empty{padding:18px;font-size:13px;color:var(--ink-dim);}
+.chord{cursor:pointer;}
+
 @media(min-width:600px){
 h1{font-size:26px;} .chord{font-size:20px;} .bar{min-height:95px;}
 .fret{width:45px;height:34px;font-size:10px;} .fret-dot{width:45px;}
@@ -301,6 +316,12 @@ body{padding:8px;}
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/svguitar@2.0.3/dist/svguitar.umd.js"></script>
+<script src="js/chordParser.js"></script>
+<script src="js/chordDataService.js"></script>
+<script src="js/chordDiagram.js"></script>
+<script src="js/chordVoicingsModal.js"></script>
+<script src="js/chordVoicingsInit.js"></script>
 <script>
 /* ============================================================
    SONGBOOK DATA — 18 TUNES (v6.0 data model preserved)
@@ -1223,6 +1244,9 @@ function renderLeadSheet(tuneName, targetKey) {
       bar.setAttribute('aria-label', `Bar ${bn}: ${t.chord}, ${t.roman}, suggested scale ${t.scale}`);
       const num = document.createElement('div'); num.className = 'bar-number'; num.textContent = bn++;
       const ch  = document.createElement('div'); ch.className  = 'chord'; ch.textContent = t.chord;
+      ch.tabIndex = 0;
+      ch.setAttribute('role', 'button');
+      ch.setAttribute('aria-label', `Open guitar voicings for ${t.chord}`);
       const ro  = document.createElement('div'); ro.className  = 'roman'; ro.textContent = t.roman;
       const sc  = document.createElement('div');
       sc.className = showScales ? 'scale-sug' : 'scale-sug hidden'; sc.textContent = t.scale;
@@ -1243,6 +1267,17 @@ function renderLeadSheet(tuneName, targetKey) {
         updateChordScaleAnalysis(bar);
       };
       bar.addEventListener('click', selectBar);
+      ch.addEventListener('click', e => {
+        e.stopPropagation();
+        openChordVoicingsForSymbol(t.chord, ch);
+      });
+      ch.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          openChordVoicingsForSymbol(t.chord, ch);
+        }
+      });
       bar.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
