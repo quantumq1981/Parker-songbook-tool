@@ -798,67 +798,147 @@ const FREQ = {
   'E':329.63,'F':349.23,'F#':369.99,'Gb':369.99,'G':392,'G#':415.30,
   'Ab':415.30,'A':440,'A#':466.16,'Bb':466.16,'B':493.88
 };
-let _actx = null;
-let _audioPrimed = false;
-function getCtx() {
-  if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
-  return _actx;
+let audioContext = null;
+let audioReady = false;
+let audioUnlockAttempted = false;
+
+function initAudio() {
+  if (audioContext) {
+    if (audioContext.state === 'suspended') {
+      return audioContext.resume().then(() => {
+        console.log('✅ AudioContext resumed:', audioContext.state);
+        audioReady = true;
+        return audioContext;
+      });
+    }
+    return Promise.resolve(audioContext);
+  }
+
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error('Web Audio API not supported');
+    audioContext = new AudioContextClass();
+    console.log('🎵 AudioContext created:', audioContext.state);
+
+    if (audioContext.state === 'suspended') {
+      return audioContext.resume().then(() => {
+        console.log('✅ AudioContext resumed:', audioContext.state);
+        audioReady = true;
+        return audioContext;
+      });
+    }
+
+    audioReady = true;
+    return Promise.resolve(audioContext);
+  } catch (err) {
+    console.error('❌ Audio initialization failed:', err);
+    return Promise.reject(err);
+  }
 }
 
-async function ensureAudioReady() {
-  const ctx = getCtx();
-  if (ctx.state === 'suspended') await ctx.resume();
-  if (_audioPrimed) return true;
+function playTestTone() {
+  return initAudio().then(ctx => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = 440;
 
-  // iOS/mobile browsers can require a short user-gesture-triggered sound before
-  // scheduled playback becomes audible.
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = 'sine';
-  osc.frequency.value = 880;
-  gain.gain.value = 0.0001;
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  const t0 = ctx.currentTime;
-  osc.start(t0);
-  osc.stop(t0 + 0.02);
-  _audioPrimed = true;
-  return true;
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.2, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+    osc.start(now);
+    osc.stop(now + 0.35);
+    console.log('🔊 Test tone played');
+    return true;
+  }).catch(err => {
+    console.error('❌ Test tone failed:', err);
+    return false;
+  });
+}
+
+function ensureAudioReady() {
+  return initAudio().then(() => {
+    audioReady = true;
+    return true;
+  }).catch(err => {
+    audioReady = false;
+    throw err;
+  });
+}
+
+function enableAudio() {
+  if (audioUnlockAttempted && audioReady) {
+    return Promise.resolve(true);
+  }
+  audioUnlockAttempted = true;
+  setAudioStatus('🎵 Enabling audio...');
+  return initAudio()
+    .then(() => playTestTone())
+    .then(success => {
+      if (!success) throw new Error('Audio test tone did not play');
+      audioReady = true;
+      setAudioStatus('✅ Audio ready — tap bars to hear chords', true);
+      return true;
+    })
+    .catch(err => {
+      audioReady = false;
+      console.error('❌ Audio enable failed:', err);
+      setAudioStatus('⚠️ Audio failed to enable. Tap again to retry.');
+      return false;
+    });
 }
 
 // LAYER 2A — Four-note chord voicing (preserved from v6.0)
-function playChordVoicing(root, chordSym, dur = 0.9) {
-  const ctx = getCtx(), base = FREQ[root] || 261.63;
+function playChordVoicing(root, chordSym, dur = 1.0) {
+  if (!audioReady) {
+    console.warn('⚠️ Audio not ready - attempting auto-enable');
+    enableAudio();
+    return;
+  }
+  const base = FREQ[root] || 261.63;
   let ivs;
   if (/Δ|maj7/i.test(chordSym))     ivs = [0,4,7,11];
   else if (/m7b5|ø/.test(chordSym)) ivs = [0,3,6,10];
   else if (/dim/.test(chordSym))    ivs = [0,3,6,9];
   else if (/m7/.test(chordSym))     ivs = [0,3,7,10];
   else                               ivs = [0,4,7,10];
-  ctx.resume().then(() => {
+
+  initAudio().then(ctx => {
+    console.log(`🎵 Playing ${root}${chordSym}:`, ivs);
     ivs.forEach((semi, i) => {
       const osc = ctx.createOscillator(), gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
       osc.type = 'sine'; osc.frequency.value = base * Math.pow(2, semi / 12);
-      const t0 = ctx.currentTime + i * 0.012;
+      const t0 = ctx.currentTime + i * 0.015;
       gain.gain.setValueAtTime(0, t0);
-      gain.gain.linearRampToValueAtTime(0.22, t0 + 0.02);
+      gain.gain.linearRampToValueAtTime(0.15, t0 + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-      osc.start(t0); osc.stop(t0 + dur + 0.05);
+      osc.start(t0); osc.stop(t0 + dur + 0.1);
     });
+  }).catch(err => {
+    console.error('❌ Chord playback error:', err);
   });
 }
 
 // LAYER 2B — Descending scale run (from Bebop Trainer)
 function playScaleRun(root, scaleName) {
-  const ctx = getCtx(), base = FREQ[root] || 261.63;
+  if (!audioReady) {
+    console.warn('⚠️ Audio not ready - attempting auto-enable for scale playback');
+    enableAudio();
+    return;
+  }
+  const base = FREQ[root] || 261.63;
   const sk = scaleName.split('/')[0].trim();
   const pattern = SCALE_IVS[sk] || SCALE_IVS['Mixolydian'];
   // Ascending then back to root an octave up, played descending
   const asc = [...pattern.map(iv => base * Math.pow(2, iv / 12)), base * 2];
   const notes = [...asc].reverse();
   const dur = 60 / 220; // ~220 BPM scale tempo
-  ctx.resume().then(() => {
+  initAudio().then(ctx => {
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator(), gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
@@ -868,16 +948,22 @@ function playScaleRun(root, scaleName) {
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur * 0.9);
       osc.start(t0); osc.stop(t0 + dur + 0.05);
     });
+  }).catch(err => {
+    console.error('❌ Scale playback error:', err);
   });
 }
 
 // LAYER 2C — Library scale playback (ascending, note names as input)
 function playLibraryScale(noteNames) {
-  const ctx = getCtx();
+  if (!audioReady) {
+    console.warn('⚠️ Audio not ready - attempting auto-enable for library scale playback');
+    enableAudio();
+    return;
+  }
   const freqs = noteNames.map(n => FREQ[n] || 261.63);
   freqs.push((FREQ[noteNames[0]] || 261.63) * 2); // octave root
   const dur = 60 / 200;
-  ctx.resume().then(() => {
+  initAudio().then(ctx => {
     freqs.forEach((freq, i) => {
       const osc = ctx.createOscillator(), gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
@@ -887,6 +973,8 @@ function playLibraryScale(noteNames) {
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur * 0.85);
       osc.start(t0); osc.stop(t0 + dur + 0.05);
     });
+  }).catch(err => {
+    console.error('❌ Library scale playback error:', err);
   });
 }
 
@@ -1300,11 +1388,8 @@ async function runCountIn(beats, bpm) {
 async function startPlayback() {
   const bars = Array.from(document.querySelectorAll('#sheet .bar'));
   if (!bars.length) { document.getElementById('playStatus').textContent = 'Generate a lead sheet first.'; return; }
-  try {
-    await ensureAudioReady();
-    setAudioStatus('✅ Audio enabled', true);
-  } catch {
-    setAudioStatus('⚠️ Audio blocked. Tap the page, then press Play again.');
+  const audioEnabled = await enableAudio();
+  if (!audioEnabled) {
     document.getElementById('playStatus').textContent = 'Audio is blocked until a user gesture enables it.';
     return;
   }
@@ -1443,15 +1528,12 @@ function setAudioStatus(message, ready = false) {
 }
 
 function unlockAudio() {
-  setAudioStatus('🎵 Enabling audio...');
-  ensureAudioReady()
-    .then(() => setAudioStatus('✅ Audio enabled', true))
-    .catch(() => setAudioStatus('⚠️ Tap Play to retry audio unlock.'));
+  enableAudio();
 }
 
-document.addEventListener('click', unlockAudio, { once: true, passive: true });
-document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
-document.addEventListener('keydown', unlockAudio, { once: true });
+document.addEventListener('click', unlockAudio, { passive: true });
+document.addEventListener('touchstart', unlockAudio, { passive: true });
+document.addEventListener('keydown', unlockAudio);
 
 
 ['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'].forEach(k => {
