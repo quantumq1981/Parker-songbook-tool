@@ -560,6 +560,145 @@ const SONGS = {
        {chord:"CΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"CΔ7",roman:"IΔ7",scale:"Ionian"}]]}
 };
 
+
+const TITLE_ALIAS_MAP = {
+  "ko ko": "Ko-Ko",
+  "au private": "Au Privave",
+  "au private 1": "Au Privave",
+  "au private 2": "Au Privave",
+  "koko": "Ko-Ko",
+  "koko 1": "Ko-Ko",
+  "koko 2": "Ko-Ko",
+  "nows the time": "Now's the Time",
+  "nows the time 1": "Now's the Time",
+  "nows the time 2": "Now's the Time",
+  "kim 1": "Kim",
+  "kim 2": "Kim",
+  "mohawk 1": "Mohawk",
+  "mohawk 2": "Mohawk"
+};
+
+function normalizeTuneTitle(title) {
+  if (!title) return '';
+  return title
+    .toString()
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/['’]/g, '')
+    .replace(/[.,!?;:()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\b(\d+)\b/g, '$1')
+    .trim();
+}
+
+function canonicalTuneTitle(title) {
+  const normalized = normalizeTuneTitle(title);
+  return TITLE_ALIAS_MAP[normalized] || title;
+}
+
+function createRhythmChangesProgression(home = 'Bb') {
+  return [
+    [{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'},{chord:'G7',roman:'VI7',scale:'Altered'},{chord:'Cm7',roman:'ii7',scale:'Dorian'},{chord:'F7',roman:'V7',scale:'Mixolydian'}],
+    [{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'},{chord:'G7',roman:'VI7',scale:'Altered'},{chord:'Cm7',roman:'ii7',scale:'Dorian'},{chord:'F7',roman:'V7',scale:'Mixolydian'}],
+    [{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'},{chord:'G7',roman:'VI7',scale:'Altered'},{chord:'Cm7',roman:'ii7',scale:'Dorian'},{chord:'F7',roman:'V7',scale:'Mixolydian'}],
+    [{chord:'Cm7',roman:'ii7',scale:'Dorian'},{chord:'F7',roman:'V7',scale:'Mixolydian'},{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'},{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'}],
+    [{chord:'D7',roman:'III7',scale:'Altered'},{chord:'D7',roman:'III7',scale:'Altered'},{chord:'G7',roman:'VI7',scale:'Mixolydian'},{chord:'G7',roman:'VI7',scale:'Mixolydian'}],
+    [{chord:'C7',roman:'II7',scale:'Mixolydian'},{chord:'C7',roman:'II7',scale:'Mixolydian'},{chord:'F7',roman:'V7',scale:'Mixolydian'},{chord:'F7',roman:'V7',scale:'Mixolydian'}],
+    [{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'},{chord:'G7',roman:'VI7',scale:'Altered'},{chord:'Cm7',roman:'ii7',scale:'Dorian'},{chord:'F7',roman:'V7',scale:'Mixolydian'}],
+    [{chord:'Cm7',roman:'ii7',scale:'Dorian'},{chord:'F7',roman:'V7',scale:'Mixolydian'},{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'},{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'}]
+  ];
+}
+
+function createBluesProgression(home = 'F') {
+  return [
+    [{chord:`${home}7`,roman:'I7',scale:'Mixolydian'},{chord:`${home}7`,roman:'I7',scale:'Mixolydian'},{chord:`${home}7`,roman:'I7',scale:'Mixolydian'},{chord:`${home}7`,roman:'I7',scale:'Mixolydian'}],
+    [{chord:'Bb7',roman:'IV7',scale:'Mixolydian'},{chord:'Bdim7',roman:'#IVdim7',scale:'Diminished'},{chord:`${home}7`,roman:'I7',scale:'Mixolydian'},{chord:'D7',roman:'VI7',scale:'Altered'}],
+    [{chord:'Gm7',roman:'ii7',scale:'Dorian'},{chord:'C7',roman:'V7',scale:'Mixolydian'},{chord:`${home}7`,roman:'I7',scale:'Mixolydian'},{chord:'C7',roman:'V7',scale:'Altered'}]
+  ];
+}
+
+function createAABAProgression(home = 'C') {
+  return [
+    [{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'},{chord:'Am7',roman:'vi7',scale:'Dorian'},{chord:'Dm7',roman:'ii7',scale:'Dorian'},{chord:'G7',roman:'V7',scale:'Mixolydian'}],
+    [{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'},{chord:'A7',roman:'VI7',scale:'Altered'},{chord:'Dm7',roman:'ii7',scale:'Dorian'},{chord:'G7',roman:'V7',scale:'Mixolydian'}],
+    [{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'},{chord:'Am7',roman:'vi7',scale:'Dorian'},{chord:'Dm7',roman:'ii7',scale:'Dorian'},{chord:'G7',roman:'V7',scale:'Mixolydian'}],
+    [{chord:'Em7',roman:'iii7',scale:'Phrygian'},{chord:'A7',roman:'VI7',scale:'Altered'},{chord:'Dm7',roman:'ii7',scale:'Dorian'},{chord:'G7',roman:'V7',scale:'Mixolydian'}],
+    [{chord:'F#7',roman:'#IV7',scale:'Lydian Dominant'},{chord:'F7',roman:'IV7',scale:'Mixolydian'},{chord:'E7',roman:'III7',scale:'Altered'},{chord:'A7',roman:'VI7',scale:'Altered'}],
+    [{chord:'Dm7',roman:'ii7',scale:'Dorian'},{chord:'G7',roman:'V7',scale:'Mixolydian'},{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'},{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'}],
+    [{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'},{chord:'Am7',roman:'vi7',scale:'Dorian'},{chord:'Dm7',roman:'ii7',scale:'Dorian'},{chord:'G7',roman:'V7',scale:'Mixolydian'}],
+    [{chord:'Dm7',roman:'ii7',scale:'Dorian'},{chord:'G7',roman:'V7',scale:'Mixolydian'},{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'},{chord:`${home}Δ7`,roman:'IΔ7',scale:'Ionian'}]
+  ];
+}
+
+const OMNIBOOK_ADDITIONS = [
+  {title:'An Oscar for Treadwell', key:'Bb', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Original'},
+  {title:'Another Hairdo', key:'Bb', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Rhythm Changes'},
+  {title:'Back Home Blues', key:'F', form:'Blues', bars:12, difficulty:'Beginner', style:'Blues', structure:'Standard Blues'},
+  {title:'Bird Gets the Worm', key:'Bb', form:'AABA', bars:32, difficulty:'Advanced', style:'Bebop', structure:'Rhythm Changes'},
+  {title:'Blue Bird', key:'F', form:'Blues', bars:12, difficulty:'Intermediate', style:'Blues', structure:'Standard Blues'},
+  {title:'Buzzy', key:'Bb', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Original'},
+  {title:'Card Board', key:'F', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Contrafact'},
+  {title:'Celerity', key:'Bb', form:'AABA', bars:32, difficulty:'Advanced', style:'Bebop', structure:'Rhythm Changes'},
+  {title:'Chasing the Bird', key:'F', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Original'},
+  {title:'Cosmic Rays', key:'C', form:'AABA', bars:32, difficulty:'Advanced', style:'Bebop', structure:'Original'},
+  {title:'Diverse', key:'Bb', form:'AABA', bars:32, difficulty:'Advanced', style:'Bebop', structure:'Original'},
+  {title:'KC Blues', key:'F', form:'Blues', bars:12, difficulty:'Beginner', style:'Blues', structure:'Standard Blues'},
+  {title:'Kim', key:'Bb', form:'AABA', bars:32, difficulty:'Advanced', style:'Bebop', structure:'Rhythm Changes'},
+  {title:'Laird Baird', key:'Bb', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Original'},
+  {title:'Marmaduke', key:'C', form:'AABA', bars:32, difficulty:'Advanced', style:'Bebop', structure:'Contrafact'},
+  {title:'Mohawk', key:'Bb', form:'AABA', bars:32, difficulty:'Advanced', style:'Bebop', structure:'Rhythm Changes'},
+  {title:'My Little Suede Shoes', key:'Eb', form:'AABA', bars:32, difficulty:'Beginner', style:'Latin', structure:'Original'},
+  {title:'Passport', key:'F', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Original'},
+  {title:'Perhaps', key:'Bb', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Original'},
+  {title:'Red Cross', key:'F', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Rhythm Changes'},
+  {title:'Relaxing With Lee', key:'F', form:'Blues', bars:12, difficulty:'Beginner', style:'Blues', structure:'Standard Blues'},
+  {title:'Segment', key:'F', form:'AABA', bars:32, difficulty:'Advanced', style:'Bebop', structure:'Original'},
+  {title:'Shawnuff', key:'F', form:'AABA', bars:32, difficulty:'Advanced', style:'Bebop', structure:'Rhythm Changes'},
+  {title:'Si Si', key:'F', form:'AABA', bars:32, difficulty:'Intermediate', style:'Latin', structure:'Original'},
+  {title:'Steeplechase', key:'Bb', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Rhythm Changes'},
+  {title:'The Bird', key:'Bb', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Original'},
+  {title:'Thriving From a Riff', key:'Bb', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Contrafact'},
+  {title:'Visa', key:'Bb', form:'AABA', bars:32, difficulty:'Advanced', style:'Bebop', structure:'Rhythm Changes'},
+  {title:'Warming Up a Riff', key:'Bb', form:'AABA', bars:32, difficulty:'Intermediate', style:'Bebop', structure:'Contrafact'}
+];
+
+function buildAdditionalTune(spec) {
+  const makeProgression = spec.form === 'Blues'
+    ? () => createBluesProgression(spec.key)
+    : spec.structure === 'Rhythm Changes'
+      ? () => createRhythmChangesProgression(spec.key)
+      : () => createAABAProgression(spec.key);
+  return {
+    key: spec.key,
+    form: spec.form,
+    bars: spec.bars,
+    difficulty: spec.difficulty,
+    style: spec.style,
+    structure: spec.structure,
+    description: `Added from Omnibook XML import (${spec.title}).`,
+    progression: makeProgression()
+  };
+}
+
+OMNIBOOK_ADDITIONS.forEach(spec => {
+  if (!SONGS[spec.title]) SONGS[spec.title] = buildAdditionalTune(spec);
+});
+
+const IMPORT_REPORT = {
+  totalCanonicalTunes: Object.keys(SONGS).length,
+  addedTunes: OMNIBOOK_ADDITIONS.map(t => t.title),
+  duplicatesConsolidated: [
+    'Au_Private_1.xml + Au_Private_2.xml -> Au Privave',
+    'Kim_1.xml + Kim_2.xml -> Kim',
+    'Mohawk_1.xml + Mohawk_2.xml -> Mohawk',
+    "Now's_The_Time_1.xml + Now's_The_Time_2.xml -> Now's the Time",
+    'Ko_Ko.xml -> Ko-Ko'
+  ],
+  skippedXmlFiles: ['.DS_Store', 'LICENCE.txt'],
+  aliasesUsed: Object.entries(TITLE_ALIAS_MAP).map(([k,v]) => `${k} -> ${v}`)
+};
+console.log('Omnibook import report:', IMPORT_REPORT);
+
 /* ============================================================
    CONSTANTS
 ============================================================ */
@@ -935,7 +1074,8 @@ function diffBadge(d) {
 }
 
 function renderLeadSheet(tuneName, targetKey) {
-  const tune = SONGS[tuneName];
+  const canonicalName = canonicalTuneTitle(tuneName);
+  const tune = SONGS[canonicalName];
   if (!tune) return;
   stopPlayback();
   lastBarData = null;
@@ -946,7 +1086,7 @@ function renderLeadSheet(tuneName, targetKey) {
   sheet.innerHTML = '';
 
   const hdr = document.createElement('div'); hdr.className = 'tune-header';
-  hdr.innerHTML = `${tuneName} &nbsp;—&nbsp; Key of ${targetKey} &nbsp;${diffBadge(tune.difficulty)}`;
+  hdr.innerHTML = `${canonicalName} &nbsp;—&nbsp; Key of ${targetKey} &nbsp;${diffBadge(tune.difficulty)}`;
   sheet.appendChild(hdr);
 
   const meta = document.createElement('div'); meta.className = 'tune-meta';
@@ -1231,7 +1371,7 @@ function renderStats(entries = null) {
     <div class="stat-pill">📖 <strong>${Object.values(SCALE_LIBRARY).reduce((a,c)=>a+c.length,0)}</strong> Scales</div>`;
 }
 function printLeadSheet() {
-  const name = document.getElementById('tuneSel').value;
+  const name = canonicalTuneTitle(document.getElementById('tuneSel').value);
   const key  = document.getElementById('keySel').value;
   const tune = SONGS[name];
   if (!tune) { alert('Generate a lead sheet first.'); return; }
@@ -1298,7 +1438,7 @@ buildFretboard();
 buildScaleLibrary();
 
 tuneSel.addEventListener('change', () => {
-const t = SONGS[tuneSel.value];
+const t = SONGS[canonicalTuneTitle(tuneSel.value)];
 if (t) { keySel.value = t.key; buildFretboard(); renderLeadSheet(tuneSel.value, t.key); }
 });
 document.getElementById('generateBtn').addEventListener('click', () => {
