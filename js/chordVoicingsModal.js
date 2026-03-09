@@ -34,7 +34,9 @@
 
     closeBtn.addEventListener('click', close);
     backdrop.addEventListener('click', close);
-    toggleEl.addEventListener('change', rerender);
+    toggleEl.addEventListener('change', () => {
+      rerender();
+    });
     modal.addEventListener('keydown', trapFocus);
   }
 
@@ -54,7 +56,7 @@
     }
   }
 
-  function rerender() {
+  async function rerender() {
     const filtered = toggleEl.checked
       ? global.ChordDataService.filterJazzVoicings(state.positions)
       : state.positions;
@@ -65,10 +67,19 @@
       return;
     }
     countEl.textContent = `${filtered.length} voicings`;
-    filtered.forEach((position, idx) => {
+    const renderTasks = filtered.map((position, idx) => {
       const tile = document.createElement('div');
       body.appendChild(tile);
-      global.ChordDiagram.renderChordDiagram(tile, { title: `${state.symbol} #${idx + 1}`, position });
+      return global.ChordDiagram.renderChordDiagram(tile, { title: `${state.symbol} #${idx + 1}`, position });
+    });
+
+    Promise.allSettled(renderTasks).then((results) => {
+      const failed = results.filter((result) => result.status === 'rejected');
+      if (failed.length) {
+        console.error('[ChordVoicingsModal] Some chord diagrams failed to render.', failed);
+      } else {
+        console.info(`[ChordVoicingsModal] Rendered ${results.length} diagram(s) for ${state.symbol}.`);
+      }
     });
   }
 
