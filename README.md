@@ -30,4 +30,4 @@ This app now includes a dynamic chord voicing modal for lead-sheet chords.
   - `m7b5`, `ø`, `ø7` → `m7b5`
 - Slash-chord behavior: slash bass is preserved for display (e.g. `C7/E`) while lookup is done against the main chord (`C7`).
 - Enharmonic limitation: voicing availability depends on dictionary spellings (e.g. some uncommon spellings may map imperfectly).
-- Diagram rendering uses SVGuitar loaded from CDN (`https://cdn.jsdelivr.net/npm/svguitar@2.0.3/dist/svguitar.umd.js`).
+- Diagram rendering uses a bundled local SVGuitar UMD build at `./js/svguitar.umd.js` for GitHub Pages/mobile reliability (no CDN dependency at runtime).

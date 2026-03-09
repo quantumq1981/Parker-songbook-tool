@@ -32,7 +32,15 @@
 
   global.openChordVoicingsForSymbol = openChordVoicingsForSymbol;
   document.addEventListener('DOMContentLoaded', () => {
+    console.info('[ChordVoicingsInit] DOM ready. Initializing chord voicings dependencies.');
     global.ChordVoicingsModal.ensureModal();
-    global.ChordDataService.loadChordData().catch(() => {});
+    global.ChordDataService.loadChordData().catch((error) => {
+      console.error('[ChordVoicingsInit] Failed to preload chord data.', error);
+    });
+    if (global.ChordDiagram && typeof global.ChordDiagram.waitForSvguitar === 'function') {
+      global.ChordDiagram.waitForSvguitar()
+        .then(() => console.info('[ChordVoicingsInit] SVGuitar dependency is ready.'))
+        .catch((error) => console.error('[ChordVoicingsInit] SVGuitar dependency failed to load.', error));
+    }
   });
 })(typeof window !== 'undefined' ? window : globalThis);
