@@ -70,6 +70,19 @@ padding:10px 12px;margin-bottom:10px;}
 margin-top:6px;min-height:16px;letter-spacing:.4px;}
 .audio-status{text-align:center;color:var(--accent2);font-size:11px;min-height:16px;margin-top:4px;}
 .audio-status.ready{color:var(--green);}
+.playback-progress{height:10px;background:#111;border:1px solid var(--barline);border-radius:999px;margin-top:8px;overflow:hidden;}
+.playback-progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--green));transition:width .2s ease;}
+.metro-indicator{display:none;text-align:center;font-size:11px;color:#ddd;margin-top:6px;}
+.metro-indicator.active{display:block;}
+.metro-indicator.flash{color:var(--accent);}
+
+.analysis-panel{margin-top:10px;background:#1b2233;border:1px solid #355a8f;border-radius:8px;padding:8px;}
+.analysis-title{font-size:12px;color:#9fd2ff;font-weight:bold;margin-bottom:6px;}
+.analysis-row{font-size:11px;color:#d2e6ff;margin:2px 0;}
+.analysis-chip{display:inline-block;padding:1px 6px;border-radius:12px;margin-right:4px;font-size:10px;}
+.chip-color{background:#1f3d21;color:#8fe692;}
+.chip-avoid{background:#451d1d;color:#ff9e9e;}
+.chip-tension{background:#2e2450;color:#c2abff;}
 
 /* Lead sheet */
 .sheet{background:var(--panel);border:2px solid var(--accent);border-radius:10px;
@@ -93,6 +106,10 @@ padding:8px 4px;background:#1e1e1e;border-radius:6px;position:relative;touch-act
 .bar.active{border-color:var(--accent)!important;}
 .bar.playing{background:#0d2e0d!important;border-color:var(--green)!important;}
 .bar.playing .chord{color:var(--green)!important;}
+.bar.loop-target{border-color:var(--accent2)!important;box-shadow:0 0 0 1px var(--accent2) inset;}
+.bar.pattern-iivi{background:#2b203d;border-color:#b388ff;}
+.bar.pattern-turnaround{background:#2a2e14;border-color:#d4e157;}
+.bar.pattern-tritone{background:#3b1f1f;border-color:#ff8a80;}
 .bar-number{position:absolute;top:2px;left:4px;font-size:9px;color:#666;}
 .chord{font-size:16px;font-weight:bold;color:var(--sym);}
 .roman{font-size:10px;color:var(--ink-dim);margin-top:3px;}
@@ -217,9 +234,30 @@ body{padding:8px;}
       <button id="playBtn" class="btn-ok">▶ Play</button>
       <button id="stopBtn" class="btn-stop">⏹ Stop</button>
       <button id="loopBtn" class="btn-sec">🔁 Loop: OFF</button>
+      <select id="loopTargetSel" style="max-width:190px;">
+        <option value="full">Loop: Full Form</option>
+        <option value="sectionA">Loop: Section A</option>
+        <option value="sectionB">Loop: Section B/Bridge</option>
+        <option value="bars">Loop: Bar Range</option>
+      </select>
+      <input type="number" id="loopStart" min="1" value="1" title="Loop start bar"/>
+      <input type="number" id="loopEnd" min="1" value="8" title="Loop end bar"/>
+      <input type="number" id="countInInput" min="0" max="8" value="2" title="Count-in beats"/>
+      <button id="tempoTrainerBtn" class="btn-sec">Tempo Trainer: OFF</button>
+      <button id="metroBtn" class="btn-sec">Metronome: OFF</button>
     </div>
+    <div class="metro-indicator" id="metroIndicator">🕒 Metronome click</div>
+    <div class="playback-progress"><div class="playback-progress-fill" id="playbackProgressFill"></div></div>
     <div class="play-status" id="playStatus">Ready — generate a lead sheet to begin</div>
     <div class="audio-status" id="audioStatus">🎵 Tap anywhere to enable audio</div>
+  </div>
+
+  <div class="analysis-panel" id="analysisPanel">
+    <div class="analysis-title">Chord-Scale Relationship Guide</div>
+    <div class="analysis-row" id="analysisChord">Select a bar to analyze compatibility.</div>
+    <div class="analysis-row" id="analysisScales"></div>
+    <div class="analysis-row" id="analysisNotes"></div>
+    <div class="analysis-row" id="analysisTension"></div>
   </div>
 
   <div class="legend">Tap any bar to hear the chord or scale · Use Playback to sequence at tempo · Open Scale Library for bebop theory reference</div>
@@ -604,6 +642,15 @@ const INT_DEGREES = {0:'1',1:'♭2',2:'2',3:'♭3',4:'3',5:'4',6:'♯4',7:'5',8:
 const INT_NUMERIC = {0:'R',1:'b2',2:'2',3:'b3',4:'3',5:'4',6:'#4',7:'5',8:'b6',9:'6',10:'b7',11:'7'};
 function intervalDegree(iv){ return INT_DEGREES[((iv % 12) + 12) % 12] || ''; }
 
+
+const CHORD_SCALE_GUIDE = {
+  maj7:{primary:['Ionian','Lydian'],alternate:['Major Bebop'],avoid:['4'],color:['3','7'],tension:['9','13','#11'],resolution:'Stable tonic color; resolve #11 to 5 when needed.'},
+  m7:{primary:['Dorian'],alternate:['Aeolian','Minor Bebop'],avoid:['b6 over ii'],color:['b3','b7','9','11'],tension:['9','11','13'],resolution:'Often pre-dominant in ii-V-I; tensions resolve into V chord tones.'},
+  dom7:{primary:['Mixolydian'],alternate:['Lydian Dominant','Dominant Bebop','Altered'],avoid:['11 on plain Mixolydian'],color:['3','b7','13'],tension:['b9','#9','#11','b13'],resolution:'Dominant energy resolves by fifth motion or tritone substitute.'},
+  halfdim:{primary:['Locrian'],alternate:['Locrian ♮2'],avoid:['b2 held long'],color:['b3','b5','b7'],tension:['11','b13'],resolution:'Commonly resolves to altered dominants in minor ii-V.'},
+  dim:{primary:['Diminished'],alternate:['Whole Tone'],avoid:['natural 4 against dim triad'],color:['b3','b5','6'],tension:['9','#11'],resolution:'Symmetric function; resolves in minor-third cycles.'}
+};
+
 /* ============================================================
    AUDIO ENGINE — Chord voicing + scale run
 ============================================================ */
@@ -919,6 +966,8 @@ function renderLeadSheet(tuneName, targetKey) {
       bar.dataset.root  = t.chord.match(/^([A-G][b#]?)/)?.[1] || 'C';
       bar.dataset.scale = t.scale;
       bar.dataset.chord = t.chord;
+      bar.dataset.roman = t.roman;
+      bar.dataset.section = lbl || '';
       bar.tabIndex = 0;
       bar.setAttribute('role', 'button');
       bar.setAttribute('aria-label', `Bar ${bn}: ${t.chord}, ${t.roman}, suggested scale ${t.scale}`);
@@ -941,6 +990,7 @@ function renderLeadSheet(tuneName, targetKey) {
         if (audioMode === 'voicing') playChordVoicing(root, chord);
         else playScaleRun(root, scale);
         showFretboard(root, scale, chord);
+        updateChordScaleAnalysis(bar);
       };
       bar.addEventListener('click', selectBar);
       bar.addEventListener('keydown', e => {
@@ -953,31 +1003,166 @@ function renderLeadSheet(tuneName, targetKey) {
     });
     sheet.appendChild(rowDiv);
   });
+  applyPatternHighlights();
 }
 
 /* ============================================================
    PLAYBACK ENGINE (v6.0 preserved — always plays chord voicings)
 ============================================================ */
+const loopSection = { enabled:false, startBar:null, endBar:null, currentLoop:0, maxLoops:Infinity };
 let isPlaying = false, loopEnabled = false, playTimer = null, playIdx = 0;
+let tempoTrainerEnabled = false, metronomeEnabled = false;
+let currentTrainerTier = 0;
+const tempoTrainerTiers = [80,120,160];
+
+function normalizeChordQuality(chordSym) {
+  if (/m7b5|ø/.test(chordSym)) return 'halfdim';
+  if (/dim/.test(chordSym)) return 'dim';
+  if (/Δ|maj7/i.test(chordSym)) return 'maj7';
+  if (/m7/.test(chordSym)) return 'm7';
+  return 'dom7';
+}
+
+function updateChordScaleAnalysis(bar) {
+  if (!bar) return;
+  const chord = bar.dataset.chord || '';
+  const quality = normalizeChordQuality(chord);
+  const guide = CHORD_SCALE_GUIDE[quality] || CHORD_SCALE_GUIDE.dom7;
+  const chordEl = document.getElementById('analysisChord');
+  const scalesEl = document.getElementById('analysisScales');
+  const notesEl = document.getElementById('analysisNotes');
+  const tensionEl = document.getElementById('analysisTension');
+  chordEl.textContent = `Chord: ${chord} (${quality})`;
+  scalesEl.textContent = `Compatible scales: ${guide.primary.join(', ')} | options: ${guide.alternate.join(', ')}`;
+  notesEl.innerHTML = `<span class="analysis-chip chip-color">Color tones: ${guide.color.join(', ')}</span><span class="analysis-chip chip-avoid">Avoid: ${guide.avoid.join(', ')}</span>`;
+  tensionEl.innerHTML = `<span class="analysis-chip chip-tension">Tensions: ${guide.tension.join(', ')}</span> ${guide.resolution}`;
+}
+
+function detectPatterns(progressionBars) {
+  const patterns = { iivi: new Set(), turnaround: new Set(), tritone: new Set() };
+  for (let i = 0; i < progressionBars.length - 2; i++) {
+    const a = progressionBars[i].dataset.roman || '';
+    const b = progressionBars[i + 1].dataset.roman || '';
+    const c = progressionBars[i + 2].dataset.roman || '';
+    if (/ii/i.test(a) && /^V/i.test(b) && /^I/i.test(c)) [i, i+1, i+2].forEach(v => patterns.iivi.add(v));
+  }
+  for (let i = 0; i < progressionBars.length - 3; i++) {
+    const seq = progressionBars.slice(i, i + 4).map(b => b.dataset.roman || '').join('|');
+    if (/I.*VI.*ii.*V/i.test(seq)) [i, i+1, i+2, i+3].forEach(v => patterns.turnaround.add(v));
+  }
+  for (let i = 1; i < progressionBars.length; i++) {
+    const prev = progressionBars[i - 1].dataset.root;
+    const curr = progressionBars[i].dataset.root;
+    if (prev && curr) {
+      const iv = (NOTE_IDX[curr] - NOTE_IDX[prev] + 12) % 12;
+      if (iv === 6) { patterns.tritone.add(i - 1); patterns.tritone.add(i); }
+    }
+  }
+  return patterns;
+}
+
+function applyPatternHighlights() {
+  const bars = Array.from(document.querySelectorAll('#sheet .bar'));
+  bars.forEach(b => b.classList.remove('pattern-iivi','pattern-turnaround','pattern-tritone'));
+  const patterns = detectPatterns(bars);
+  patterns.iivi.forEach(i => bars[i]?.classList.add('pattern-iivi'));
+  patterns.turnaround.forEach(i => bars[i]?.classList.add('pattern-turnaround'));
+  patterns.tritone.forEach(i => bars[i]?.classList.add('pattern-tritone'));
+}
+
+function playMetronomeClick() {
+  if (!metronomeEnabled) return;
+  const metroEl = document.getElementById('metroIndicator');
+  metroEl.classList.add('active','flash');
+  setTimeout(() => metroEl.classList.remove('flash'), 100);
+  const ctx = getCtx();
+  ctx.resume().then(() => {
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'square'; osc.frequency.value = 1200;
+    osc.connect(gain); gain.connect(ctx.destination);
+    const t0 = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.08, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08);
+    osc.start(t0); osc.stop(t0 + 0.09);
+  });
+}
+
+function updatePlaybackProgress(current, total) {
+  const pct = total ? Math.max(0, Math.min(100, (current / total) * 100)) : 0;
+  document.getElementById('playbackProgressFill').style.width = `${pct}%`;
+}
+
+function resolveLoopRange(bars) {
+  const mode = document.getElementById('loopTargetSel').value;
+  if (mode === 'bars') {
+    const s = Math.max(1, parseInt(document.getElementById('loopStart').value) || 1);
+    const e = Math.min(bars.length, parseInt(document.getElementById('loopEnd').value) || bars.length);
+    return { start: Math.min(s,e) - 1, end: Math.max(s,e) - 1 };
+  }
+  if (mode === 'sectionA') {
+    const idx = bars.findIndex(b => (b.dataset.section || '').startsWith('§ A'));
+    const end = bars.findIndex((b,i) => i > idx && !(b.dataset.section || '').startsWith('§ A'));
+    return { start: Math.max(0, idx), end: (end === -1 ? bars.length : end) - 1 };
+  }
+  if (mode === 'sectionB') {
+    const idx = bars.findIndex(b => /B|Bridge/.test(b.dataset.section || ''));
+    if (idx >= 0) {
+      const end = bars.findIndex((b,i) => i > idx && /§ A/.test(b.dataset.section || ''));
+      return { start: idx, end: (end === -1 ? bars.length : end) - 1 };
+    }
+  }
+  return { start: 0, end: bars.length - 1 };
+}
 
 function stopPlayback() {
   isPlaying = false;
   if (playTimer) { clearTimeout(playTimer); playTimer = null; }
   document.querySelectorAll('#sheet .bar.playing').forEach(b => b.classList.remove('playing'));
+  document.querySelectorAll('#sheet .bar.loop-target').forEach(b => b.classList.remove('loop-target'));
   document.getElementById('playStatus').textContent = 'Stopped';
   document.getElementById('playBtn').textContent = '▶ Play';
+  updatePlaybackProgress(0, 1);
 }
 
-function startPlayback() {
+async function runCountIn(beats, bpm) {
+  for (let i = 0; i < beats; i++) {
+    if (!isPlaying) return false;
+    playMetronomeClick();
+    document.getElementById('playStatus').textContent = `Count-in ${i + 1}/${beats}`;
+    await new Promise(r => setTimeout(r, 60000 / bpm));
+  }
+  return true;
+}
+
+async function startPlayback() {
   const bars = Array.from(document.querySelectorAll('#sheet .bar'));
   if (!bars.length) { document.getElementById('playStatus').textContent = 'Generate a lead sheet first.'; return; }
+  const bpmInput = document.getElementById('bpmInput');
+  if (tempoTrainerEnabled) {
+    currentTrainerTier = 0;
+    bpmInput.value = tempoTrainerTiers[currentTrainerTier];
+  }
   isPlaying = true; playIdx = 0;
+  loopSection.currentLoop = 0;
   document.getElementById('playBtn').textContent = '⏸ Pause';
+  const { start, end } = resolveLoopRange(bars);
+  loopSection.startBar = start;
+  loopSection.endBar = end;
+  bars.forEach((b, i) => {
+    b.classList.toggle('loop-target', loopEnabled && i >= start && i <= end);
+  });
+  if (!(await runCountIn(Math.max(0, parseInt(document.getElementById('countInInput').value) || 0), parseInt(bpmInput.value) || 120))) return;
+  playIdx = loopEnabled ? start : 0;
   function tick() {
     if (!isPlaying) return;
     bars.forEach(b => b.classList.remove('playing'));
-    if (playIdx >= bars.length) {
-      if (loopEnabled) playIdx = 0;
+    const loopEnd = loopEnabled ? loopSection.endBar : bars.length - 1;
+    if (playIdx > loopEnd) {
+      if (loopEnabled) {
+        playIdx = loopSection.startBar;
+        loopSection.currentLoop++;
+      }
       else { stopPlayback(); return; }
     }
     const bar = bars[playIdx];
@@ -986,12 +1171,20 @@ function startPlayback() {
     const { root, chord, scale } = bar.dataset;
     if (audioMode === 'voicing') playChordVoicing(root, chord);
     else playScaleRun(root, scale);
+    playMetronomeClick();
     lastBarData = { root, scale, chord };
+    updateChordScaleAnalysis(bar);
     if (document.getElementById('fbSection').style.display !== 'none') showFretboard(root, scale, chord);
     document.getElementById('playStatus').textContent =
-      `♩ Bar ${playIdx + 1} / ${bars.length}${loopEnabled ? ' · Loop ON' : ''} · ${audioMode === 'voicing' ? 'Chord Audio' : 'Scale Audio'}`;
+      `♩ Bar ${playIdx + 1} / ${bars.length}${loopEnabled ? ` · Loop ${loopSection.currentLoop + 1}` : ''} · ${audioMode === 'voicing' ? 'Chord Audio' : 'Scale Audio'}`;
+    updatePlaybackProgress(playIdx + 1, bars.length);
     playIdx++;
     const bpm = Math.max(40, Math.min(320, parseInt(document.getElementById('bpmInput').value) || 120));
+    if (tempoTrainerEnabled && !loopEnabled && playIdx >= bars.length && currentTrainerTier < tempoTrainerTiers.length - 1) {
+      currentTrainerTier++;
+      document.getElementById('bpmInput').value = tempoTrainerTiers[currentTrainerTier];
+      playIdx = 0;
+    }
     playTimer = setTimeout(tick, (60000 / bpm) * 4);
   }
   tick();
@@ -1152,6 +1345,27 @@ e.target.classList.toggle('btn-loop-on', loopEnabled);
 e.target.classList.toggle('btn-sec', !loopEnabled);
 });
 
+document.getElementById('tempoTrainerBtn').addEventListener('click', e => {
+  tempoTrainerEnabled = !tempoTrainerEnabled;
+  e.target.textContent = tempoTrainerEnabled ? 'Tempo Trainer: ON (80→120→160)' : 'Tempo Trainer: OFF';
+  e.target.classList.toggle('btn-loop-on', tempoTrainerEnabled);
+  e.target.classList.toggle('btn-sec', !tempoTrainerEnabled);
+});
+
+document.getElementById('metroBtn').addEventListener('click', e => {
+  metronomeEnabled = !metronomeEnabled;
+  e.target.textContent = metronomeEnabled ? 'Metronome: ON' : 'Metronome: OFF';
+  e.target.classList.toggle('btn-loop-on', metronomeEnabled);
+  e.target.classList.toggle('btn-sec', !metronomeEnabled);
+  document.getElementById('metroIndicator').classList.toggle('active', metronomeEnabled);
+});
+
+document.getElementById('loopTargetSel').addEventListener('change', () => {
+  const barsMode = document.getElementById('loopTargetSel').value === 'bars';
+  document.getElementById('loopStart').style.display = barsMode ? 'inline-block' : 'none';
+  document.getElementById('loopEnd').style.display = barsMode ? 'inline-block' : 'none';
+});
+
 // Filters
 document.getElementById('applyFilter').addEventListener('click', () => {
 const entries = getFilteredTunes();
@@ -1169,7 +1383,9 @@ document.getElementById('printBtn').addEventListener('click', printLeadSheet);
   ['tuneSel','Tune selector'],['keySel','Key selector'],['randomTune','Choose a random tune'],
   ['generateBtn','Generate lead sheet'],['toggleScales','Toggle scale suggestions'],['printBtn','Print lead sheet'],
   ['bpmInput','Playback tempo in BPM'],['playBtn','Play progression'],['stopBtn','Stop playback'],
-  ['loopBtn','Toggle loop playback'],['toggleMode','Toggle fretboard mode'],['toggleAudio','Toggle audio mode'],
+  ['loopBtn','Toggle loop playback'],['loopTargetSel','Loop target'],['loopStart','Loop start bar'],['loopEnd','Loop end bar'],
+  ['countInInput','Count-in beats'],['tempoTrainerBtn','Toggle tempo trainer'],['metroBtn','Toggle metronome'],
+  ['toggleMode','Toggle fretboard mode'],['toggleAudio','Toggle audio mode'],
   ['applyFilter','Apply tune filters'],['clearFilter','Clear tune filters'],['filterForm','Filter by form'],
   ['filterDiff','Filter by difficulty'],['filterStyle','Filter by style']
 ].forEach(([id,label]) => {
@@ -1180,6 +1396,7 @@ document.getElementById('printBtn').addEventListener('click', printLeadSheet);
 // Load on startup
 tuneSel.value = 'Anthropology'; keySel.value = 'Bb';
 renderLeadSheet('Anthropology','Bb');
+document.getElementById('loopTargetSel').dispatchEvent(new Event('change'));
 </script>
 
 </body>
