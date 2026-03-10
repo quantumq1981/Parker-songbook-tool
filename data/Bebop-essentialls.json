@@ -1,0 +1,45 @@
+{
+  "voicings": {
+    "CΔ7": [
+      { "name": "CΔ7 (Root 6)", "fingers": [[6, 8, "R"], [4, 9, "7"], [3, 9, "3"], [2, 8, "5"]], "baseFret": 8 },
+      { "name": "CΔ7 (Root 5)", "fingers": [[5, 3, "R"], [4, 5, "5"], [3, 4, "7"], [2, 5, "3"]], "baseFret": 3 }
+    ],
+    "Cm7": [
+      { "name": "Cm7 (Shell 6)", "fingers": [[6, 8, "R"], [4, 8, "b7"], [3, 8, "b3"]], "baseFret": 8 },
+      { "name": "Cm7 (Root 5)", "fingers": [[5, 3, "R"], [4, 5, "5"], [3, 3, "b7"], [2, 4, "b3"]], "baseFret": 3 }
+    ],
+    "C7": [
+      { "name": "C7 (Shell 6)", "fingers": [[6, 8, "R"], [4, 8, "b7"], [3, 9, "3"]], "baseFret": 8 },
+      { "name": "C7 (Root 5)", "fingers": [[5, 3, "R"], [4, 5, "5"], [3, 3, "b7"], [2, 5, "3"]], "baseFret": 3 }
+    ],
+    "Cm7b5": [
+      { "name": "Cm7b5 (Root 6)", "fingers": [[6, 8, "R"], [4, 8, "b7"], [3, 8, "b3"], [2, 7, "b5"]], "baseFret": 7 },
+      { "name": "Cm7b5 (Root 5)", "fingers": [[5, 3, "R"], [4, 4, "b5"], [3, 3, "b7"], [2, 4, "b3"]], "baseFret": 3 }
+    ],
+    "Cdim7": [
+      { "name": "C°7 (Root 6)", "fingers": [[6, 8, "R"], [4, 7, "bb7"], [3, 8, "b3"], [2, 7, "b5"]], "baseFret": 7 }
+    ],
+    "C7alt": [
+      { "name": "C7#9 (Purple)", "fingers": [[5, 3, "R"], [4, 2, "3"], [3, 3, "b7"], [2, 4, "#9"]], "baseFret": 2 },
+      { "name": "C7b13", "fingers": [[6, 8, "R"], [4, 8, "b7"], [3, 9, "3"], [2, 9, "b13"]], "baseFret": 8 }
+    ],
+    "FΔ7": [
+      { "name": "FΔ7 (Shell 6)", "fingers": [[6, 1, "R"], [4, 2, "7"], [3, 2, "3"]], "baseFret": 1 },
+      { "name": "FΔ7 (Root 5)", "fingers": [[5, 8, "R"], [4, 10, "5"], [3, 9, "7"], [2, 10, "3"]], "baseFret": 8 }
+    ],
+    "Fm7": [
+      { "name": "Fm7 (Shell 6)", "fingers": [[6, 1, "R"], [4, 1, "b7"], [3, 1, "b3"]], "baseFret": 1 },
+      { "name": "Fm7 (Root 5)", "fingers": [[5, 8, "R"], [4, 10, "5"], [3, 8, "b7"], [2, 9, "b3"]], "baseFret": 8 }
+    ],
+    "Bb7": [
+      { "name": "Bb7 (Shell 6)", "fingers": [[6, 6, "R"], [4, 6, "b7"], [3, 7, "3"]], "baseFret": 6 },
+      { "name": "Bb7 (Root 5)", "fingers": [[5, 1, "R"], [4, 3, "5"], [3, 1, "b7"], [2, 3, "3"]], "baseFret": 1 }
+    ],
+    "EbΔ7": [
+      { "name": "EbΔ7 (Root 5)", "fingers": [[5, 6, "R"], [4, 8, "5"], [3, 7, "7"], [2, 8, "3"]], "baseFret": 6 }
+    ],
+    "Ab7": [
+      { "name": "Ab7 (Shell 6)", "fingers": [[6, 4, "R"], [4, 4, "b7"], [3, 5, "3"]], "baseFret": 4 }
+    ]
+  }
+}
