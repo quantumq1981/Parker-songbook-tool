@@ -34,7 +34,9 @@
 
     closeBtn.addEventListener('click', close);
     backdrop.addEventListener('click', close);
-    toggleEl.addEventListener('change', rerender);
+    toggleEl.addEventListener('change', () => {
+      rerender();
+    });
     modal.addEventListener('keydown', trapFocus);
   }
 
@@ -54,7 +56,7 @@
     }
   }
 
-  function rerender() {
+  async function rerender() {
     const filtered = toggleEl.checked
       ? global.ChordDataService.filterJazzVoicings(state.positions)
       : state.positions;
@@ -65,10 +67,45 @@
       return;
     }
     countEl.textContent = `${filtered.length} voicings`;
-    filtered.forEach((position, idx) => {
+    const renderTasks = filtered.map((position, idx) => {
       const tile = document.createElement('div');
+      tile.dataset.voicingIndex = String(idx);
+      tile.id = `chord-box-${idx}`;
       body.appendChild(tile);
-      global.ChordDiagram.renderChordDiagram(tile, { title: `${state.symbol} #${idx + 1}`, position });
+      return global.ChordDiagram.renderChordDiagram(tile, {
+        title: `${state.symbol} #${idx + 1}`,
+        position,
+        index: idx
+      });
+    });
+
+    Promise.allSettled(renderTasks).then((results) => {
+      const failed = results.filter((result) => result.status === 'rejected');
+      const missingSvgs = Array.from(body.querySelectorAll('.chord-diagram-tile')).filter((tile) => !tile.querySelector('svg'));
+
+      if (missingSvgs.length) {
+        console.warn('[ChordVoicingsModal] Diagram tile rendered without SVG. Running static probe on first tile.', {
+          symbol: state.symbol,
+          missingCount: missingSvgs.length
+        });
+        global.ChordDiagram.renderChordDiagram(missingSvgs[0], {
+          title: 'Debug probe (C major)',
+          index: 0,
+          position: {
+            frets: [-1, 3, 2, 0, 1, 0],
+            fingers: [[5, 3], [4, 2], [2, 1]],
+            baseFret: 1,
+            barres: []
+          }
+        });
+        console.log('DEBUG: Test dots (C-Major) command sent to canvas.');
+      }
+
+      if (failed.length) {
+        console.error('[ChordVoicingsModal] Some chord diagrams failed to render.', failed);
+      } else {
+        console.info(`[ChordVoicingsModal] Rendered ${results.length} diagram(s) for ${state.symbol}.`);
+      }
     });
   }
 
@@ -78,14 +115,17 @@
     state = { symbol, positions: positions || [] };
     titleEl.textContent = symbol || 'Chord Voicings';
     body.innerHTML = '';
+    modal.hidden = false;
+    document.body.classList.add('modal-open');
+
     if (message) {
       body.innerHTML = `<div class="chord-voicings-empty">${message}</div>`;
       countEl.textContent = '0 voicings';
     } else {
-      rerender();
+      requestAnimationFrame(() => {
+        rerender();
+      });
     }
-    modal.hidden = false;
-    document.body.classList.add('modal-open');
     closeBtn.focus();
   }
 

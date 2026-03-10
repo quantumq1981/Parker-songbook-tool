@@ -1,4 +1,161 @@
 (function (global) {
+  const LOAD_TIMEOUT_MS = 5000;
+  let libraryReadyPromise;
+
+  function getSvguitarNamespace() {
+    if (global.svguitar?.Chart) return global.svguitar;
+    if (global.svguitar?.SVGuitarChord) {
+      global.svguitar.Chart = class ChartAdapter {
+        constructor(target) {
+          this.instance = new global.svguitar.SVGuitarChord(target);
+          this.payload = {};
+        }
+        set(payload) {
+          this.payload = payload || {};
+          return this;
+        }
+        draw() {
+          this.instance
+            .configure({
+              fingerColor: '#f1c40f',
+              fingerTextColor: '#0b1220',
+              color: '#e6eeff',
+              fixedFretCount: 4
+            })
+            .chord({
+              title: this.payload.title || '',
+              fingers: this.payload.fingers || [],
+              barres: this.payload.barres || [],
+              position: this.payload.position || 1
+            })
+            .draw();
+          return this;
+        }
+      };
+      return global.svguitar;
+    }
+    if (global.SVGuitarChord) {
+      global.svguitar = global.svguitar || {};
+      if (!global.svguitar.Chart) {
+        global.svguitar.Chart = class ChartAdapter {
+          constructor(target) {
+            this.instance = new global.SVGuitarChord(target);
+            this.payload = {};
+          }
+          set(payload) {
+            this.payload = payload || {};
+            return this;
+          }
+          draw() {
+            this.instance
+              .configure({
+                fingerColor: '#f1c40f',
+                fingerTextColor: '#0b1220',
+                color: '#e6eeff',
+                fixedFretCount: 4
+              })
+              .chord({
+                title: this.payload.title || '',
+                fingers: this.payload.fingers || [],
+                barres: this.payload.barres || [],
+                position: this.payload.position || 1
+              })
+              .draw();
+            return this;
+          }
+        };
+      }
+      return global.svguitar;
+    }
+    return null;
+  }
+
+  function asFingerTuples(rawFingers) {
+    if (!Array.isArray(rawFingers)) return [];
+    return rawFingers
+      .filter((finger) => Array.isArray(finger) && finger.length >= 2)
+      .map(([stringNum, fret]) => [stringNum, fret]);
+  }
+
+  function withIntervalLabels(formattedFingers, rawVoicing) {
+    const labels = Array.isArray(rawVoicing?.intervals) ? rawVoicing.intervals : [];
+    if (!labels.length) return formattedFingers;
+    return formattedFingers.map((finger, idx) => {
+      const label = labels[idx];
+      if (!label) return finger;
+      return [finger[0], finger[1], { text: label, textColor: '#0b1220', color: '#f1c40f' }];
+    });
+  }
+
+  // Mapping Function
+  function renderJazzVoicing(targetId, rawVoicing) {
+    // 1. The Translator: Convert simple arrays [3,2,4,3] into [[string, fret]]
+    // This assumes your DB stores voicings as [LowE, A, D, G, B, HighE]
+    let formattedFingers = [];
+
+    if (Array.isArray(rawVoicing)) {
+      rawVoicing.forEach((fret, index) => {
+        // 'x' or -1 means don't play the string
+        if (fret !== 'x' && fret !== -1 && fret !== null) {
+          // Library uses 1 for High E, 6 for Low E
+          const stringNum = 6 - index;
+          formattedFingers.push([stringNum, fret]);
+        }
+      });
+    } else {
+      // If data is already in [[s,f]] format, use it directly
+      formattedFingers = rawVoicing.fingers;
+    }
+
+    // 2. The Execution: Draw it with the correct settings
+    const chart = new global.svguitar.Chart(targetId);
+
+    chart.set({
+      fingers: formattedFingers,
+      barres: rawVoicing.barres || [],
+      position: rawVoicing.baseFret || 1,
+      title: rawVoicing.name || ''
+    }).draw();
+  }
+
+  function waitForSvguitar() {
+    if (libraryReadyPromise) return libraryReadyPromise;
+    libraryReadyPromise = new Promise((resolve, reject) => {
+      const ready = getSvguitarNamespace();
+      if (ready) return resolve(ready);
+
+      const script = document.querySelector('script[src*="svguitar"]');
+      let settled = false;
+      const finish = (fn, payload) => {
+        if (settled) return;
+        settled = true;
+        fn(payload);
+      };
+
+      const check = () => {
+        const ns = getSvguitarNamespace();
+        if (ns) {
+          finish(resolve, ns);
+          return true;
+        }
+        return false;
+      };
+
+      if (script) {
+        script.addEventListener('load', () => check(), { once: true });
+        script.addEventListener('error', () => finish(reject, new Error('Unable to load diagram library script.')), { once: true });
+      }
+
+      if (!check()) {
+        setTimeout(() => {
+          if (!check()) finish(reject, new Error(`Timed out waiting for SVGuitar after ${LOAD_TIMEOUT_MS}ms.`));
+        }, LOAD_TIMEOUT_MS);
+      }
+    });
+
+    return libraryReadyPromise;
+  }
+
   function renderFallback(container, title, message) {
     const tile = document.createElement('div');
     tile.className = 'chord-diagram-empty';
@@ -6,53 +163,85 @@
     container.appendChild(tile);
   }
 
-  function renderChordDiagram(container, { title, position }) {
+  function drawWithRecovery(svgHolder, rawVoicing) {
+    return new Promise((resolve, reject) => {
+      const draw = () => {
+        try {
+          renderJazzVoicing(svgHolder, rawVoicing);
+          const svg = svgHolder.querySelector('svg');
+          if (!svg || svg.getBoundingClientRect().height === 0) {
+            throw new Error('SVG render produced an empty or zero-height output.');
+          }
+          svg.style.width = '100%';
+          svg.style.height = 'auto';
+          resolve();
+        } catch (firstError) {
+          console.warn('[ChordDiagram] Initial render failed. Retrying once.', firstError);
+          svgHolder.innerHTML = '';
+          setTimeout(() => {
+            try {
+              renderJazzVoicing(svgHolder, rawVoicing);
+              const svg = svgHolder.querySelector('svg');
+              if (!svg || svg.getBoundingClientRect().height === 0) {
+                throw new Error('Retry render produced an empty or zero-height output.');
+              }
+              svg.style.width = '100%';
+              svg.style.height = 'auto';
+              resolve();
+            } catch (retryError) {
+              reject(retryError);
+            }
+          }, 100);
+        }
+      };
+
+      setTimeout(draw, 100);
+    });
+  }
+
+  async function renderChordDiagram(container, { title, position }) {
     container.innerHTML = '';
     container.className = 'chord-diagram-tile';
+
     const heading = document.createElement('div');
     heading.className = 'chord-diagram-title';
     heading.textContent = title || 'Voicing';
     container.appendChild(heading);
 
-    if (!position || !Array.isArray(position.frets)) {
-      renderFallback(container, title, 'Invalid voicing');
-      return;
-    }
-
     const svgHolder = document.createElement('div');
     svgHolder.className = 'chord-diagram-svg';
     container.appendChild(svgHolder);
 
+    if (!position) {
+      renderFallback(container, title, 'Invalid voicing');
+      return;
+    }
+
     try {
-      if (!global.SVGuitarChord) {
-        renderFallback(container, title, 'Diagram library unavailable');
-        return;
-      }
-      const chord = new global.SVGuitarChord(svgHolder);
-      chord
-        .configure({
-          theme: {
-            backgroundColor: '#121826',
-            neckColor: '#2d3752',
-            stringColor: '#7fa2ff',
-            fretLabelColor: '#ff9800',
-            noteColor: '#ff9800',
-            textColor: '#e6eeff'
-          }
-        })
-        .chord({
-          title,
-          fingers: position.fingers || [],
-          barres: position.barres || [],
-          position: position.baseFret || 1,
-          frets: position.frets
-        });
+      await waitForSvguitar();
+
+      const fingerTuples = Array.isArray(position?.fingers)
+        ? asFingerTuples(position.fingers)
+        : [];
+      const rawVoicing = Array.isArray(position)
+        ? position
+        : {
+          ...position,
+          fingers: withIntervalLabels(fingerTuples, position)
+        };
+
+      await drawWithRecovery(svgHolder, rawVoicing);
     } catch (err) {
-      renderFallback(container, title, 'Unable to render voicing');
+      const svgReady = Boolean(global.svguitar?.Chart || global.svguitar?.SVGuitarChord || global.SVGuitarChord);
+      const detail = !svgReady
+        ? `Missing svguitar runtime at ${global.location?.href || 'unknown location'}`
+        : 'Unable to render diagram';
+      console.error('[ChordDiagram] Render failure.', err);
+      renderFallback(container, title, detail);
     }
   }
 
-  const api = { renderChordDiagram };
+  const api = { renderChordDiagram, waitForSvguitar, renderJazzVoicing };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.ChordDiagram = api;
 })(typeof window !== 'undefined' ? window : globalThis);

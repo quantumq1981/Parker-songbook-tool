@@ -36,6 +36,32 @@
     return map[suffix] || map[s] || [suffix, s].filter(Boolean);
   }
 
+  function jazzSymbolCandidates(key, suffix) {
+    const normalizedSuffix = (suffix || '').toLowerCase();
+    const symbol = `${key}${suffix || ''}`;
+    const candidates = new Set([symbol]);
+
+    if (normalizedSuffix === 'maj7') {
+      candidates.add(`${key}Δ7`);
+    }
+    if (normalizedSuffix === 'dim7') {
+      candidates.add(`${key}°7`);
+    }
+
+    return Array.from(candidates);
+  }
+
+  function getJazzVoicingsForChord(key, suffix) {
+    const db = global.JazzChordDatabase?.voicings;
+    if (!db) return [];
+    const candidates = jazzSymbolCandidates(key, suffix);
+    for (const symbol of candidates) {
+      const hit = db[symbol];
+      if (Array.isArray(hit) && hit.length) return hit;
+    }
+    return [];
+  }
+
   async function loadChordData() {
     if (chordData) return chordData;
     if (!chordDataPromise) {
@@ -51,6 +77,9 @@
   }
 
   async function getChordVoicings(key, suffix) {
+    const jazzVoicings = getJazzVoicingsForChord(key, suffix);
+    if (jazzVoicings.length) return jazzVoicings;
+
     const data = await loadChordData();
     const dataKey = ROOT_MAP[key] || key;
     const entries = data?.chords?.[dataKey] || [];
