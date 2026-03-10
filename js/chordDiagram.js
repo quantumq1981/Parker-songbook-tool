@@ -21,7 +21,8 @@
               fingerTextColor: '#0b1220',
               color: '#e6eeff',
               fixedFretCount: 4,
-              padding: 5
+              padding: 5,
+              fontFamily: 'Arial, Helvetica, sans-serif'
             })
             .chord({
               title: this.payload.title || '',
@@ -54,7 +55,8 @@
                 fingerTextColor: '#0b1220',
                 color: '#e6eeff',
                 fixedFretCount: 4,
-                padding: 5
+                padding: 5,
+                fontFamily: 'Arial, Helvetica, sans-serif'
               })
               .chord({
                 title: this.payload.title || '',
@@ -91,31 +93,41 @@
 
   // Mapping Function
   function renderJazzVoicing(targetId, rawVoicing) {
-    // 1. The Translator: Convert simple arrays [3,2,4,3] into [[string, fret]]
-    // This assumes your DB stores voicings as [LowE, A, D, G, B, HighE]
     let formattedFingers = [];
 
     if (Array.isArray(rawVoicing)) {
+      // Flat frets array [LowE, A, D, G, B, HighE] — convert to [[string, fret]]
       rawVoicing.forEach((fret, index) => {
-        // 'x' or -1 means don't play the string
         if (fret !== 'x' && fret !== -1 && fret !== null) {
-          // Library uses 1 for High E, 6 for Low E
           const stringNum = 6 - index;
           formattedFingers.push([stringNum, fret]);
         }
       });
     } else {
-      // If data is already in [[s,f]] format, use it directly
       formattedFingers = rawVoicing.fingers;
     }
 
-    // 2. The Execution: Draw it with the correct settings
-    const chart = new global.svguitar.Chart(targetId);
+    // SVGuitar chord().fingers expects RELATIVE fret positions (1–fixedFretCount)
+    // within the position window, not absolute guitar fret numbers.
+    //
+    // Jazz DB / transposed voicings store absolute frets and have no .frets array.
+    // chords.json fallback voicings already use relative positions AND have a .frets array.
+    //
+    // Convert: relativeFret = absoluteFret - baseFret + 1  (only when baseFret > 1)
+    const baseFret = rawVoicing.baseFret || 1;
+    if (!Array.isArray(rawVoicing.frets) && baseFret > 1) {
+      formattedFingers = formattedFingers.map(([string, fret, ...rest]) => [
+        string,
+        fret > 0 ? fret - baseFret + 1 : fret, // keep open strings (0) as-is
+        ...rest
+      ]);
+    }
 
+    const chart = new global.svguitar.Chart(targetId);
     chart.set({
       fingers: formattedFingers,
       barres: rawVoicing.barres || [],
-      position: rawVoicing.baseFret || 1,
+      position: baseFret,
       title: rawVoicing.name || '',
       fixedFretCount: 4,
       padding: 5
