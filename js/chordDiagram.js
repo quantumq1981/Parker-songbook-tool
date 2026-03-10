@@ -128,7 +128,7 @@
       const ready = getSvguitarNamespace();
       if (ready) return resolve(ready);
 
-      const script = document.querySelector('script[src*="svguitar"]');
+      const scripts = document.querySelectorAll('script[src*="svguitar"]');
       let settled = false;
       const finish = (fn, payload) => {
         if (settled) return;
@@ -145,10 +145,14 @@
         return false;
       };
 
-      if (script) {
+      scripts.forEach((script) => {
         script.addEventListener('load', () => check(), { once: true });
-        script.addEventListener('error', () => finish(reject, new Error('Unable to load diagram library script.')), { once: true });
-      }
+        script.addEventListener('error', () => {
+          console.warn('[ChordDiagram] A svguitar script failed to load:', script.src);
+          // Don't reject – the other script (CDN or local) may still load successfully.
+          check();
+        }, { once: true });
+      });
 
       if (!check()) {
         setTimeout(() => {
@@ -173,8 +177,8 @@
         try {
           renderJazzVoicing(svgHolder, rawVoicing);
           const svg = svgHolder.querySelector('svg');
-          if (!svg || svg.getBoundingClientRect().height === 0) {
-            throw new Error('SVG render produced an empty or zero-height output.');
+          if (!svg) {
+            throw new Error('SVG element not found after render.');
           }
           svg.style.width = '100%';
           svg.style.height = 'auto';
@@ -186,8 +190,8 @@
             try {
               renderJazzVoicing(svgHolder, rawVoicing);
               const svg = svgHolder.querySelector('svg');
-              if (!svg || svg.getBoundingClientRect().height === 0) {
-                throw new Error('Retry render produced an empty or zero-height output.');
+              if (!svg) {
+                throw new Error('SVG element not found after retry render.');
               }
               svg.style.width = '100%';
               svg.style.height = 'auto';
@@ -195,7 +199,7 @@
             } catch (retryError) {
               reject(retryError);
             }
-          }, 100);
+          }, 150);
         }
       };
 

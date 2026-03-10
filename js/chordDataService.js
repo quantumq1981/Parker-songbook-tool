@@ -233,14 +233,23 @@
 
     return list
       .map((position, idx) => {
-        const frets = Array.isArray(position.frets) ? position.frets : [];
+        // Support both chords.json format (position.frets array) and jazz DB format
+        // (position.fingers as [[string, fret, label]] tuples).
+        let frets = Array.isArray(position.frets) ? position.frets : [];
+        if (!frets.length && Array.isArray(position.fingers) && position.fingers.length) {
+          frets = position.fingers
+            .filter((f) => Array.isArray(f) && typeof f[1] === 'number')
+            .map((f) => f[1]);
+        }
+
         const played = frets.filter((f) => typeof f === 'number' && f >= 0);
         const openCount = frets.filter((f) => f === 0).length;
         const fretted = frets.filter((f) => typeof f === 'number' && f > 0).length;
         const lowestFret = played.filter((f) => f > 0).sort((a, b) => a - b)[0] || position.baseFret || 1;
-        const compactSpan = played.length ? Math.max(...played) - Math.min(...played) : 12;
+        const highestFret = fretted ? Math.max(...played.filter((f) => f > 0)) : lowestFret;
+        const compactSpan = fretted ? highestFret - lowestFret : 12;
         const midPenalty = Math.abs(lowestFret - 6);
-        const shellBonus = played.length <= 4 ? -2 : 0;
+        const shellBonus = fretted > 0 && fretted <= 4 ? -2 : 0;
         const openPenalty = demoteOpen ? openCount * 4 : openCount;
         const densityPenalty = fretted > 5 ? 4 : 0;
         const score = openPenalty + densityPenalty + midPenalty + compactSpan + shellBonus;
