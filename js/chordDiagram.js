@@ -20,7 +20,8 @@
               fingerColor: '#f1c40f',
               fingerTextColor: '#0b1220',
               color: '#e6eeff',
-              fixedFretCount: 4
+              fixedFretCount: 4,
+              padding: 5
             })
             .chord({
               title: this.payload.title || '',
@@ -52,7 +53,8 @@
                 fingerColor: '#f1c40f',
                 fingerTextColor: '#0b1220',
                 color: '#e6eeff',
-                fixedFretCount: 4
+                fixedFretCount: 4,
+                padding: 5
               })
               .chord({
                 title: this.payload.title || '',
@@ -74,15 +76,15 @@
     if (!Array.isArray(rawFingers)) return [];
     return rawFingers
       .filter((finger) => Array.isArray(finger) && finger.length >= 2)
-      .map(([stringNum, fret]) => [stringNum, fret]);
+      .map(([stringNum, fret, label]) => [stringNum, fret, label].filter((value) => value !== undefined));
   }
 
   function withIntervalLabels(formattedFingers, rawVoicing) {
-    const labels = Array.isArray(rawVoicing?.intervals) ? rawVoicing.intervals : [];
-    if (!labels.length) return formattedFingers;
+    const intervalArray = Array.isArray(rawVoicing?.intervals) ? rawVoicing.intervals : [];
     return formattedFingers.map((finger, idx) => {
-      const label = labels[idx];
-      if (!label) return finger;
+      const tupleLabel = typeof finger[2] === 'string' ? finger[2] : null;
+      const label = tupleLabel || intervalArray[idx];
+      if (!label) return [finger[0], finger[1]];
       return [finger[0], finger[1], { text: label, textColor: '#0b1220', color: '#f1c40f' }];
     });
   }
