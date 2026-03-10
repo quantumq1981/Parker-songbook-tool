@@ -10,6 +10,7 @@
     ['min7', 'm7'],
     ['-7', 'm7'],
     ['maj7', 'maj7'],
+    ['M7', 'maj7'],
     ['Δ7', 'maj7'],
     ['Δ', 'maj7'],
     ['^7', 'maj7'],
@@ -44,7 +45,10 @@
       .replace(/♭/g, 'b')
       .replace(/♯/g, '#')
       .replace(/−/g, '-')
-      .replace(/\u00BA/g, '°');
+      .replace(/\u00BA/g, '°')
+      .replace(/º/g, '°')
+      .replace(/Ø/g, 'ø')
+      .replace(/∆/g, 'Δ');
   }
 
   function normalizeSuffix(rawSuffix) {

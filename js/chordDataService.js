@@ -24,9 +24,26 @@
     B: 11, Cb: 11
   };
 
+  const chordTypeAliases = {
+    maj7: 'Δ7',
+    M7: 'Δ7',
+    'Δ7': 'Δ7',
+    '∆7': 'Δ7',
+    m7b5: 'm7b5',
+    'ø7': 'm7b5',
+    'Ø7': 'm7b5',
+    dim7: 'dim7',
+    '°7': 'dim7',
+    'º7': 'dim7',
+    '-7': 'm7'
+  };
+
   function normalizeJazzSuffix(suffix) {
     const raw = `${suffix || ''}`.replace(/\s+/g, '');
     const lower = raw.toLowerCase();
+
+    if (chordTypeAliases[raw]) return chordTypeAliases[raw];
+    if (chordTypeAliases[lower]) return chordTypeAliases[lower];
 
     if (['maj7', 'm7+', 'm7maj', 'mmaj7', 'm7major', 'major7'].includes(lower) || ['M7', 'Δ7', '∆7'].includes(raw)) {
       return 'Δ7';
@@ -37,9 +54,13 @@
     if (['dim7', '°7', 'º7'].includes(raw) || ['dim7'].includes(lower)) {
       return 'dim7';
     }
-    if (raw === '-7') return 'm7';
-    if (lower === 'maj7') return 'Δ7';
     return raw;
+  }
+
+  function normalizeChordSymbol(symbol) {
+    const parsed = splitChordSymbol(symbol);
+    if (!parsed) return symbol;
+    return `${parsed.root}${normalizeJazzSuffix(parsed.suffix)}`;
   }
 
   function splitChordSymbol(symbol) {
@@ -52,10 +73,7 @@
     const from = NOTE_TO_SEMITONE[fromRoot];
     const to = NOTE_TO_SEMITONE[toRoot];
     if (typeof from !== 'number' || typeof to !== 'number') return null;
-    let diff = (to - from) % 12;
-    if (diff > 6) diff -= 12;
-    if (diff < -6) diff += 12;
-    return diff;
+    return (to - from + 12) % 12;
   }
 
   function transposeVoicing(voicing, delta) {
@@ -76,10 +94,15 @@
 
     const min = Math.min(...playedFrets);
     const max = Math.max(...playedFrets);
-    if (min < 0 || max > 15) return null;
+    if (min < 0 || max > 24) return null;
 
-    const nextBaseFret = (voicing.baseFret || min) + delta;
-    if (nextBaseFret < 0 || nextBaseFret > 15) return null;
+    const sourceMin = Math.min(...voicing.fingers
+      .map(([, fret]) => fret)
+      .filter((fret) => typeof fret === 'number' && fret > 0));
+    const sourceBase = voicing.baseFret || sourceMin;
+    const baseOffset = sourceBase - sourceMin;
+    const nextBaseFret = min + baseOffset;
+    if (nextBaseFret < 1 || nextBaseFret > 24) return null;
 
     return {
       ...voicing,
@@ -92,14 +115,14 @@
   function closestShapeFallback(voicing, delta) {
     const fingers = (voicing.fingers || []).map(([stringNum, fret, intervalLabel]) => {
       if (typeof fret !== 'number' || fret <= 0) return [stringNum, fret, intervalLabel].filter((v) => v !== undefined);
-      const shifted = Math.max(0, Math.min(15, fret + delta));
+      const shifted = Math.max(0, Math.min(24, fret + delta));
       return [stringNum, shifted, intervalLabel].filter((v) => v !== undefined);
     });
     return {
       ...voicing,
       name: `${voicing.name} (closest shape)`,
       fingers,
-      baseFret: Math.max(0, Math.min(15, (voicing.baseFret || 1) + delta))
+      baseFret: Math.max(1, Math.min(24, (voicing.baseFret || 1) + delta))
     };
   }
 
@@ -110,7 +133,7 @@
   function getJazzVoicingsForChord(key, suffix) {
     const db = getJazzEntries();
     const targetSuffix = normalizeJazzSuffix(suffix);
-    const directKey = `${key}${targetSuffix}`;
+    const directKey = normalizeChordSymbol(`${key}${targetSuffix}`);
 
     if (Array.isArray(db[directKey]) && db[directKey].length) {
       return db[directKey];
@@ -118,21 +141,21 @@
 
     const candidates = Object.entries(db)
       .map(([symbol, voicings]) => {
-        const parsed = splitChordSymbol(symbol);
+        const parsed = splitChordSymbol(normalizeChordSymbol(symbol));
         if (!parsed || normalizeJazzSuffix(parsed.suffix) !== targetSuffix) return null;
         const distance = semitoneDistance(parsed.root, key);
         if (distance === null) return null;
         return { symbol, voicings, distance };
       })
       .filter(Boolean)
-      .sort((a, b) => Math.abs(a.distance) - Math.abs(b.distance));
+      .sort((a, b) => a.distance - b.distance);
 
     if (!candidates.length) return [];
 
     const source = candidates[0];
-    const distanceOptions = [source.distance, source.distance + 12, source.distance - 12]
+    const distanceOptions = [source.distance, source.distance + 12]
       .filter((value, index, arr) => arr.indexOf(value) === index)
-      .sort((a, b) => Math.abs(a) - Math.abs(b));
+      .sort((a, b) => a - b);
 
     const transposed = [];
 
@@ -198,7 +221,10 @@
     const entries = data?.chords?.[dataKey] || [];
     const wanted = new Set(suffixCandidates(suffix).map((v) => (v || '').toLowerCase()));
     const hit = entries.find((item) => wanted.has((item.suffix || '').toLowerCase()));
-    return hit?.positions || [];
+    if (hit?.positions?.length) return hit.positions;
+
+    const basicFallback = entries.find((item) => Array.isArray(item.positions) && item.positions.length);
+    return basicFallback?.positions || [];
   }
 
   function filterJazzVoicings(positions, options = {}) {
@@ -229,6 +255,7 @@
     getChordVoicings,
     filterJazzVoicings,
     normalizeJazzSuffix,
+    normalizeChordSymbol,
     getJazzVoicingsForChord
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

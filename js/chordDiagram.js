@@ -116,7 +116,9 @@
       fingers: formattedFingers,
       barres: rawVoicing.barres || [],
       position: rawVoicing.baseFret || 1,
-      title: rawVoicing.name || ''
+      title: rawVoicing.name || '',
+      fixedFretCount: 4,
+      padding: 5
     }).draw();
   }
 
