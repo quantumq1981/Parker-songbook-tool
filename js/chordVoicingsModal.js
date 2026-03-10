@@ -70,8 +70,13 @@
     const renderTasks = filtered.map((position, idx) => {
       const tile = document.createElement('div');
       tile.dataset.voicingIndex = String(idx);
+      tile.id = `chord-box-${idx}`;
       body.appendChild(tile);
-      return global.ChordDiagram.renderChordDiagram(tile, { title: `${state.symbol} #${idx + 1}`, position });
+      return global.ChordDiagram.renderChordDiagram(tile, {
+        title: `${state.symbol} #${idx + 1}`,
+        position,
+        index: idx
+      });
     });
 
     Promise.allSettled(renderTasks).then((results) => {
@@ -85,13 +90,15 @@
         });
         global.ChordDiagram.renderChordDiagram(missingSvgs[0], {
           title: 'Debug probe (C major)',
+          index: 0,
           position: {
             frets: [-1, 3, 2, 0, 1, 0],
-            fingers: [0, 3, 2, 0, 1, 0],
+            fingers: [[5, 3], [4, 2], [2, 1]],
             baseFret: 1,
             barres: []
           }
         });
+        console.log('DEBUG: Test dots (C-Major) command sent to canvas.');
       }
 
       if (failed.length) {
