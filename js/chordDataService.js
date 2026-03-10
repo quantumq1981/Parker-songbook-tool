@@ -3,11 +3,150 @@
   let chordData = null;
 
   const ROOT_MAP = {
-    'C#': 'Csharp', 'Db': 'Db', 'D#': 'Dsharp', 'Eb': 'Eb',
-    'F#': 'Fsharp', 'Gb': 'Gb', 'G#': 'Gsharp', 'Ab': 'Ab',
-    'A#': 'Asharp', 'Bb': 'Bb', 'B': 'B', 'Cb': 'Cb', 'C': 'C',
-    'D': 'D', 'E': 'E', 'F': 'F', 'G': 'G', 'A': 'A'
+    'C#': 'Csharp', Db: 'Db', 'D#': 'Dsharp', Eb: 'Eb',
+    'F#': 'Fsharp', Gb: 'Gb', 'G#': 'Gsharp', Ab: 'Ab',
+    'A#': 'Asharp', Bb: 'Bb', B: 'B', Cb: 'Cb', C: 'C',
+    D: 'D', E: 'E', F: 'F', G: 'G', A: 'A'
   };
+
+  const NOTE_TO_SEMITONE = {
+    C: 0, 'B#': 0,
+    'C#': 1, Db: 1,
+    D: 2,
+    'D#': 3, Eb: 3,
+    E: 4, Fb: 4,
+    F: 5, 'E#': 5,
+    'F#': 6, Gb: 6,
+    G: 7,
+    'G#': 8, Ab: 8,
+    A: 9,
+    'A#': 10, Bb: 10,
+    B: 11, Cb: 11
+  };
+
+  function normalizeJazzSuffix(suffix) {
+    const raw = `${suffix || ''}`.replace(/\s+/g, '');
+    const lower = raw.toLowerCase();
+
+    if (['maj7', 'm7+', 'm7maj', 'mmaj7', 'm7major', 'major7'].includes(lower) || ['M7', 'Δ7', '∆7'].includes(raw)) {
+      return 'Δ7';
+    }
+    if (['m7b5', 'ø7', 'Ø7', 'ø', 'Ø'].includes(raw) || ['m7b5'].includes(lower)) {
+      return 'm7b5';
+    }
+    if (['dim7', '°7', 'º7'].includes(raw) || ['dim7'].includes(lower)) {
+      return 'dim7';
+    }
+    if (raw === '-7') return 'm7';
+    if (lower === 'maj7') return 'Δ7';
+    return raw;
+  }
+
+  function splitChordSymbol(symbol) {
+    const match = `${symbol || ''}`.match(/^([A-G](?:#|b)?)(.*)$/);
+    if (!match) return null;
+    return { root: match[1], suffix: match[2] || '' };
+  }
+
+  function semitoneDistance(fromRoot, toRoot) {
+    const from = NOTE_TO_SEMITONE[fromRoot];
+    const to = NOTE_TO_SEMITONE[toRoot];
+    if (typeof from !== 'number' || typeof to !== 'number') return null;
+    let diff = (to - from) % 12;
+    if (diff > 6) diff -= 12;
+    if (diff < -6) diff += 12;
+    return diff;
+  }
+
+  function transposeVoicing(voicing, delta) {
+    if (!Array.isArray(voicing?.fingers)) return null;
+
+    const fingers = voicing.fingers.map((finger) => {
+      const [stringNum, fret, intervalLabel] = finger;
+      if (typeof fret !== 'number' || fret <= 0) return [stringNum, fret, intervalLabel].filter((v) => v !== undefined);
+      const shifted = fret + delta;
+      return [stringNum, shifted, intervalLabel].filter((v) => v !== undefined);
+    });
+
+    const playedFrets = fingers
+      .map(([, fret]) => fret)
+      .filter((fret) => typeof fret === 'number' && fret > 0);
+
+    if (!playedFrets.length) return null;
+
+    const min = Math.min(...playedFrets);
+    const max = Math.max(...playedFrets);
+    if (min < 0 || max > 15) return null;
+
+    const nextBaseFret = (voicing.baseFret || min) + delta;
+    if (nextBaseFret < 0 || nextBaseFret > 15) return null;
+
+    return {
+      ...voicing,
+      name: delta === 0 ? voicing.name : `${voicing.name} (tr ${delta > 0 ? '+' : ''}${delta})`,
+      fingers,
+      baseFret: nextBaseFret
+    };
+  }
+
+  function closestShapeFallback(voicing, delta) {
+    const fingers = (voicing.fingers || []).map(([stringNum, fret, intervalLabel]) => {
+      if (typeof fret !== 'number' || fret <= 0) return [stringNum, fret, intervalLabel].filter((v) => v !== undefined);
+      const shifted = Math.max(0, Math.min(15, fret + delta));
+      return [stringNum, shifted, intervalLabel].filter((v) => v !== undefined);
+    });
+    return {
+      ...voicing,
+      name: `${voicing.name} (closest shape)`,
+      fingers,
+      baseFret: Math.max(0, Math.min(15, (voicing.baseFret || 1) + delta))
+    };
+  }
+
+  function getJazzEntries() {
+    return global.JAZZ_CHORDS || global.JazzChordDatabase?.voicings || {};
+  }
+
+  function getJazzVoicingsForChord(key, suffix) {
+    const db = getJazzEntries();
+    const targetSuffix = normalizeJazzSuffix(suffix);
+    const directKey = `${key}${targetSuffix}`;
+
+    if (Array.isArray(db[directKey]) && db[directKey].length) {
+      return db[directKey];
+    }
+
+    const candidates = Object.entries(db)
+      .map(([symbol, voicings]) => {
+        const parsed = splitChordSymbol(symbol);
+        if (!parsed || normalizeJazzSuffix(parsed.suffix) !== targetSuffix) return null;
+        const distance = semitoneDistance(parsed.root, key);
+        if (distance === null) return null;
+        return { symbol, voicings, distance };
+      })
+      .filter(Boolean)
+      .sort((a, b) => Math.abs(a.distance) - Math.abs(b.distance));
+
+    if (!candidates.length) return [];
+
+    const source = candidates[0];
+    const distanceOptions = [source.distance, source.distance + 12, source.distance - 12]
+      .filter((value, index, arr) => arr.indexOf(value) === index)
+      .sort((a, b) => Math.abs(a) - Math.abs(b));
+
+    const transposed = [];
+
+    source.voicings.forEach((voicing) => {
+      let chosen = null;
+      for (const delta of distanceOptions) {
+        chosen = transposeVoicing(voicing, delta);
+        if (chosen) break;
+      }
+      transposed.push(chosen || closestShapeFallback(voicing, source.distance));
+    });
+
+    return transposed;
+  }
 
   function suffixCandidates(suffix) {
     const s = (suffix || '').toLowerCase();
@@ -36,39 +175,13 @@
     return map[suffix] || map[s] || [suffix, s].filter(Boolean);
   }
 
-  function jazzSymbolCandidates(key, suffix) {
-    const normalizedSuffix = (suffix || '').toLowerCase();
-    const symbol = `${key}${suffix || ''}`;
-    const candidates = new Set([symbol]);
-
-    if (normalizedSuffix === 'maj7') {
-      candidates.add(`${key}Δ7`);
-    }
-    if (normalizedSuffix === 'dim7') {
-      candidates.add(`${key}°7`);
-    }
-
-    return Array.from(candidates);
-  }
-
-  function getJazzVoicingsForChord(key, suffix) {
-    const db = global.JazzChordDatabase?.voicings;
-    if (!db) return [];
-    const candidates = jazzSymbolCandidates(key, suffix);
-    for (const symbol of candidates) {
-      const hit = db[symbol];
-      if (Array.isArray(hit) && hit.length) return hit;
-    }
-    return [];
-  }
-
   async function loadChordData() {
     if (chordData) return chordData;
     if (!chordDataPromise) {
-      chordDataPromise = fetch('data/chords.json').then(r => {
+      chordDataPromise = fetch('data/chords.json').then((r) => {
         if (!r.ok) throw new Error('Unable to load chords.json');
         return r.json();
-      }).then(json => {
+      }).then((json) => {
         chordData = json;
         return json;
       });
@@ -83,8 +196,8 @@
     const data = await loadChordData();
     const dataKey = ROOT_MAP[key] || key;
     const entries = data?.chords?.[dataKey] || [];
-    const wanted = new Set(suffixCandidates(suffix).map(v => (v || '').toLowerCase()));
-    const hit = entries.find(item => wanted.has((item.suffix || '').toLowerCase()));
+    const wanted = new Set(suffixCandidates(suffix).map((v) => (v || '').toLowerCase()));
+    const hit = entries.find((item) => wanted.has((item.suffix || '').toLowerCase()));
     return hit?.positions || [];
   }
 
@@ -95,10 +208,10 @@
     return list
       .map((position, idx) => {
         const frets = Array.isArray(position.frets) ? position.frets : [];
-        const played = frets.filter(f => typeof f === 'number' && f >= 0);
-        const openCount = frets.filter(f => f === 0).length;
-        const fretted = frets.filter(f => typeof f === 'number' && f > 0).length;
-        const lowestFret = played.filter(f => f > 0).sort((a, b) => a - b)[0] || position.baseFret || 1;
+        const played = frets.filter((f) => typeof f === 'number' && f >= 0);
+        const openCount = frets.filter((f) => f === 0).length;
+        const fretted = frets.filter((f) => typeof f === 'number' && f > 0).length;
+        const lowestFret = played.filter((f) => f > 0).sort((a, b) => a - b)[0] || position.baseFret || 1;
         const compactSpan = played.length ? Math.max(...played) - Math.min(...played) : 12;
         const midPenalty = Math.abs(lowestFret - 6);
         const shellBonus = played.length <= 4 ? -2 : 0;
@@ -108,10 +221,16 @@
         return { position, idx, score };
       })
       .sort((a, b) => a.score - b.score || a.idx - b.idx)
-      .map(v => v.position);
+      .map((v) => v.position);
   }
 
-  const api = { loadChordData, getChordVoicings, filterJazzVoicings };
+  const api = {
+    loadChordData,
+    getChordVoicings,
+    filterJazzVoicings,
+    normalizeJazzSuffix,
+    getJazzVoicingsForChord
+  };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.ChordDataService = api;
 })(typeof window !== 'undefined' ? window : globalThis);
