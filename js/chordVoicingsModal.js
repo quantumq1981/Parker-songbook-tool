@@ -81,26 +81,6 @@
 
     Promise.allSettled(renderTasks).then((results) => {
       const failed = results.filter((result) => result.status === 'rejected');
-      const missingSvgs = Array.from(body.querySelectorAll('.chord-diagram-tile')).filter((tile) => !tile.querySelector('svg'));
-
-      if (missingSvgs.length) {
-        console.warn('[ChordVoicingsModal] Diagram tile rendered without SVG. Running static probe on first tile.', {
-          symbol: state.symbol,
-          missingCount: missingSvgs.length
-        });
-        global.ChordDiagram.renderChordDiagram(missingSvgs[0], {
-          title: 'Debug probe (C major)',
-          index: 0,
-          position: {
-            frets: [-1, 3, 2, 0, 1, 0],
-            fingers: [[5, 3], [4, 2], [2, 1]],
-            baseFret: 1,
-            barres: []
-          }
-        });
-        console.log('DEBUG: Test dots (C-Major) command sent to canvas.');
-      }
-
       if (failed.length) {
         console.error('[ChordVoicingsModal] Some chord diagrams failed to render.', failed);
       } else {
