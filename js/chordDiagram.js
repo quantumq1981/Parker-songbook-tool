@@ -2,65 +2,127 @@
   const LOAD_TIMEOUT_MS = 5000;
   let libraryReadyPromise;
 
-  function log(level, message, details) {
-    const logger = console[level] || console.log;
-    if (typeof details === 'undefined') {
-      logger(`[ChordDiagram] ${message}`);
-      return;
-    }
-    logger(`[ChordDiagram] ${message}`, details);
-  }
-
-  function getSvguitarConstructor() {
-    const ctor = global.SVGuitarChord || global.svguitar?.SVGuitarChord;
-    return typeof ctor === 'function' ? ctor : null;
-  }
-
-  function normalizeFingers(position) {
-    const sourceFingers = Array.isArray(position?.fingers) ? position.fingers : [];
-    if (sourceFingers.length && Array.isArray(sourceFingers[0])) return sourceFingers;
-
-    const frets = Array.isArray(position?.frets) ? position.frets : [];
-    const baseFret = Number(position?.baseFret) > 1 ? Number(position.baseFret) : 1;
-    return frets
-      .map((fret, idx) => {
-        if (typeof fret !== 'number' || fret <= 0) return null;
-        const relativeFret = baseFret > 1 ? (fret - baseFret + 1) : fret;
-        return [6 - idx, relativeFret];
-      })
-      .filter(Boolean);
-  }
-
-  function normalizeBarres(position) {
-    const rawBarres = Array.isArray(position?.barres) ? position.barres : [];
-    if (!rawBarres.length) return [];
-    if (typeof rawBarres[0] === 'object' && rawBarres[0] !== null) return rawBarres;
-
-    const frets = Array.isArray(position?.frets) ? position.frets : [];
-    const baseFret = Number(position?.baseFret) > 1 ? Number(position.baseFret) : 1;
-    return rawBarres
-      .map((barreFret) => {
-        const strings = frets
-          .map((fret, idx) => (fret === barreFret ? 6 - idx : null))
-          .filter((value) => value !== null);
-        if (!strings.length) return null;
-        const relativeFret = baseFret > 1 ? (barreFret - baseFret + 1) : barreFret;
-        return {
-          fret: relativeFret,
-          fromString: Math.max(...strings),
-          toString: Math.min(...strings)
+  function getSvguitarNamespace() {
+    if (global.svguitar?.Chart) return global.svguitar;
+    if (global.SVGuitarChord) {
+      global.svguitar = global.svguitar || {};
+      if (!global.svguitar.Chart) {
+        global.svguitar.Chart = class ChartAdapter {
+          constructor(target) {
+            this.instance = new global.SVGuitarChord(target);
+            this.payload = {};
+          }
+          set(payload) {
+            this.payload = payload || {};
+            return this;
+          }
+          draw() {
+            this.instance
+              .configure({
+                fingerColor: '#f1c40f',
+                fingerTextColor: '#0b1220',
+                color: '#e6eeff'
+              })
+              .chord({
+                title: this.payload.title || '',
+                fingers: this.payload.fingers || [],
+                barres: this.payload.barres || [],
+                position: this.payload.position || 1
+              })
+              .draw();
+            return this;
+          }
         };
-      })
-      .filter(Boolean);
+      }
+      return global.svguitar;
+    }
+    return null;
   }
 
-  function normalizeVoicingData(position) {
-    return {
-      frets: Array.isArray(position?.frets) ? position.frets : [],
-      position: position?.baseFret || 1,
-      fingers: normalizeFingers(position),
-      barres: normalizeBarres(position)
-    };
+  function asFingerTuples(rawFingers) {
+    if (!Array.isArray(rawFingers)) return [];
+    return rawFingers
+      .filter((finger) => Array.isArray(finger) && finger.length >= 2)
+      .map(([stringNum, fret]) => [stringNum, fret]);
+  }
+
+  function withIntervalLabels(formattedFingers, rawVoicing) {
+    const labels = Array.isArray(rawVoicing?.intervals) ? rawVoicing.intervals : [];
+    if (!labels.length) return formattedFingers;
+    return formattedFingers.map((finger, idx) => {
+      const label = labels[idx];
+      if (!label) return finger;
+      return [finger[0], finger[1], { text: label, textColor: '#0b1220', color: '#f1c40f' }];
+    });
+  }
+
+  // Mapping Function
+  function renderJazzVoicing(targetId, rawVoicing) {
+    // 1. The Translator: Convert simple arrays [3,2,4,3] into [[string, fret]]
+    // This assumes your DB stores voicings as [LowE, A, D, G, B, HighE]
+    let formattedFingers = [];
+
+    if (Array.isArray(rawVoicing)) {
+      rawVoicing.forEach((fret, index) => {
+        // 'x' or -1 means don't play the string
+        if (fret !== 'x' && fret !== -1 && fret !== null) {
+          // Library uses 1 for High E, 6 for Low E
+          const stringNum = 6 - index;
+          formattedFingers.push([stringNum, fret]);
+        }
+      });
+    } else {
+      // If data is already in [[s,f]] format, use it directly
+      formattedFingers = rawVoicing.fingers;
+    }
+
+    // 2. The Execution: Draw it with the correct settings
+    const chart = new global.svguitar.Chart(targetId);
+
+    chart.set({
+      fingers: formattedFingers,
+      barres: rawVoicing.barres || [],
+      position: rawVoicing.baseFret || 1,
+      title: rawVoicing.name || ''
+    }).draw();
+  }
+
+  function waitForSvguitar() {
+    if (libraryReadyPromise) return libraryReadyPromise;
+    libraryReadyPromise = new Promise((resolve, reject) => {
+      const ready = getSvguitarNamespace();
+      if (ready) return resolve(ready);
+
+      const script = document.querySelector('script[src*="svguitar"]');
+      let settled = false;
+      const finish = (fn, payload) => {
+        if (settled) return;
+        settled = true;
+        fn(payload);
+      };
+
+      const check = () => {
+        const ns = getSvguitarNamespace();
+        if (ns) {
+          finish(resolve, ns);
+          return true;
+        }
+        return false;
+      };
+
+      if (script) {
+        script.addEventListener('load', () => check(), { once: true });
+        script.addEventListener('error', () => finish(reject, new Error('Unable to load diagram library script.')), { once: true });
+      }
+
+      if (!check()) {
+        setTimeout(() => {
+          if (!check()) finish(reject, new Error(`Timed out waiting for SVGuitar after ${LOAD_TIMEOUT_MS}ms.`));
+        }, LOAD_TIMEOUT_MS);
+      }
+    });
+
+    return libraryReadyPromise;
   }
 
   function renderFallback(container, title, message) {
@@ -70,153 +132,50 @@
     container.appendChild(tile);
   }
 
-  function waitForSvguitar() {
-    if (libraryReadyPromise) return libraryReadyPromise;
-    libraryReadyPromise = new Promise((resolve, reject) => {
-      const script = document.querySelector('script[src*="svguitar"]');
-      const existingCtor = getSvguitarConstructor();
-
-      if (existingCtor) {
-        log('info', 'SVGuitar constructor detected immediately.');
-        resolve(existingCtor);
-        return;
-      }
-
-      let settled = false;
-      const cleanup = () => {
-        if (script) {
-          script.removeEventListener('load', onLoad);
-          script.removeEventListener('error', onError);
-        }
-        document.removeEventListener('DOMContentLoaded', onDomReady);
-      };
-      const finish = (fn, payload) => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        fn(payload);
-      };
-      const tryResolve = (context) => {
-        const ctor = getSvguitarConstructor();
-        if (ctor) {
-          log('info', `SVGuitar became available (${context}).`);
-          finish(resolve, ctor);
-          return true;
-        }
-        return false;
-      };
-      const onLoad = () => {
-        if (!tryResolve('script load event')) {
-          const err = new Error('SVGuitar script loaded but SVGuitarChord was not found on window.');
-          log('error', err.message, {
-            availableKeys: Object.keys(global).filter((key) => /svg/i.test(key)).slice(0, 20)
-          });
-          finish(reject, err);
-        }
-      };
-      const onError = (event) => {
-        const err = new Error('Unable to load diagram library script.');
-        log('error', err.message, event);
-        finish(reject, err);
-      };
-      const onDomReady = () => {
-        tryResolve('DOMContentLoaded');
-      };
-
-      if (script) {
-        script.addEventListener('load', onLoad, { once: true });
-        script.addEventListener('error', onError, { once: true });
-        log('info', 'Waiting for SVGuitar script events.', { src: script.getAttribute('src') });
-      } else {
-        log('warn', 'SVGuitar script tag was not found in DOM.');
-      }
-
-      if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        tryResolve(`document.readyState=${document.readyState}`);
-      } else {
-        document.addEventListener('DOMContentLoaded', onDomReady, { once: true });
-      }
-
-      setTimeout(() => {
-        if (tryResolve(`timeout check ${LOAD_TIMEOUT_MS}ms`)) return;
-        const err = new Error(`Timed out waiting for SVGuitar after ${LOAD_TIMEOUT_MS}ms.`);
-        log('error', err.message, { scriptPresent: Boolean(script) });
-        finish(reject, err);
-      }, LOAD_TIMEOUT_MS);
-    });
-
-    return libraryReadyPromise;
-  }
-
-  async function renderChordDiagram(container, { title, position, index }) {
+  async function renderChordDiagram(container, { title, position }) {
     container.innerHTML = '';
     container.className = 'chord-diagram-tile';
+
     const heading = document.createElement('div');
     heading.className = 'chord-diagram-title';
     heading.textContent = title || 'Voicing';
     container.appendChild(heading);
 
-    if (!position || !Array.isArray(position.frets)) {
-      log('warn', 'Invalid voicing payload passed to renderChordDiagram.', position);
-      renderFallback(container, title, 'Invalid voicing');
-      return;
-    }
-
     const svgHolder = document.createElement('div');
     svgHolder.className = 'chord-diagram-svg';
     container.appendChild(svgHolder);
 
-    const voicingData = normalizeVoicingData(position);
-
-    console.log('--- CHORD RENDER ATTEMPT ---');
     if (!position) {
-      console.error('DEBUG: No voicing data found for this chord!');
-    } else {
-      console.log('DEBUG: Raw Voicing Data:', JSON.stringify(position));
-      console.log('DEBUG: SVGuitar-ready Voicing Data:', JSON.stringify(voicingData));
-    }
-    if (!container) {
-      console.error(`DEBUG: Could not find container #chord-box-${index} in the DOM.`);
-    } else {
-      console.log(`DEBUG: Container found. Width: ${container.offsetWidth}, Height: ${container.offsetHeight}`);
+      renderFallback(container, title, 'Invalid voicing');
+      return;
     }
 
     try {
-      const SVGuitarCtor = await waitForSvguitar();
+      await waitForSvguitar();
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      const fingerTuples = Array.isArray(position?.fingers)
+        ? asFingerTuples(position.fingers)
+        : [];
+      const rawVoicing = Array.isArray(position)
+        ? position
+        : {
+          ...position,
+          fingers: withIntervalLabels(fingerTuples, position)
+        };
 
-      const chord = new SVGuitarCtor(svgHolder);
-      console.log('DEBUG: SVGuitar Library initialized successfully.');
-      chord
-        .configure({
-          theme: {
-            backgroundColor: '#121826',
-            neckColor: '#2d3752',
-            stringColor: '#7fa2ff',
-            fretLabelColor: '#ff9800',
-            noteColor: '#ff9800',
-            textColor: '#e6eeff'
-          }
-        })
-        .chord({
-          title,
-          fingers: voicingData.fingers,
-          barres: voicingData.barres,
-          position: voicingData.position,
-          frets: voicingData.frets
-        })
-        .draw();
-      console.log('DEBUG: Draw command sent to canvas.');
-      log('info', `Rendered voicing tile: ${title || 'Voicing'}.`);
+      renderJazzVoicing(svgHolder, rawVoicing);
+
+      const svg = svgHolder.querySelector('svg');
+      if (svg) {
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+      }
     } catch (err) {
-      console.error('DEBUG: SVGuitar Library CRASHED during draw:', err);
-      log('error', `Render failed for ${title || 'Voicing'}.`, err);
       renderFallback(container, title, 'Unable to load diagram library');
     }
   }
 
-  const api = { renderChordDiagram, waitForSvguitar, normalizeVoicingData };
+  const api = { renderChordDiagram, waitForSvguitar, renderJazzVoicing };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.ChordDiagram = api;
 })(typeof window !== 'undefined' ? window : globalThis);
