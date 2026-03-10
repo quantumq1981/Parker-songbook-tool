@@ -16,6 +16,53 @@
     return typeof ctor === 'function' ? ctor : null;
   }
 
+  function normalizeFingers(position) {
+    const sourceFingers = Array.isArray(position?.fingers) ? position.fingers : [];
+    if (sourceFingers.length && Array.isArray(sourceFingers[0])) return sourceFingers;
+
+    const frets = Array.isArray(position?.frets) ? position.frets : [];
+    const baseFret = Number(position?.baseFret) > 1 ? Number(position.baseFret) : 1;
+    return frets
+      .map((fret, idx) => {
+        if (typeof fret !== 'number' || fret <= 0) return null;
+        const relativeFret = baseFret > 1 ? (fret - baseFret + 1) : fret;
+        return [6 - idx, relativeFret];
+      })
+      .filter(Boolean);
+  }
+
+  function normalizeBarres(position) {
+    const rawBarres = Array.isArray(position?.barres) ? position.barres : [];
+    if (!rawBarres.length) return [];
+    if (typeof rawBarres[0] === 'object' && rawBarres[0] !== null) return rawBarres;
+
+    const frets = Array.isArray(position?.frets) ? position.frets : [];
+    const baseFret = Number(position?.baseFret) > 1 ? Number(position.baseFret) : 1;
+    return rawBarres
+      .map((barreFret) => {
+        const strings = frets
+          .map((fret, idx) => (fret === barreFret ? 6 - idx : null))
+          .filter((value) => value !== null);
+        if (!strings.length) return null;
+        const relativeFret = baseFret > 1 ? (barreFret - baseFret + 1) : barreFret;
+        return {
+          fret: relativeFret,
+          fromString: Math.max(...strings),
+          toString: Math.min(...strings)
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function normalizeVoicingData(position) {
+    return {
+      frets: Array.isArray(position?.frets) ? position.frets : [],
+      position: position?.baseFret || 1,
+      fingers: normalizeFingers(position),
+      barres: normalizeBarres(position)
+    };
+  }
+
   function renderFallback(container, title, message) {
     const tile = document.createElement('div');
     tile.className = 'chord-diagram-empty';
@@ -101,7 +148,7 @@
     return libraryReadyPromise;
   }
 
-  async function renderChordDiagram(container, { title, position }) {
+  async function renderChordDiagram(container, { title, position, index }) {
     container.innerHTML = '';
     container.className = 'chord-diagram-tile';
     const heading = document.createElement('div');
@@ -119,9 +166,28 @@
     svgHolder.className = 'chord-diagram-svg';
     container.appendChild(svgHolder);
 
+    const voicingData = normalizeVoicingData(position);
+
+    console.log('--- CHORD RENDER ATTEMPT ---');
+    if (!position) {
+      console.error('DEBUG: No voicing data found for this chord!');
+    } else {
+      console.log('DEBUG: Raw Voicing Data:', JSON.stringify(position));
+      console.log('DEBUG: SVGuitar-ready Voicing Data:', JSON.stringify(voicingData));
+    }
+    if (!container) {
+      console.error(`DEBUG: Could not find container #chord-box-${index} in the DOM.`);
+    } else {
+      console.log(`DEBUG: Container found. Width: ${container.offsetWidth}, Height: ${container.offsetHeight}`);
+    }
+
     try {
       const SVGuitarCtor = await waitForSvguitar();
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       const chord = new SVGuitarCtor(svgHolder);
+      console.log('DEBUG: SVGuitar Library initialized successfully.');
       chord
         .configure({
           theme: {
@@ -135,20 +201,22 @@
         })
         .chord({
           title,
-          fingers: position.fingers || [],
-          barres: position.barres || [],
-          position: position.baseFret || 1,
-          frets: position.frets
+          fingers: voicingData.fingers,
+          barres: voicingData.barres,
+          position: voicingData.position,
+          frets: voicingData.frets
         })
         .draw();
+      console.log('DEBUG: Draw command sent to canvas.');
       log('info', `Rendered voicing tile: ${title || 'Voicing'}.`);
     } catch (err) {
+      console.error('DEBUG: SVGuitar Library CRASHED during draw:', err);
       log('error', `Render failed for ${title || 'Voicing'}.`, err);
       renderFallback(container, title, 'Unable to load diagram library');
     }
   }
 
-  const api = { renderChordDiagram, waitForSvguitar };
+  const api = { renderChordDiagram, waitForSvguitar, normalizeVoicingData };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.ChordDiagram = api;
 })(typeof window !== 'undefined' ? window : globalThis);
