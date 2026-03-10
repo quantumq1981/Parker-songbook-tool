@@ -5,6 +5,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Charlie Parker Songbook Trainer v7.0</title>
+<script src="https://unpkg.com/svguitar@1.7.1/dist/svguitar.umd.js" data-svguitar-lib="cdn"></script>
+<script src="./js/svguitar.umd.js" data-svguitar-lib="local" onerror="console.warn('Local SVGuitar fallback failed to load')"></script>
 <style>
 :root{
   --bg:#121212;--panel:#1a1a1a;--ink:#eee;--ink-dim:#aaa;
@@ -162,18 +164,18 @@ border-radius:4px;cursor:pointer;transition:.15s;}
 margin-top:10px;border-radius:4px;font-size:11px;line-height:1.6;}
 
 /* Chord voicings modal */
-body.modal-open{overflow:hidden;}
+body.modal-open{overflow:hidden;touch-action:none;}
 #chordVoicingsModal{position:fixed;inset:0;z-index:9999;}
 #chordVoicingsBackdrop{position:absolute;inset:0;background:rgba(4,8,18,.72);}
 .chord-voicings-panel{position:relative;margin:4vh auto;background:#101725;border:1px solid var(--accent2);
-border-radius:12px;width:min(980px,94vw);max-height:92vh;display:flex;flex-direction:column;padding:12px;}
+border-radius:12px;width:min(980px,94vw);max-height:80vh;display:flex;flex-direction:column;padding:12px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .chord-voicings-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;}
 .chord-voicings-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ink-dim);}
 #chordVoicingsClose{background:#1e1e1e;border:1px solid var(--accent);color:var(--sym);border-radius:6px;padding:6px 10px;cursor:pointer;}
-#chordVoicingsBody{overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px;padding-right:4px;align-items:center;}
+#chordVoicingsBody{overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px;padding-right:4px;align-items:center;-webkit-overflow-scrolling:touch;}
 .chord-diagram-tile,.chord-diagram-empty{background:#18233a;border:1px solid #355a8f;border-radius:10px;padding:8px;min-height:190px;display:flex;flex-direction:column;justify-content:center;}
 .chord-diagram-title{font-size:11px;color:var(--accent2);margin-bottom:6px;}
-.chord-diagram-svg{width:100%;display:flex;justify-content:center;align-items:center;}
+.chord-diagram-svg{width:100%;height:200px;display:flex;justify-content:center;align-items:center;overflow:hidden;}
 .chord-diagram-svg svg{width:100%!important;height:auto!important;display:block;}
 .chord-voicings-empty{padding:18px;font-size:13px;color:var(--ink-dim);}
 .chord{cursor:pointer;}
@@ -318,11 +320,10 @@ body{padding:8px;}
   </div>
 </div>
 
-<script src="./js/svguitar.umd.js" data-svguitar-lib="local"></script>
 <script src="js/chordParser.js"></script>
 <script src="js/jazzChordDatabase.js"></script>
 <script src="js/chordDataService.js"></script>
-<script src="js/chordDiagram.js"></script>
+<script src="js/chordDiagram.js?v=7.0.1"></script>
 <script src="js/chordVoicingsModal.js"></script>
 <script src="js/chordVoicingsInit.js"></script>
 <script>

@@ -4,6 +4,36 @@
 
   function getSvguitarNamespace() {
     if (global.svguitar?.Chart) return global.svguitar;
+    if (global.svguitar?.SVGuitarChord) {
+      global.svguitar.Chart = class ChartAdapter {
+        constructor(target) {
+          this.instance = new global.svguitar.SVGuitarChord(target);
+          this.payload = {};
+        }
+        set(payload) {
+          this.payload = payload || {};
+          return this;
+        }
+        draw() {
+          this.instance
+            .configure({
+              fingerColor: '#f1c40f',
+              fingerTextColor: '#0b1220',
+              color: '#e6eeff',
+              fixedFretCount: 4
+            })
+            .chord({
+              title: this.payload.title || '',
+              fingers: this.payload.fingers || [],
+              barres: this.payload.barres || [],
+              position: this.payload.position || 1
+            })
+            .draw();
+          return this;
+        }
+      };
+      return global.svguitar;
+    }
     if (global.SVGuitarChord) {
       global.svguitar = global.svguitar || {};
       if (!global.svguitar.Chart) {
@@ -21,7 +51,8 @@
               .configure({
                 fingerColor: '#f1c40f',
                 fingerTextColor: '#0b1220',
-                color: '#e6eeff'
+                color: '#e6eeff',
+                fixedFretCount: 4
               })
               .chord({
                 title: this.payload.title || '',
@@ -132,6 +163,42 @@
     container.appendChild(tile);
   }
 
+  function drawWithRecovery(svgHolder, rawVoicing) {
+    return new Promise((resolve, reject) => {
+      const draw = () => {
+        try {
+          renderJazzVoicing(svgHolder, rawVoicing);
+          const svg = svgHolder.querySelector('svg');
+          if (!svg || svg.getBoundingClientRect().height === 0) {
+            throw new Error('SVG render produced an empty or zero-height output.');
+          }
+          svg.style.width = '100%';
+          svg.style.height = 'auto';
+          resolve();
+        } catch (firstError) {
+          console.warn('[ChordDiagram] Initial render failed. Retrying once.', firstError);
+          svgHolder.innerHTML = '';
+          setTimeout(() => {
+            try {
+              renderJazzVoicing(svgHolder, rawVoicing);
+              const svg = svgHolder.querySelector('svg');
+              if (!svg || svg.getBoundingClientRect().height === 0) {
+                throw new Error('Retry render produced an empty or zero-height output.');
+              }
+              svg.style.width = '100%';
+              svg.style.height = 'auto';
+              resolve();
+            } catch (retryError) {
+              reject(retryError);
+            }
+          }, 100);
+        }
+      };
+
+      setTimeout(draw, 100);
+    });
+  }
+
   async function renderChordDiagram(container, { title, position }) {
     container.innerHTML = '';
     container.className = 'chord-diagram-tile';
@@ -163,15 +230,14 @@
           fingers: withIntervalLabels(fingerTuples, position)
         };
 
-      renderJazzVoicing(svgHolder, rawVoicing);
-
-      const svg = svgHolder.querySelector('svg');
-      if (svg) {
-        svg.style.width = '100%';
-        svg.style.height = 'auto';
-      }
+      await drawWithRecovery(svgHolder, rawVoicing);
     } catch (err) {
-      renderFallback(container, title, 'Unable to load diagram library');
+      const svgReady = Boolean(global.svguitar?.Chart || global.svguitar?.SVGuitarChord || global.SVGuitarChord);
+      const detail = !svgReady
+        ? `Missing svguitar runtime at ${global.location?.href || 'unknown location'}`
+        : 'Unable to render diagram';
+      console.error('[ChordDiagram] Render failure.', err);
+      renderFallback(container, title, detail);
     }
   }
 
