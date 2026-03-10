@@ -170,9 +170,11 @@ border-radius:12px;width:min(980px,94vw);max-height:92vh;display:flex;flex-direc
 .chord-voicings-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;}
 .chord-voicings-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ink-dim);}
 #chordVoicingsClose{background:#1e1e1e;border:1px solid var(--accent);color:var(--sym);border-radius:6px;padding:6px 10px;cursor:pointer;}
-#chordVoicingsBody{overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px;padding-right:4px;}
-.chord-diagram-tile,.chord-diagram-empty{background:#18233a;border:1px solid #355a8f;border-radius:10px;padding:8px;min-height:190px;}
+#chordVoicingsBody{overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px;padding-right:4px;align-items:center;}
+.chord-diagram-tile,.chord-diagram-empty{background:#18233a;border:1px solid #355a8f;border-radius:10px;padding:8px;min-height:190px;display:flex;flex-direction:column;justify-content:center;}
 .chord-diagram-title{font-size:11px;color:var(--accent2);margin-bottom:6px;}
+.chord-diagram-svg{width:100%;display:flex;justify-content:center;align-items:center;}
+.chord-diagram-svg svg{width:100%!important;height:auto!important;display:block;}
 .chord-voicings-empty{padding:18px;font-size:13px;color:var(--ink-dim);}
 .chord{cursor:pointer;}
 
@@ -318,6 +320,7 @@ body{padding:8px;}
 
 <script src="./js/svguitar.umd.js" data-svguitar-lib="local"></script>
 <script src="js/chordParser.js"></script>
+<script src="js/jazzChordDatabase.js"></script>
 <script src="js/chordDataService.js"></script>
 <script src="js/chordDiagram.js"></script>
 <script src="js/chordVoicingsModal.js"></script>
