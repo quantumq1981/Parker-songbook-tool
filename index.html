@@ -206,7 +206,105 @@ body{padding:8px;}
 .fret-dot{width:42px;}
 }
 @media print{body>*{display:none!important;}}
+
+/* =====================================================
+   RESONANCE ENGINE OVERLAY STYLES
+===================================================== */
+
+/* Ghost chord tones – dimmed, dashed outline, not highlighted */
+.fret.ghost-tone {
+  outline: 2px dashed rgba(99,102,241,0.55);
+  outline-offset: -2px;
+  background: rgba(99,102,241,0.16) !important;
+  color: #b0b3f7 !important;
+  font-size: 8px !important;
+  opacity: 0.72;
+}
+
+/* All lick step positions – subtle border */
+.fret.lick-step {
+  outline: 1px solid rgba(255,235,59,0.45);
+  outline-offset: -1px;
+}
+
+/* Currently active lick step during playback */
+.fret.lick-step-active {
+  box-shadow: 0 0 16px 6px rgba(255,235,59,0.85) !important;
+  outline: 2px solid #ffeb3b !important;
+  outline-offset: -2px;
+  transform: scale(1.09);
+  z-index: 3;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+/* Resonance pulse animations – applied on top of hl class */
+@keyframes resPulseStable {
+  0%,100% { box-shadow: inset 0 0 0 0 rgba(76,175,80,0); }
+  50%      { box-shadow: inset 0 0 5px 1px rgba(76,175,80,0.28); }
+}
+@keyframes resPulseModerate {
+  0%,100% { box-shadow: inset 0 0 0 0 rgba(66,165,245,0); }
+  50%      { box-shadow: inset 0 0 6px 2px rgba(66,165,245,0.35); }
+}
+@keyframes resPulseTense {
+  0%,100% { box-shadow: inset 0 0 0 0 rgba(239,83,80,0); }
+  50%      { box-shadow: inset 0 0 9px 3px rgba(239,83,80,0.70); }
+}
+@keyframes resPulseVeryTense {
+  0%,100% { box-shadow: inset 0 0 0 0 rgba(239,83,80,0); }
+  50%      { box-shadow: inset 0 0 14px 6px rgba(239,83,80,0.95); }
+}
+
+.fret[data-pulse="stable"].hl    { animation: resPulseStable    2000ms ease-in-out infinite; }
+.fret[data-pulse="moderate"].hl  { animation: resPulseModerate  1400ms ease-in-out infinite; }
+.fret[data-pulse="tense"].hl     { animation: resPulseTense      800ms ease-in-out infinite; }
+.fret[data-pulse="very-tense"].hl{ animation: resPulseVeryTense  500ms ease-in-out infinite; }
+
+/* Active lick step overrides any pulse animation */
+.fret.lick-step-active { animation: none !important; }
+
+/* Resonance Engine panel */
+.resonance-panel {
+  background: #0c1020;
+  border: 1px solid var(--indigo);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+.resonance-panel h3 {
+  color: var(--indigo);
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  letter-spacing: .4px;
+}
+.resonance-status {
+  text-align: center;
+  color: var(--accent2);
+  font-size: 11px;
+  margin-top: 8px;
+  min-height: 16px;
+  letter-spacing: .3px;
+}
+.btn-resonance-on {
+  background: #161030 !important;
+  border-color: var(--indigo) !important;
+  color: #a5b4fc !important;
+}
+.btn-resonance-on:hover {
+  background: var(--indigo) !important;
+  color: #fff !important;
+}
+
+/* Gravity arrow SVG overlay */
+#gravityArrowsSvg {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+#fretboardWrap { position: relative; }
 </style>
+
 
 </head>
 <body>
@@ -290,6 +388,7 @@ body{padding:8px;}
     <div class="controls" style="justify-content:center;margin-bottom:6px;flex-wrap:wrap;">
       <button id="toggleMode" class="btn-sec">Mode: Chord Tones</button>
       <button id="toggleAudio" class="btn-sec">🎵 Audio: Chord</button>
+      <button id="toggleResonance" class="btn-sec">🎸 Resonance: OFF</button>
     </div>
     <div class="func-legend" id="funcLegend">
       <span class="fl-root">● Root (I)</span>
@@ -297,8 +396,22 @@ body{padding:8px;}
       <span class="fl-dom">● Dominant (V, VII)</span>
       <span class="fl-other">● Mediant / Other</span>
     </div>
-    <div class="fretboard" id="fretboard"></div>
-    <div class="fret-markers" id="fretMarkers"></div>
+    <div id="fretboardWrap">
+      <div class="fretboard" id="fretboard"></div>
+      <div class="fret-markers" id="fretMarkers"></div>
+      <svg id="gravityArrowsSvg" width="0" height="0"></svg>
+    </div>
+  </div>
+
+  <div id="resonancePanel" class="resonance-panel" style="display:none;">
+    <h3>🎸 Resonance Engine</h3>
+    <div class="controls" style="justify-content:center;flex-wrap:wrap;margin-bottom:0;">
+      <button id="resonanceRegenBtn" class="btn-sec">↻ Regenerate Lick</button>
+      <button id="resonancePlayBtn" class="btn-ok">▶ Play Lick</button>
+      <button id="resonanceStopBtn" class="btn-stop">⏹ Stop</button>
+      <button id="resonanceArrowsBtn" class="btn-sec">Gravity Arrows: OFF</button>
+    </div>
+    <div class="resonance-status" id="resonanceStatus">Select a bar to activate the Resonance Engine.</div>
   </div>
 
   <details class="panel scale-lib" style="margin-top:10px;">
@@ -320,6 +433,7 @@ body{padding:8px;}
   </div>
 </div>
 
+<script src="js/resonanceEngine.js?v=1.0"></script>
 <script src="js/chordParser.js?v=7.2"></script>
 <script src="js/jazzChordDatabase.js?v=7.2"></script>
 <script src="js/chordDataService.js?v=7.2"></script>
@@ -1012,6 +1126,341 @@ let fbMode = 'chord'; // 'chord' | 'scale' | 'function'
 let audioMode = 'voicing'; // 'voicing' | 'scale'
 let showScales = false;
 
+/* ============================================================
+   RESONANCE ENGINE STATE
+============================================================ */
+let resonanceModeEnabled = false;
+let resonanceGravityMap  = null;
+let resonanceLick        = null;
+let resonanceLickPath    = [];   // FretboardNotePosition[] with fret<=12
+let resonanceGhostTones  = [];
+let resonancePulseMap    = [];
+let resonanceLickFretEls = [];   // pre-computed DOM element refs per lick step
+let showGravityArrows    = false;
+let resonanceIsPlaying   = false;
+let resonanceTimers      = [];
+let resonanceLickSeed    = Date.now();
+let resonanceLastKey     = null;
+let resonanceLastScale   = null;
+
+// Scale-name adapter: map app names → resonance engine IDs
+const APP_SCALE_TO_RESONANCE_ID = {
+  'Ionian':           'ionian',
+  'Major Bebop':      'major_bebop',
+  'Dominant Bebop':   'dominant_bebop',
+  'Dorian Bebop':     'dorian_bebop',
+  'Minor Bebop':      'dorian_bebop',
+  'Harmonic Minor':   'harmonic_minor',
+  'Harmonic Minor Bebop': 'harmonic_minor',
+  'Altered':          'altered'
+};
+
+function mapAppScaleToResonanceScale(appScaleName) {
+  const sk  = appScaleName.split('/')[0].trim();
+  const id  = APP_SCALE_TO_RESONANCE_ID[sk] || sk.toLowerCase().replace(/ /g, '_');
+  const ivs = SCALE_IVS[sk] || SCALE_IVS['Ionian'];
+  return { id: id, intervals: ivs };
+}
+
+// Find a .fret DOM element by engine string number (1=low E … 6=high E) + fret number
+function findFretEl(engineString, fretNum) {
+  if (fretNum < 0 || fretNum > 12) return null;
+  const rowIdx = 6 - engineString; // engine 1→row5 (low E), engine 6→row0 (high E)
+  const rows   = document.querySelectorAll('#fretboard .string');
+  if (rowIdx < 0 || rowIdx >= rows.length) return null;
+  const frets  = rows[rowIdx].querySelectorAll('.fret');
+  return frets[fretNum] || null;
+}
+
+function setResonanceStatus(msg) {
+  const el = document.getElementById('resonanceStatus');
+  if (el) el.textContent = msg;
+}
+
+/* ---- Lick note playback via Web Audio ---- */
+const RE_FLAT_NAMES = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+
+function playLickNoteByMidi(midi, duration) {
+  if (!audioContext || !audioReady) return;
+  const noteName = RE_FLAT_NAMES[((midi % 12) + 12) % 12];
+  const octave   = Math.floor(midi / 12) - 1;
+  const baseFreq = FREQ[noteName] || 261.63;
+  const freq     = baseFreq * Math.pow(2, octave - 4);
+  const osc  = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  osc.connect(gain); gain.connect(audioContext.destination);
+  osc.type = 'triangle';
+  osc.frequency.value = freq;
+  const t0 = audioContext.currentTime;
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(0.22, t0 + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+  osc.start(t0); osc.stop(t0 + duration + 0.05);
+}
+
+/* ---- Lick step visual highlighting ---- */
+function clearLickStepHighlights() {
+  resonanceLickFretEls.forEach(function(fr) {
+    if (fr) fr.classList.remove('lick-step-active');
+  });
+}
+
+function highlightActiveLickStep(stepIdx) {
+  clearLickStepHighlights();
+  const fr = resonanceLickFretEls[stepIdx];
+  if (fr) fr.classList.add('lick-step-active');
+}
+
+/* ---- Lick playback control ---- */
+function stopResonanceLick() {
+  resonanceIsPlaying = false;
+  resonanceTimers.forEach(function(t) { clearTimeout(t); });
+  resonanceTimers = [];
+  clearLickStepHighlights();
+  const btn = document.getElementById('resonancePlayBtn');
+  if (btn) btn.textContent = '▶ Play Lick';
+}
+
+async function playResonanceLick() {
+  if (!resonanceLick || !resonanceLickPath.length) {
+    setResonanceStatus('No lick available — click ↻ Regenerate Lick first.');
+    return;
+  }
+  if (resonanceIsPlaying) { stopResonanceLick(); return; }
+
+  const audioEnabled = await enableAudio();
+  if (!audioEnabled) { setResonanceStatus('Audio blocked — tap screen first.'); return; }
+
+  resonanceIsPlaying = true;
+  document.getElementById('resonancePlayBtn').textContent = '⏸ Stop';
+
+  const stepMs  = 380;  // ms between notes
+  const noteDur = 0.34; // seconds, note duration
+
+  resonanceLick.notes.forEach(function(note, i) {
+    const t = setTimeout(function() {
+      if (!resonanceIsPlaying) return;
+      highlightActiveLickStep(i);
+      playLickNoteByMidi(note.midi, noteDur);
+      setResonanceStatus(
+        'Playing ' + (i + 1) + '/' + resonanceLick.notes.length +
+        ': ' + note.note + ' (' + note.degree + ')' +
+        (note.isTense ? ' ←tense' : '')
+      );
+    }, i * stepMs);
+    resonanceTimers.push(t);
+  });
+
+  const endT = setTimeout(function() {
+    resonanceIsPlaying = false;
+    clearLickStepHighlights();
+    document.getElementById('resonancePlayBtn').textContent = '▶ Play Lick';
+    setResonanceStatus(
+      '✓ Lick complete · ' + resonanceLick.notes.length + ' notes · ' +
+      (resonanceLick.containsTenseNote ? 'tension resolved' : 'stable') +
+      ' · ends on root: ' + (resonanceLick.endsOnRoot ? 'yes' : 'no')
+    );
+  }, resonanceLick.notes.length * stepMs + 200);
+  resonanceTimers.push(endT);
+}
+
+/* ---- Gravity arrow SVG overlay ---- */
+function renderGravityArrows() {
+  const svg = document.getElementById('gravityArrowsSvg');
+  svg.innerHTML = '';
+
+  if (!showGravityArrows || !resonanceGravityMap || !resonanceGravityMap.arrows.length) return;
+
+  const wrap = document.getElementById('fretboardWrap');
+  if (!wrap) return;
+  const wrapRect = wrap.getBoundingClientRect();
+  if (!wrapRect.width) return;
+
+  // Sync SVG size to wrapper
+  svg.setAttribute('width', wrapRect.width);
+  svg.setAttribute('height', wrapRect.height);
+
+  // Arrowhead marker definition
+  const defs    = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const marker  = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+  marker.setAttribute('id', 'res-ah'); marker.setAttribute('markerWidth', '8');
+  marker.setAttribute('markerHeight', '6'); marker.setAttribute('refX', '8');
+  marker.setAttribute('refY', '3'); marker.setAttribute('orient', 'auto');
+  const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  poly.setAttribute('points', '0 0, 8 3, 0 6'); poly.setAttribute('fill', 'rgba(239,83,80,0.85)');
+  marker.appendChild(poly); defs.appendChild(marker); svg.appendChild(defs);
+
+  resonanceGravityMap.arrows.forEach(function(arrow) {
+    // Prefer highlighted frets; fall back to any marked fret
+    const fromFret = document.querySelector('.fret.hl[data-res-degree="' + arrow.fromDegree + '"]')
+                  || document.querySelector('.fret[data-res-degree="' + arrow.fromDegree + '"]');
+    const toFret   = document.querySelector('.fret.hl[data-res-degree="' + arrow.toDegree + '"]')
+                  || document.querySelector('.fret[data-res-degree="' + arrow.toDegree + '"]');
+    if (!fromFret || !toFret || fromFret === toFret) return;
+
+    const fr1 = fromFret.getBoundingClientRect();
+    const fr2 = toFret.getBoundingClientRect();
+    const x1  = fr1.left + fr1.width  / 2 - wrapRect.left;
+    const y1  = fr1.top  + fr1.height / 2 - wrapRect.top;
+    const x2  = fr2.left + fr2.width  / 2 - wrapRect.left;
+    const y2  = fr2.top  + fr2.height / 2 - wrapRect.top;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('stroke', 'rgba(239,83,80,0.75)');
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('stroke-dasharray', '4,3');
+    line.setAttribute('marker-end', 'url(#res-ah)');
+    svg.appendChild(line);
+  });
+}
+
+/* ---- Overlay layers ---- */
+function _applyGhostTones(ghostTones) {
+  ghostTones.forEach(function(pos) {
+    if (pos.fret > 12) return;
+    const fr = findFretEl(pos.string, pos.fret);
+    if (!fr || fr.classList.contains('hl')) return; // don't dim active highlights
+    fr.classList.add('ghost-tone');
+    fr.dataset.resGhost  = '1';
+    fr.dataset.resDegree = pos.degree;
+    fr.textContent = pos.noteName + '\n' + pos.degree;
+  });
+}
+
+function _applyPulseMap(pulseMap) {
+  const pcToStability = {};
+  pulseMap.forEach(function(p) { pcToStability[p.pitchClass] = p.stability; });
+  document.querySelectorAll('.fret.hl').forEach(function(fr) {
+    const pc = parseInt(fr.dataset.idx, 10);
+    if (isNaN(pc)) return;
+    const stab = pcToStability[pc];
+    if (stab) fr.setAttribute('data-pulse', stab);
+  });
+}
+
+function _markResonanceDegrees(gravityMap) {
+  const pcToDeg = {};
+  gravityMap.notes.forEach(function(n) { pcToDeg[n.pitchClass] = n.degree; });
+  document.querySelectorAll('.fret').forEach(function(fr) {
+    const pc = parseInt(fr.dataset.idx, 10);
+    if (isNaN(pc)) return;
+    const deg = pcToDeg[pc];
+    if (deg) fr.dataset.resDegree = deg;
+  });
+}
+
+function _applyLickPath(lickPath) {
+  resonanceLickFretEls = lickPath.map(function(pos) {
+    const fr = findFretEl(pos.string, pos.fret);
+    if (fr) fr.classList.add('lick-step');
+    return fr;
+  });
+}
+
+/* ---- Main overlay entry point ---- */
+function applyResonanceOverlays(root, scaleName) {
+  if (!resonanceModeEnabled) return;
+  if (!window.ResonanceEngine) {
+    console.warn('[ResonanceEngine] Engine not loaded.');
+    return;
+  }
+
+  const sk       = scaleName.split('/')[0].trim();
+  const scaleObj = mapAppScaleToResonanceScale(sk);
+  const keyChanged   = root !== resonanceLastKey;
+  const scaleChanged = sk   !== resonanceLastScale;
+
+  if (keyChanged || scaleChanged || !resonanceLick) {
+    stopResonanceLick();
+    try {
+      const result = window.ResonanceEngine.runResonanceEngine({
+        key:        root,
+        scale:      scaleObj,
+        lickLength: 6,
+        seed:       resonanceLickSeed,
+        showArrows: showGravityArrows
+      });
+      if (!result) {
+        console.warn('[ResonanceEngine] No result for', root, sk);
+        setResonanceStatus('⚠ Engine unavailable for this scale — showing base view.');
+        return;
+      }
+      resonanceGravityMap = result.gravityMap;
+      resonanceLick       = result.lick;
+      resonanceLickPath   = result.activePath;
+      resonanceGhostTones = result.ghostChordTones;
+      resonancePulseMap   = result.pulseMap;
+      resonanceLastKey    = root;
+      resonanceLastScale  = sk;
+      setResonanceStatus(
+        '✓ ' + root + ' ' + sk + ' · ' +
+        resonanceLick.notes.length + ' notes · ' +
+        (resonanceLick.containsTenseNote ? 'tension present' : 'stable') +
+        ' · ends on root: ' + (resonanceLick.endsOnRoot ? 'yes' : 'no')
+      );
+    } catch (err) {
+      console.warn('[ResonanceEngine] Error:', err);
+      setResonanceStatus('⚠ Engine error — check console.');
+      return;
+    }
+  }
+
+  // Apply overlay layers (order matters)
+  _markResonanceDegrees(resonanceGravityMap);
+  _applyGhostTones(resonanceGhostTones);
+  _applyPulseMap(resonancePulseMap);
+  _applyLickPath(resonanceLickPath);
+  if (showGravityArrows) renderGravityArrows();
+}
+
+/* ---- Mode on/off ---- */
+function activateResonanceMode() {
+  resonanceModeEnabled = true;
+  document.getElementById('resonancePanel').style.display = 'block';
+  document.getElementById('fbSection').style.display      = 'block';
+  if (lastBarData) {
+    showFretboard(lastBarData.root, lastBarData.scale, lastBarData.chord);
+  } else {
+    setResonanceStatus('Select a bar to activate the Resonance Engine.');
+  }
+}
+
+function deactivateResonanceMode() {
+  stopResonanceLick();
+  resonanceModeEnabled = false;
+  resonanceLastKey     = null;
+  resonanceLastScale   = null;
+  resonanceLick        = null;
+  // Clear all resonance DOM markings
+  document.querySelectorAll('.fret').forEach(function(fr) {
+    fr.classList.remove('ghost-tone', 'lick-step', 'lick-step-active');
+    fr.removeAttribute('data-pulse');
+    fr.removeAttribute('data-res-degree');
+    fr.removeAttribute('data-res-ghost');
+    delete fr.dataset.resDegree;
+    delete fr.dataset.resGhost;
+  });
+  const svg = document.getElementById('gravityArrowsSvg');
+  if (svg) { svg.innerHTML = ''; svg.setAttribute('width', 0); svg.setAttribute('height', 0); }
+  document.getElementById('resonancePanel').style.display = 'none';
+  setResonanceStatus('');
+}
+
+function regenerateLick() {
+  if (!resonanceModeEnabled) return;
+  stopResonanceLick();
+  resonanceLickSeed  = Date.now() + Math.floor(Math.random() * 99999);
+  resonanceLick      = null; // force re-run
+  resonanceLastKey   = null;
+  resonanceLastScale = null;
+  if (lastBarData) {
+    showFretboard(lastBarData.root, lastBarData.scale, lastBarData.chord);
+    setResonanceStatus('↻ New lick generated.');
+  }
+}
+
 function buildFretboard() {
   const fb = document.getElementById('fretboard');
   fb.innerHTML = '';
@@ -1049,10 +1498,19 @@ function buildFretMarkers() {
 }
 
 function clearFretboard() {
+  // Clear lick step highlights before removing class refs
+  clearLickStepHighlights();
+  resonanceLickFretEls = [];
   document.querySelectorAll('.fret').forEach(fr => {
     fr.className = 'fret'; fr.style.background = ''; fr.style.color = '';
     fr.textContent = fr.dataset.fp === '0' ? fr.dataset.open : '';
+    fr.removeAttribute('data-pulse');
+    delete fr.dataset.resDegree;
+    delete fr.dataset.resGhost;
   });
+  // Clear SVG arrows
+  const svg = document.getElementById('gravityArrowsSvg');
+  if (svg) { svg.innerHTML = ''; svg.setAttribute('width', 0); svg.setAttribute('height', 0); }
 }
 
 function updateFuncLegend() {
@@ -1106,6 +1564,9 @@ function showFretboard(root, scaleName, chordSym) {
     fr.style.color = '#000';
     if (iv === 0) fr.classList.add('rt');
   });
+
+  // Apply resonance overlays if mode is active
+  if (resonanceModeEnabled) applyResonanceOverlays(root, scaleName);
 }
 
 // Scale Library fretboard display — always functional coloring in C reference
@@ -1648,6 +2109,43 @@ document.getElementById('metroBtn').addEventListener('click', e => {
   document.getElementById('metroIndicator').classList.toggle('active', metronomeEnabled);
 });
 
+// ---- Resonance Engine controls ----
+document.getElementById('toggleResonance').addEventListener('click', e => {
+  resonanceModeEnabled = !resonanceModeEnabled;
+  e.target.textContent = resonanceModeEnabled ? '🎸 Resonance: ON' : '🎸 Resonance: OFF';
+  e.target.classList.toggle('btn-resonance-on', resonanceModeEnabled);
+  e.target.classList.toggle('btn-sec', !resonanceModeEnabled);
+  if (resonanceModeEnabled) activateResonanceMode();
+  else deactivateResonanceMode();
+});
+
+document.getElementById('resonanceRegenBtn').addEventListener('click', () => {
+  regenerateLick();
+});
+
+document.getElementById('resonancePlayBtn').addEventListener('click', () => {
+  playResonanceLick();
+});
+
+document.getElementById('resonanceStopBtn').addEventListener('click', () => {
+  stopResonanceLick();
+  setResonanceStatus('Stopped.');
+});
+
+document.getElementById('resonanceArrowsBtn').addEventListener('click', e => {
+  showGravityArrows = !showGravityArrows;
+  e.target.textContent = showGravityArrows ? 'Gravity Arrows: ON' : 'Gravity Arrows: OFF';
+  e.target.classList.toggle('btn-resonance-on', showGravityArrows);
+  e.target.classList.toggle('btn-sec', !showGravityArrows);
+  if (resonanceModeEnabled && lastBarData) {
+    if (showGravityArrows) renderGravityArrows();
+    else {
+      const svg = document.getElementById('gravityArrowsSvg');
+      if (svg) { svg.innerHTML = ''; svg.setAttribute('width', 0); svg.setAttribute('height', 0); }
+    }
+  }
+});
+
 document.getElementById('loopTargetSel').addEventListener('change', () => {
   const barsMode = document.getElementById('loopTargetSel').value === 'bars';
   document.getElementById('loopStart').style.display = barsMode ? 'inline-block' : 'none';
@@ -1674,6 +2172,9 @@ document.getElementById('printBtn').addEventListener('click', printLeadSheet);
   ['loopBtn','Toggle loop playback'],['loopTargetSel','Loop target'],['loopStart','Loop start bar'],['loopEnd','Loop end bar'],
   ['countInInput','Count-in beats'],['tempoTrainerBtn','Toggle tempo trainer'],['metroBtn','Toggle metronome'],
   ['toggleMode','Toggle fretboard mode'],['toggleAudio','Toggle audio mode'],
+  ['toggleResonance','Toggle Resonance Engine'],
+  ['resonanceRegenBtn','Regenerate lick'],['resonancePlayBtn','Play or stop lick'],
+  ['resonanceStopBtn','Stop lick playback'],['resonanceArrowsBtn','Toggle gravity arrows'],
   ['applyFilter','Apply tune filters'],['clearFilter','Clear tune filters'],['filterForm','Filter by form'],
   ['filterDiff','Filter by difficulty'],['filterStyle','Filter by style']
 ].forEach(([id,label]) => {
