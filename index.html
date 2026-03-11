@@ -410,6 +410,14 @@ body{padding:8px;}
       <button id="resonancePlayBtn" class="btn-ok">▶ Play Lick</button>
       <button id="resonanceStopBtn" class="btn-stop">⏹ Stop</button>
       <button id="resonanceArrowsBtn" class="btn-sec">Gravity Arrows: OFF</button>
+      <button id="resonanceCopyTabBtn" class="btn-sec">📋 Copy Tab</button>
+      <button id="resonanceAutoPlayBtn" class="btn-sec">Auto-play: OFF</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;justify-content:center;flex-wrap:wrap;">
+      <label style="color:var(--ink-dim);font-size:12px;">Lick length:</label>
+      <input type="range" id="lickLengthSlider" min="3" max="16" value="6"
+             style="width:120px;accent-color:var(--indigo);cursor:pointer;" />
+      <span id="lickLengthDisplay" style="color:var(--indigo);font-size:12px;font-weight:bold;min-width:48px;">6 notes</span>
     </div>
     <div class="resonance-status" id="resonanceStatus">Select a bar to activate the Resonance Engine.</div>
   </div>
@@ -1142,6 +1150,9 @@ let resonanceTimers      = [];
 let resonanceLickSeed    = Date.now();
 let resonanceLastKey     = null;
 let resonanceLastScale   = null;
+let resonanceLickLength  = 6;    // user-adjustable via slider (3–16)
+let resonanceAutoPlay    = false; // auto-trigger lick on each new bar during playback
+let fretboardResizeObserver = null; // ResizeObserver for arrow repositioning
 
 // Scale-name adapter: map app names → resonance engine IDs
 const APP_SCALE_TO_RESONANCE_ID = {
@@ -1152,7 +1163,11 @@ const APP_SCALE_TO_RESONANCE_ID = {
   'Minor Bebop':      'dorian_bebop',
   'Harmonic Minor':   'harmonic_minor',
   'Harmonic Minor Bebop': 'harmonic_minor',
-  'Altered':          'altered'
+  'Altered':          'altered',
+  'Dorian':           'dorian',
+  'Mixolydian':       'mixolydian',
+  'Lydian Dominant':  'lydian_dominant',
+  'Diminished':       'diminished'
 };
 
 function mapAppScaleToResonanceScale(appScaleName) {
@@ -1221,7 +1236,11 @@ function stopResonanceLick() {
   if (btn) btn.textContent = '▶ Play Lick';
 }
 
-async function playResonanceLick() {
+async function playResonanceLick(opts) {
+  // opts: optional { autoPlay: bool, bpm: number }
+  const isAutoPlay  = opts && opts.autoPlay;
+  const bpmForAuto  = (opts && opts.bpm) || 120;
+
   if (!resonanceLick || !resonanceLickPath.length) {
     setResonanceStatus('No lick available — click ↻ Regenerate Lick first.');
     return;
@@ -1234,8 +1253,14 @@ async function playResonanceLick() {
   resonanceIsPlaying = true;
   document.getElementById('resonancePlayBtn').textContent = '⏸ Stop';
 
-  const stepMs  = 380;  // ms between notes
-  const noteDur = 0.34; // seconds, note duration
+  // When auto-playing during sequencer, scale step time to ~85% of bar duration
+  let stepMs  = 380;
+  let noteDur = 0.34;
+  if (isAutoPlay) {
+    const barMs = (60000 / bpmForAuto) * 4;
+    stepMs  = Math.max(120, Math.floor(barMs / resonanceLick.notes.length * 0.85));
+    noteDur = Math.max(0.08, stepMs / 1000 * 0.82);
+  }
 
   resonanceLick.notes.forEach(function(note, i) {
     const t = setTimeout(function() {
@@ -1378,7 +1403,7 @@ function applyResonanceOverlays(root, scaleName) {
       const result = window.ResonanceEngine.runResonanceEngine({
         key:        root,
         scale:      scaleObj,
-        lickLength: 6,
+        lickLength: resonanceLickLength,
         seed:       resonanceLickSeed,
         showArrows: showGravityArrows
       });
@@ -1400,6 +1425,12 @@ function applyResonanceOverlays(root, scaleName) {
         (resonanceLick.containsTenseNote ? 'tension present' : 'stable') +
         ' · ends on root: ' + (resonanceLick.endsOnRoot ? 'yes' : 'no')
       );
+      // Auto-trigger lick playback when main sequencer is running
+      if (isPlaying && resonanceAutoPlay) {
+        const bpm = Math.max(40, Math.min(320,
+          parseInt(document.getElementById('bpmInput').value) || 120));
+        setTimeout(function() { playResonanceLick({ autoPlay: true, bpm: bpm }); }, 60);
+      }
     } catch (err) {
       console.warn('[ResonanceEngine] Error:', err);
       setResonanceStatus('⚠ Engine error — check console.');
@@ -1459,6 +1490,48 @@ function regenerateLick() {
     showFretboard(lastBarData.root, lastBarData.scale, lastBarData.chord);
     setResonanceStatus('↻ New lick generated.');
   }
+}
+
+/* ---- ASCII guitar tab export ---- */
+function generateAsciiTab(lickPath) {
+  if (!lickPath || !lickPath.length) return '(no lick generated)';
+  // Engine strings: 6=high-e, 5=B, 4=G, 3=D, 2=A, 1=low-E
+  const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E'];
+  const colWidth = Math.max(4, ...lickPath.map(function(p) {
+    return p.fret.toString().length + 2; // at least 2 dash padding
+  }));
+  const rows = STRING_LABELS.map(function(label, ri) {
+    const engineStr = 6 - ri; // e→6, B→5, G→4, D→3, A→2, E→1
+    let line = label + '|';
+    lickPath.forEach(function(pos) {
+      if (pos.string === engineStr) {
+        const f = pos.fret.toString();
+        const pad = colWidth - f.length;
+        const lp = Math.floor(pad / 2);
+        line += '-'.repeat(lp) + f + '-'.repeat(pad - lp);
+      } else {
+        line += '-'.repeat(colWidth);
+      }
+    });
+    return line + '|';
+  });
+  const degRow = '   ' + lickPath.map(function(pos) {
+    const d = (pos.degree || '').slice(0, colWidth);
+    const pad = colWidth - d.length;
+    return ' '.repeat(Math.floor(pad / 2)) + d + ' '.repeat(pad - Math.floor(pad / 2));
+  }).join('');
+  return rows.join('\n') + '\n' + degRow;
+}
+
+/* ---- ResizeObserver for gravity arrows ---- */
+function initFretboardResizeObserver() {
+  const wrap = document.getElementById('fretboardWrap');
+  if (!wrap || !window.ResizeObserver) return;
+  if (fretboardResizeObserver) fretboardResizeObserver.disconnect();
+  fretboardResizeObserver = new ResizeObserver(function() {
+    if (showGravityArrows && resonanceModeEnabled) renderGravityArrows();
+  });
+  fretboardResizeObserver.observe(wrap);
 }
 
 function buildFretboard() {
@@ -1825,7 +1898,8 @@ function playMetronomeClick() {
   const metroEl = document.getElementById('metroIndicator');
   metroEl.classList.add('active','flash');
   setTimeout(() => metroEl.classList.remove('flash'), 100);
-  const ctx = getCtx();
+  const ctx = audioContext;
+  if (!ctx) { console.warn('[Metronome] AudioContext not ready — tap screen to enable audio.'); return; }
   ctx.resume().then(() => {
     const osc = ctx.createOscillator(), gain = ctx.createGain();
     osc.type = 'square'; osc.frequency.value = 1200;
@@ -1835,7 +1909,7 @@ function playMetronomeClick() {
     gain.gain.exponentialRampToValueAtTime(0.08, t0 + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08);
     osc.start(t0); osc.stop(t0 + 0.09);
-  });
+  }).catch(e => console.warn('[Metronome] resume error:', e));
 }
 
 function updatePlaybackProgress(current, total) {
@@ -2045,6 +2119,7 @@ populateTuneDropdown();
 renderStats();
 buildFretboard();
 buildScaleLibrary();
+initFretboardResizeObserver();
 
 tuneSel.addEventListener('change', () => {
 const t = SONGS[canonicalTuneTitle(tuneSel.value)];
@@ -2146,6 +2221,38 @@ document.getElementById('resonanceArrowsBtn').addEventListener('click', e => {
   }
 });
 
+// Lick length slider
+document.getElementById('lickLengthSlider').addEventListener('input', e => {
+  resonanceLickLength = parseInt(e.target.value, 10);
+  document.getElementById('lickLengthDisplay').textContent = resonanceLickLength + ' notes';
+  if (resonanceModeEnabled) regenerateLick();
+});
+
+// Copy Tab
+document.getElementById('resonanceCopyTabBtn').addEventListener('click', () => {
+  if (!resonanceLickPath.length) {
+    setResonanceStatus('No lick to copy — regenerate first.');
+    return;
+  }
+  const tab = generateAsciiTab(resonanceLickPath);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(tab).then(() => {
+      setResonanceStatus('✓ Tab copied to clipboard!');
+      setTimeout(() => setResonanceStatus(''), 2200);
+    }).catch(() => { alert('Guitar tab:\n\n' + tab); });
+  } else {
+    alert('Guitar tab:\n\n' + tab);
+  }
+});
+
+// Auto-play toggle
+document.getElementById('resonanceAutoPlayBtn').addEventListener('click', e => {
+  resonanceAutoPlay = !resonanceAutoPlay;
+  e.target.textContent = resonanceAutoPlay ? 'Auto-play: ON' : 'Auto-play: OFF';
+  e.target.classList.toggle('btn-resonance-on', resonanceAutoPlay);
+  e.target.classList.toggle('btn-sec', !resonanceAutoPlay);
+});
+
 document.getElementById('loopTargetSel').addEventListener('change', () => {
   const barsMode = document.getElementById('loopTargetSel').value === 'bars';
   document.getElementById('loopStart').style.display = barsMode ? 'inline-block' : 'none';
@@ -2175,6 +2282,8 @@ document.getElementById('printBtn').addEventListener('click', printLeadSheet);
   ['toggleResonance','Toggle Resonance Engine'],
   ['resonanceRegenBtn','Regenerate lick'],['resonancePlayBtn','Play or stop lick'],
   ['resonanceStopBtn','Stop lick playback'],['resonanceArrowsBtn','Toggle gravity arrows'],
+  ['resonanceCopyTabBtn','Copy lick as ASCII tab'],['resonanceAutoPlayBtn','Toggle lick auto-play during sequencer'],
+  ['lickLengthSlider','Lick note count (3–16)'],
   ['applyFilter','Apply tune filters'],['clearFilter','Clear tune filters'],['filterForm','Filter by form'],
   ['filterDiff','Filter by difficulty'],['filterStyle','Filter by style']
 ].forEach(([id,label]) => {

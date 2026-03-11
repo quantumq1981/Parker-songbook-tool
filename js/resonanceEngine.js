@@ -125,6 +125,36 @@
       tenseNotes: ['b6', '7'],
       resolutionMap: { b6: ['5'], '7': ['1'] },
       tonicChordType: 'mMaj7'
+    },
+    // --- New scale rules ---
+    dorian: {
+      // m7 chord tones: 1, b3, 5, b7. Natural 2 and 6 are characteristic tensions.
+      // 2 (passing tone) resolves to 1 or b3; 6 (color tone) resolves to 5 or b7.
+      tenseNotes: ['2', '6'],
+      resolutionMap: { '2': ['1', 'b3'], '6': ['5', 'b7'] },
+      tonicChordType: 'm7'
+    },
+    mixolydian: {
+      // Dom7 chord tones: 1, 3, 5, b7. Avoid: 4 clashes against 3.
+      // 4 resolves down to 3; 2 resolves to 1 or 3.
+      tenseNotes: ['4', '2'],
+      resolutionMap: { '4': ['3', '5'], '2': ['1', '3'] },
+      tonicChordType: '7'
+    },
+    lydian_dominant: {
+      // Dom7#11 chord tones: 1, 3, 5, b7. Characteristic tritone: #4.
+      // #4 resolves up to 5 or down to 3; 2 resolves to 1 or 3.
+      tenseNotes: ['#4', '2'],
+      resolutionMap: { '#4': ['5', '3'], '2': ['1', '3'] },
+      tonicChordType: '7'
+    },
+    diminished: {
+      // Dim7 chord tones: 1, b3, b5, 6 (symmetric half-whole scale).
+      // Passing tones b2 and 3 are very tense against the dim chord.
+      // b2 resolves to 1 or b3; 3 resolves to b3 or b5.
+      tenseNotes: ['b2', '3'],
+      resolutionMap: { 'b2': ['1', 'b3'], '3': ['b3', 'b5'] },
+      tonicChordType: 'dim'
     }
   };
 
@@ -139,7 +169,11 @@
     bebop_dorian: 'dorian_bebop',
     altered: 'altered',
     super_locrian: 'altered',
-    harmonic_minor: 'harmonic_minor'
+    harmonic_minor: 'harmonic_minor',
+    dorian: 'dorian',
+    mixolydian: 'mixolydian',
+    lydian_dominant: 'lydian_dominant',
+    diminished: 'diminished'
   };
 
   function getFunctionalRole(degree) {
