@@ -450,7 +450,7 @@ body{padding:8px;}
 <script src="js/chordVoicingsInit.js?v=7.2"></script>
 <script>
 /* ============================================================
-   SONGBOOK DATA — 19 TUNES (v6.0 data model preserved)
+   SONGBOOK DATA — 21 TUNES (v6.0 data model preserved)
 ============================================================ */
 const SONGS = {
   "Anthropology":{key:"Bb",form:"AABA",bars:32,difficulty:"Intermediate",style:"Bebop",structure:"Rhythm Changes",
@@ -713,7 +713,45 @@ const SONGS = {
       [{chord:"Eb7",roman:"IV7",scale:"Mixolydian"},{chord:"Eb7",roman:"IV7",scale:"Mixolydian"},
        {chord:"Bb7",roman:"I7",scale:"Mixolydian"},{chord:"G7b9",roman:"VI7",scale:"Altered"}],
       [{chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Mixolydian"},
-       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Altered"}]]}
+       {chord:"Cm7",roman:"ii7",scale:"Dorian"},{chord:"F7",roman:"V7",scale:"Altered"}]]},
+  "Embraceable You":{key:"F",form:"ABAC",bars:32,difficulty:"Intermediate",style:"Ballad",structure:"Gershwin Standard",
+    description:"Gershwin ballad in ABAC form; Parker's version features rich reharmonisation and lyrical bebop phrasing",
+    progression:[
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Bm7-E7",roman:"VI-II",scale:"Altered"},
+       {chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"Ebm7",roman:"bVIIm7",scale:"Dorian"},
+       {chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"}],
+      [{chord:"Dm",roman:"vi",scale:"Aeolian"},{chord:"Dm",roman:"vi",scale:"Aeolian"},
+       {chord:"Am7",roman:"iii7",scale:"Dorian"},{chord:"D7-G7",roman:"VI7-II7",scale:"Altered"}],
+      [{chord:"CΔ7-Am7",roman:"VΔ7-iii7",scale:"Ionian"},{chord:"Dm7-G7",roman:"vii7-II7",scale:"Mixolydian"},
+       {chord:"C7",roman:"V7/V",scale:"Mixolydian"},{chord:"C#m7-F#7",roman:"bVI-bII7",scale:"Altered"}],
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Bm7-E7",roman:"VI-II",scale:"Altered"},
+       {chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"Gm7",roman:"ii7",scale:"Dorian"}],
+      [{chord:"Gm7",roman:"ii7",scale:"Dorian"},{chord:"Eb7",roman:"bVII7",scale:"Lydian Dominant"},
+       {chord:"FΔ7-Gm7",roman:"IΔ7-ii7",scale:"Ionian"},{chord:"FΔ7-F7",roman:"IΔ7-I7",scale:"Mixolydian"}],
+      [{chord:"BbΔ7",roman:"IVΔ7",scale:"Lydian"},{chord:"Em7b5-A7alt",roman:"VII∅-III7",scale:"Altered"},
+       {chord:"Dm",roman:"vi",scale:"Aeolian"},{chord:"Bm7b5-Bbm7",roman:"VI∅-bVIm7",scale:"Locrian"}],
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Gm7b5-C7",roman:"ii∅-V7",scale:"Altered"},
+       {chord:"Bm7-Dm7",roman:"VI7-vi7",scale:"Dorian"},{chord:"Gm7-C7alt",roman:"ii7-V7",scale:"Altered"}]]},
+  "Oh, Lady Be Good":{key:"G",form:"AABA",bars:32,difficulty:"Intermediate",style:"Bebop",structure:"Gershwin Standard",
+    description:"Gershwin standard transformed into a high-energy bebop vehicle; Parker burns through two full AABA choruses",
+    progression:[
+      [{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"C7",roman:"IV7",scale:"Mixolydian"},
+       {chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Bm7-Bb7",roman:"iii7-bIII7",scale:"Dorian"}],
+      [{chord:"Am7",roman:"ii7",scale:"Dorian"},{chord:"D7",roman:"V7",scale:"Mixolydian"},
+       {chord:"Gmaj6-Em7",roman:"I6-vi7",scale:"Ionian"},{chord:"Am7-D7",roman:"ii7-V7",scale:"Mixolydian"}],
+      [{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"C7",roman:"IV7",scale:"Mixolydian"},
+       {chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Bm7-Bb7",roman:"iii7-bIII7",scale:"Dorian"}],
+      [{chord:"Am7",roman:"ii7",scale:"Dorian"},{chord:"D7",roman:"V7",scale:"Mixolydian"},
+       {chord:"Gmaj6",roman:"I6",scale:"Ionian"},{chord:"Dm7-G7",roman:"vm7-I7",scale:"Mixolydian"}],
+      [{chord:"C",roman:"IV",scale:"Ionian"},{chord:"C#dim7",roman:"#IVdim7",scale:"Diminished"},
+       {chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"F#m7b5-B7alt",roman:"VII∅-III7",scale:"Altered"}],
+      [{chord:"Em7",roman:"vi7",scale:"Dorian"},{chord:"A7",roman:"II7",scale:"Mixolydian"},
+       {chord:"Am7",roman:"ii7",scale:"Dorian"},{chord:"D7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"C7",roman:"IV7",scale:"Mixolydian"},
+       {chord:"GΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Bm7-Bb7",roman:"iii7-bIII7",scale:"Dorian"}],
+      [{chord:"Am7",roman:"ii7",scale:"Dorian"},{chord:"D7",roman:"V7",scale:"Mixolydian"},
+       {chord:"Gmaj6-Em7",roman:"I6-vi7",scale:"Ionian"},{chord:"Am7-D7",roman:"ii7-V7",scale:"Mixolydian"}]]}
 };
 
 
