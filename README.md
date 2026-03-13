@@ -3,7 +3,7 @@ Jazz guitar practice app using Charlie Parker songbook and theory
 Here’s how I’d pitch it to each audience:
 
 For Musicians 🎷
-A pocket-sized bebop reference that puts 18 Charlie Parker compositions at your fingertips. Transpose any tune instantly to your working key, click any chord to hear the root and see exactly where the chord tones and scale options live on the fretboard. Great for woodshedding changes on the gig bus or in the practice room.
+A pocket-sized bebop reference that puts 19 Charlie Parker compositions at your fingertips. Transpose any tune instantly to your working key, click any chord to hear the root and see exactly where the chord tones and scale options live on the fretboard. Great for woodshedding changes on the gig bus or in the practice room.
 
 For Students 🎓
 Think of it as an interactive theory textbook focused entirely on bebop. Every chord is labeled with its Roman numeral function, so you can see the ii-V-I patterns, tritone subs, and altered dominants as they move through Bird’s compositions — not just memorize them. The fretboard visualizer connects the harmony directly to your instrument in real time.
