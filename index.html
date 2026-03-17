@@ -422,6 +422,19 @@ body{padding:8px;}
     <div class="resonance-status" id="resonanceStatus">Select a bar to activate the Resonance Engine.</div>
   </div>
 
+  <!-- ===== Section Lick Generator Panel ===== -->
+  <div id="sectionLickPanel" class="resonance-panel" style="display:none;margin-top:8px;">
+    <h3>🎼 Section Lick Generator</h3>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;">
+      <select id="sectionSelect" style="padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--card);color:var(--ink);font-size:13px;cursor:pointer;">
+        <option value="">— select section —</option>
+      </select>
+      <button id="sectionGenBtn" class="btn-sec">🎼 Generate Section</button>
+      <button id="sectionSaveTabBtn" class="btn-sec" style="display:none;">💾 Save as TAB</button>
+    </div>
+    <pre id="sectionTabDisplay" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:11px;overflow-x:auto;white-space:pre;color:var(--ink);max-height:220px;line-height:1.5;margin:0;"></pre>
+  </div>
+
   <details class="panel scale-lib" style="margin-top:10px;">
     <summary>📖 Bebop Scale Library — Click any scale to visualise &amp; hear</summary>
     <div class="lib-note">All scales shown in C as a reference. Functional harmony colouring: <span class="fl-root">Root</span> · <span class="fl-sub">Subdominant</span> · <span class="fl-dom">Dominant</span> · <span class="fl-other">Mediant</span></div>
@@ -1523,6 +1536,134 @@ function generateAsciiTab(lickPath) {
   return rows.join('\n') + '\n' + degRow;
 }
 
+/* ============================================================
+   SECTION LICK GENERATOR
+============================================================ */
+
+// Compute sections from a tune's form + bar count (or explicit tune.sections)
+function getSectionsForSong(tune) {
+  if (tune && tune.sections) return tune.sections;
+  const form = (tune && tune.form) || 'AABA';
+  const bars = (tune && tune.bars) || 32;
+  const sectionLen = bars / form.length;
+  const seen = {};
+  return [...form].map(function(letter, i) {
+    seen[letter] = (seen[letter] || 0) + 1;
+    const name = seen[letter] > 1 ? letter + seen[letter] : letter;
+    return { name: name, startBar: i * sectionLen + 1, endBar: (i + 1) * sectionLen };
+  });
+}
+
+// Returns a gravity map for a chord root + scale name + key (chord root used as tonic)
+function buildGravityMap(chordSymbol, scaleName, chordRoot) {
+  if (!window.ResonanceEngine) return null;
+  const scaleInfo = mapAppScaleToResonanceScale(scaleName || 'Ionian');
+  return ResonanceEngine.buildGravityMap(chordRoot || 'C', scaleInfo);
+}
+
+// Generate licks for every bar in a section; returns array of barGroups
+function generateSectionLicks(section, tune, targetKey, options) {
+  if (!window.ResonanceEngine) return [];
+  const notesPerBar = (options && options.notesPerBar) || resonanceLickLength;
+  const seed = (options && options.seed) || resonanceLickSeed;
+
+  // Collect chords for this section (4 chords per row, 1 bar each)
+  const startRow = Math.floor((section.startBar - 1) / 4);
+  const endRow   = Math.floor((section.endBar   - 1) / 4);
+  const sectionChords = [];
+  for (let r = startRow; r <= endRow; r++) {
+    if (tune.progression[r]) {
+      tune.progression[r].forEach(function(obj) {
+        const t = transposeChord(obj, tune.key, targetKey);
+        sectionChords.push(t);
+      });
+    }
+  }
+
+  const barGroups = [];
+  sectionChords.forEach(function(chord, idx) {
+    const rootMatch = chord.chord.match(/^([A-G][b#]?)/);
+    const chordRoot = rootMatch ? rootMatch[1] : targetKey;
+    const gm = buildGravityMap(chord.chord, chord.scale, chordRoot);
+    if (!gm) return;
+    const lick = ResonanceEngine.generateLick({
+      gravityMap: gm,
+      length: notesPerBar,
+      seed: seed + idx * 997
+    });
+    if (!lick || !lick.notes || !lick.notes.length) return;
+    const path = ResonanceEngine.mapLickToFretboard(lick, { maxFret: 12 });
+    barGroups.push({ chordSymbol: chord.chord, scale: chord.scale, notes: lick.notes, path: path });
+  });
+  return barGroups;
+}
+
+// Render barGroups (fretboard positions) as 6-string ASCII tab with bar separators
+function notesToTab(barGroups) {
+  if (!barGroups || !barGroups.length) return '(no lick data)';
+  const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E'];
+  const colW = 3; // chars per note slot
+
+  const rows = STRING_LABELS.map(function(label, ri) {
+    const engineStr = 6 - ri; // e→6, B→5, G→4, D→3, A→2, E→1
+    let line = label + '|';
+    barGroups.forEach(function(bar) {
+      bar.path.forEach(function(pos) {
+        if (pos.string === engineStr) {
+          const f = pos.fret.toString();
+          const pad = colW - f.length;
+          line += '-'.repeat(Math.floor(pad / 2)) + f + '-'.repeat(pad - Math.floor(pad / 2));
+        } else {
+          line += '-'.repeat(colW);
+        }
+      });
+      line += '|';
+    });
+    return line;
+  });
+
+  // Chord symbol header row
+  const chordRow = '  ' + barGroups.map(function(bar) {
+    const barW = bar.path.length * colW + 1; // +1 for trailing |
+    return bar.chordSymbol.padEnd(barW).slice(0, barW);
+  }).join('');
+
+  // Degree label footer row
+  const degRow = '  ' + barGroups.map(function(bar) {
+    return bar.path.map(function(pos) {
+      const d = (pos.degree || '').slice(0, colW);
+      return d.padEnd(colW);
+    }).join('') + ' ';
+  }).join('');
+
+  return chordRow + '\n' + rows.join('\n') + '\n' + degRow;
+}
+
+// Populate section dropdown and show/hide the section panel
+function updateSectionDropdown() {
+  const panel = document.getElementById('sectionLickPanel');
+  const sel   = document.getElementById('sectionSelect');
+  const pre   = document.getElementById('sectionTabDisplay');
+  const saveBtn = document.getElementById('sectionSaveTabBtn');
+  if (!panel || !sel) return;
+
+  const name = canonicalTuneTitle(tuneSel.value);
+  const tune = SONGS[name];
+  sel.innerHTML = '<option value="">— select section —</option>';
+  if (pre) { pre.textContent = ''; pre.style.display = 'none'; }
+  if (saveBtn) saveBtn.style.display = 'none';
+
+  if (!tune) { panel.style.display = 'none'; return; }
+  const sections = getSectionsForSong(tune);
+  sections.forEach(function(s, i) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = s.name + ' (bars ' + s.startBar + '\u2013' + s.endBar + ')';
+    sel.appendChild(opt);
+  });
+  panel.style.display = sections.length ? 'block' : 'none';
+}
+
 /* ---- ResizeObserver for gravity arrows ---- */
 function initFretboardResizeObserver() {
   const wrap = document.getElementById('fretboardWrap');
@@ -2123,10 +2264,10 @@ initFretboardResizeObserver();
 
 tuneSel.addEventListener('change', () => {
 const t = SONGS[canonicalTuneTitle(tuneSel.value)];
-if (t) { keySel.value = t.key; buildFretboard(); renderLeadSheet(tuneSel.value, t.key); }
+if (t) { keySel.value = t.key; buildFretboard(); renderLeadSheet(tuneSel.value, t.key); updateSectionDropdown(); }
 });
 document.getElementById('generateBtn').addEventListener('click', () => {
-if (tuneSel.value) { buildFretboard(); renderLeadSheet(tuneSel.value, keySel.value); }
+if (tuneSel.value) { buildFretboard(); renderLeadSheet(tuneSel.value, keySel.value); updateSectionDropdown(); }
 });
 document.getElementById('randomTune').addEventListener('click', () => {
 const entries = getFilteredTunes();
@@ -2253,6 +2394,53 @@ document.getElementById('resonanceAutoPlayBtn').addEventListener('click', e => {
   e.target.classList.toggle('btn-sec', !resonanceAutoPlay);
 });
 
+// ---- Section Lick Generator controls ----
+document.getElementById('sectionGenBtn').addEventListener('click', function() {
+  const name = canonicalTuneTitle(tuneSel.value);
+  const tune = SONGS[name];
+  if (!tune) { alert('Load a tune first.'); return; }
+  const sIdxVal = document.getElementById('sectionSelect').value;
+  if (sIdxVal === '') { alert('Select a section from the dropdown.'); return; }
+  const sections = getSectionsForSong(tune);
+  const section  = sections[parseInt(sIdxVal, 10)];
+  if (!section) return;
+  if (!window.ResonanceEngine) {
+    alert('Resonance Engine not loaded.');
+    return;
+  }
+  const targetKey = keySel.value;
+  const barGroups = generateSectionLicks(section, tune, targetKey);
+  const pre = document.getElementById('sectionTabDisplay');
+  const saveBtn = document.getElementById('sectionSaveTabBtn');
+  if (!barGroups.length) {
+    pre.textContent = '(could not generate — ensure Resonance Engine is loaded)';
+    pre.style.display = 'block';
+    return;
+  }
+  pre.textContent = notesToTab(barGroups);
+  pre.style.display = 'block';
+  saveBtn.style.display = '';
+});
+
+document.getElementById('sectionSaveTabBtn').addEventListener('click', function() {
+  const tab = document.getElementById('sectionTabDisplay').textContent;
+  if (!tab) return;
+  const name  = canonicalTuneTitle(tuneSel.value);
+  const tune  = SONGS[name];
+  const sIdxVal = document.getElementById('sectionSelect').value;
+  const sections = tune ? getSectionsForSong(tune) : [];
+  const sName = (sections[parseInt(sIdxVal, 10)] || {}).name || 'section';
+  const blob = new Blob([tab], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = name.replace(/\s+/g, '_') + '_' + sName + '_lick.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
 document.getElementById('loopTargetSel').addEventListener('change', () => {
   const barsMode = document.getElementById('loopTargetSel').value === 'bars';
   document.getElementById('loopStart').style.display = barsMode ? 'inline-block' : 'none';
@@ -2284,6 +2472,9 @@ document.getElementById('printBtn').addEventListener('click', printLeadSheet);
   ['resonanceStopBtn','Stop lick playback'],['resonanceArrowsBtn','Toggle gravity arrows'],
   ['resonanceCopyTabBtn','Copy lick as ASCII tab'],['resonanceAutoPlayBtn','Toggle lick auto-play during sequencer'],
   ['lickLengthSlider','Lick note count (3–16)'],
+  ['sectionSelect','Select song section for lick generation'],
+  ['sectionGenBtn','Generate section licks as ASCII tab'],
+  ['sectionSaveTabBtn','Save section tab as text file'],
   ['applyFilter','Apply tune filters'],['clearFilter','Clear tune filters'],['filterForm','Filter by form'],
   ['filterDiff','Filter by difficulty'],['filterStyle','Filter by style']
 ].forEach(([id,label]) => {
@@ -2294,6 +2485,7 @@ document.getElementById('printBtn').addEventListener('click', printLeadSheet);
 // Load on startup
 tuneSel.value = 'Anthropology'; keySel.value = 'Bb';
 renderLeadSheet('Anthropology','Bb');
+updateSectionDropdown();
 document.getElementById('loopTargetSel').dispatchEvent(new Event('change'));
 </script>
 
