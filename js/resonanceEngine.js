@@ -155,6 +155,30 @@
       tenseNotes: ['b2', '3'],
       resolutionMap: { 'b2': ['1', 'b3'], '3': ['b3', 'b5'] },
       tonicChordType: 'dim'
+    },
+    locrian: {
+      // m7b5 chord tones: 1, b3, b5, b7. Scale degrees: 1 b2 b3 4 b5 b6 b7.
+      // b2 is the most characteristic tension — a semitone above the root, strong pull to 1.
+      // b6 is a passing color tone; resolves to b7 or b5 (both chord tones).
+      tenseNotes: ['b2', 'b6'],
+      resolutionMap: { 'b2': ['1', 'b3'], 'b6': ['b7', 'b5'] },
+      tonicChordType: 'm7b5'
+    },
+    phrygian: {
+      // m7 chord tones: 1, b3, 5, b7. Scale degrees: 1 b2 b3 4 5 b6 b7.
+      // b2 is the defining Spanish/flamenco tension — resolves strongly down to 1.
+      // b6 (minor 6th) is an unstable passing tone; resolves to 5 or b7.
+      tenseNotes: ['b2', 'b6'],
+      resolutionMap: { 'b2': ['1', 'b3'], 'b6': ['5', 'b7'] },
+      tonicChordType: 'm7'
+    },
+    lydian: {
+      // maj7 chord tones: 1, 3, 5, 7. Scale degrees: 1 2 3 #4 5 6 7.
+      // #4 is the tritone — the hallmark of Lydian — resolves up to 5 or down to 3.
+      // 2 is a passing tone between 1 and 3; resolves to 1 or 3.
+      tenseNotes: ['#4', '2'],
+      resolutionMap: { '#4': ['5', '3'], '2': ['1', '3'] },
+      tonicChordType: 'maj7'
     }
   };
 
@@ -173,7 +197,10 @@
     dorian: 'dorian',
     mixolydian: 'mixolydian',
     lydian_dominant: 'lydian_dominant',
-    diminished: 'diminished'
+    diminished: 'diminished',
+    locrian: 'locrian',
+    phrygian: 'phrygian',
+    lydian: 'lydian'
   };
 
   function getFunctionalRole(degree) {
