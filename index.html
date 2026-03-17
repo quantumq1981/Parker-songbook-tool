@@ -1817,6 +1817,97 @@ function buildMusicXmlString(barGroups, title) {
   return x.join('\n');
 }
 
+// Build a standard MIDI file (Format 0, GM1) from barGroups.
+// Designed for maximum compatibility across all MIDI players and DAWs.
+// Engine string numbering (6=high-e, 1=low-E) → open-string MIDI pitches.
+function buildMidiFromBarGroups(barGroups, title, bpm) {
+  bpm = bpm || 120;
+  const TICKS      = 480;       // ticks per quarter note (standard; most players prefer this)
+  const EIGHTH     = TICKS / 2; // 240 ticks = one eighth note
+  // Open-string MIDI for each engine string number
+  const OPEN_MIDI  = { 6: 64, 5: 59, 4: 55, 3: 50, 2: 45, 1: 40 };
+  const usPerBeat  = Math.round(60000000 / bpm); // microseconds per quarter note
+
+  // Big-endian helpers
+  function u32(v) {
+    return [(v >>> 24) & 0xFF, (v >>> 16) & 0xFF, (v >>> 8) & 0xFF, v & 0xFF];
+  }
+  function u16(v) { return [(v >>> 8) & 0xFF, v & 0xFF]; }
+
+  // MIDI variable-length quantity encoding
+  function varLen(v) {
+    const b = [v & 0x7F];
+    v = v >>> 7;
+    while (v > 0) { b.unshift((v & 0x7F) | 0x80); v = v >>> 7; }
+    return b;
+  }
+
+  // Meta text event helper: FF <type> <varlen> <ascii bytes>
+  function textEvt(metaType, str) {
+    const bytes = Array.from(str).map(function(c) { return c.charCodeAt(0) & 0x7F; });
+    return [0x00, 0xFF, metaType].concat(varLen(bytes.length)).concat(bytes);
+  }
+
+  const track = [];
+
+  // Track name (FF 03) — shown in DAW track headers
+  if (title) track.push.apply(track, textEvt(0x03, title));
+
+  // Tempo (FF 51) — must come before any notes
+  track.push(
+    0x00, 0xFF, 0x51, 0x03,
+    (usPerBeat >>> 16) & 0xFF, (usPerBeat >>> 8) & 0xFF, usPerBeat & 0xFF
+  );
+
+  // Time signature 4/4 (FF 58): nn=4 dd=2(→4) cc=24 bb=8
+  track.push(0x00, 0xFF, 0x58, 0x04, 0x04, 0x02, 0x18, 0x08);
+
+  // GM1 System On SysEx (F0 7E 7F 09 01 F7) — resets all GM devices to defaults
+  track.push(0x00, 0xF0, 0x05, 0x7E, 0x7F, 0x09, 0x01, 0xF7);
+
+  // Channel 1 (0-indexed: 0) controller initialisation for widest player compat
+  track.push(0x00, 0xB0, 0x07, 0x64); // CC 7: channel volume = 100
+  track.push(0x00, 0xB0, 0x0A, 0x40); // CC 10: pan = centre (64)
+  track.push(0x00, 0xB0, 0x0B, 0x7F); // CC 11: expression = max (127)
+  track.push(0x00, 0xB0, 0x40, 0x00); // CC 64: sustain pedal off
+
+  // Program change — GM program 25 = Acoustic Guitar (nylon), 0-indexed = 24 (0x18)
+  track.push(0x00, 0xC0, 0x18);
+
+  barGroups.forEach(function(bar) {
+    // Text marker (FF 01) at bar start: shows chord/scale in DAW timeline
+    var marker = (bar.chordSymbol || '') + (bar.scale ? ' [' + bar.scale + ']' : '');
+    if (marker.trim()) track.push.apply(track, textEvt(0x01, marker));
+
+    bar.path.forEach(function(pos) {
+      var midi = Math.max(0, Math.min(127, (OPEN_MIDI[pos.string] || 64) + pos.fret));
+      // Note on: delta=0, channel 1, note, velocity 100
+      track.push(0x00, 0x90, midi, 0x64);
+      // Note off: delta=EIGHTH ticks, channel 1, note, velocity 0
+      track.push.apply(track, varLen(EIGHTH));
+      track.push(0x80, midi, 0x00);
+    });
+  });
+
+  // End of track (FF 2F)
+  track.push(0x00, 0xFF, 0x2F, 0x00);
+
+  // Assemble: MThd header + MTrk chunk
+  var header = [
+    0x4D, 0x54, 0x68, 0x64        // "MThd"
+  ].concat(u32(6))                 // chunk length = 6
+   .concat(u16(0))                 // format 0 = single track (widest compat)
+   .concat(u16(1))                 // 1 track
+   .concat(u16(TICKS));            // 480 ticks per quarter note
+
+  var chunk = [
+    0x4D, 0x54, 0x72, 0x6B        // "MTrk"
+  ].concat(u32(track.length))      // byte length of track data
+   .concat(track);
+
+  return new Uint8Array(header.concat(chunk));
+}
+
 // Package ASCII tab + alphaTex + MusicXML into a ZIP and trigger download.
 async function exportSectionZip(barGroups, baseName) {
   if (!window.JSZip) {
@@ -1833,6 +1924,7 @@ async function exportSectionZip(barGroups, baseName) {
   zip.file(baseName + '_ascii.txt',  notesToTab(barGroups));
   zip.file(baseName + '.alphatex',   buildAlphaTexString(barGroups, title));
   zip.file(baseName + '.musicxml',   buildMusicXmlString(barGroups, title));
+  zip.file(baseName + '.mid',        buildMidiFromBarGroups(barGroups, title, 120));
 
   const blob = await zip.generateAsync({ type: 'blob' });
   const url  = URL.createObjectURL(blob);
