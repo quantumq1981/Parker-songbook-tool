@@ -431,6 +431,7 @@ body{padding:8px;}
       </select>
       <button id="sectionGenBtn" class="btn-sec">🎼 Generate Section</button>
       <button id="sectionSaveTabBtn" class="btn-sec" style="display:none;">💾 Save as TAB</button>
+      <button id="sectionExportZipBtn" class="btn-sec" style="display:none;" title="Download ASCII tab, alphaTex, and MusicXML in a ZIP file">📦 Download ZIP</button>
     </div>
     <pre id="sectionTabDisplay" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:11px;overflow-x:auto;white-space:pre;color:var(--ink);max-height:220px;line-height:1.5;margin:0;"></pre>
   </div>
@@ -454,6 +455,7 @@ body{padding:8px;}
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="js/resonanceEngine.js?v=1.0"></script>
 <script src="js/chordParser.js?v=7.2"></script>
 <script src="js/jazzChordDatabase.js?v=7.2"></script>
@@ -1232,6 +1234,7 @@ let resonanceLastScale   = null;
 let resonanceLickLength  = 6;    // user-adjustable via slider (3–16)
 let resonanceAutoPlay    = false; // auto-trigger lick on each new bar during playback
 let fretboardResizeObserver = null; // ResizeObserver for arrow repositioning
+let _sectionBarGroups    = null; // persisted after section generate, used by ZIP export
 
 // Scale-name adapter: map app names → resonance engine IDs
 const APP_SCALE_TO_RESONANCE_ID = {
@@ -1552,8 +1555,6 @@ function deactivateResonanceMode() {
     fr.removeAttribute('data-pulse');
     fr.removeAttribute('data-res-degree');
     fr.removeAttribute('data-res-ghost');
-    delete fr.dataset.resDegree;
-    delete fr.dataset.resGhost;
   });
   const svg = document.getElementById('gravityArrowsSvg');
   if (svg) { svg.innerHTML = ''; svg.setAttribute('width', 0); svg.setAttribute('height', 0); }
@@ -1706,6 +1707,141 @@ function notesToTab(barGroups) {
   }).join('');
 
   return chordRow + '\n' + rows.join('\n') + '\n' + degRow;
+}
+
+/* ============================================================
+   MULTI-FORMAT EXPORT
+============================================================ */
+
+// Escape special chars for XML text content
+function _escXml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Build alphaTex notation string from barGroups.
+// alphaTex string numbering: 1=high-e, 6=low-E (opposite of engine: 6=high-e, 1=low-E).
+function buildAlphaTexString(barGroups, title) {
+  const lines = [];
+  if (title) lines.push('\\title "' + title.replace(/"/g, '\\"') + '"');
+  lines.push('\\tempo 120');
+  lines.push('\\instrument 25'); // acoustic guitar (nylon)
+  lines.push('.');
+  barGroups.forEach(function(bar) {
+    const comment = '// ' + bar.chordSymbol + (bar.scale ? ' · ' + bar.scale : '');
+    const notes = bar.path.map(function(pos) {
+      return pos.fret + '.' + (7 - pos.string); // engine→alphaTex string
+    });
+    lines.push(comment);
+    lines.push(':8 ' + notes.join(' ') + ' |');
+  });
+  return lines.join('\n');
+}
+
+// Build a minimal MusicXML 3.1 document (guitar tab notation) from barGroups.
+function buildMusicXmlString(barGroups, title) {
+  // Standard guitar MIDI open strings, low→high: E2=40, A2=45, D3=50, G3=55, B3=59, E4=64
+  // MusicXML staff-tuning line 1=high-e, line 6=low-E (opposite of engine string numbering)
+  const TUNING_MIDI = [64, 59, 55, 50, 45, 40]; // index = xmlLine-1
+  const TUNING_META = [
+    {step:'E', octave:4}, {step:'B', octave:3}, {step:'G', octave:3},
+    {step:'D', octave:3}, {step:'A', octave:2}, {step:'E', octave:2}
+  ];
+  // pitch class → {step, alter}
+  const PC = [
+    {step:'C', alter:0}, {step:'C', alter:1}, {step:'D', alter:0},
+    {step:'E', alter:-1}, {step:'E', alter:0}, {step:'F', alter:0},
+    {step:'F', alter:1}, {step:'G', alter:0}, {step:'A', alter:-1},
+    {step:'A', alter:0}, {step:'B', alter:-1}, {step:'B', alter:0}
+  ];
+  function midiPitch(midi) {
+    const pc = ((midi % 12) + 12) % 12;
+    return Object.assign({}, PC[pc], { octave: Math.floor(midi / 12) - 1 });
+  }
+
+  const x = [];
+  x.push('<?xml version="1.0" encoding="UTF-8"?>');
+  x.push('<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN"');
+  x.push('  "http://www.musicxml.org/dtds/partwise.dtd">');
+  x.push('<score-partwise version="3.1">');
+  if (title) x.push('  <work><work-title>' + _escXml(title) + '</work-title></work>');
+  x.push('  <part-list>');
+  x.push('    <score-part id="P1"><part-name>Guitar</part-name></score-part>');
+  x.push('  </part-list>');
+  x.push('  <part id="P1">');
+
+  barGroups.forEach(function(bar, mi) {
+    x.push('    <measure number="' + (mi + 1) + '">');
+    if (mi === 0) {
+      x.push('      <attributes>');
+      x.push('        <divisions>2</divisions>');
+      x.push('        <key><fifths>0</fifths></key>');
+      x.push('        <time><beats>4</beats><beat-type>4</beat-type></time>');
+      x.push('        <clef><sign>TAB</sign></clef>');
+      x.push('        <staff-details>');
+      x.push('          <staff-lines>6</staff-lines>');
+      TUNING_META.forEach(function(t, ti) {
+        x.push('          <staff-tuning line="' + (ti + 1) + '">');
+        x.push('            <tuning-step>' + t.step + '</tuning-step>');
+        x.push('            <tuning-octave>' + t.octave + '</tuning-octave>');
+        x.push('          </staff-tuning>');
+      });
+      x.push('        </staff-details>');
+      x.push('      </attributes>');
+    }
+    // Barline with chord annotation
+    x.push('      <!-- ' + _escXml(bar.chordSymbol + (bar.scale ? ' · ' + bar.scale : '')) + ' -->');
+    bar.path.forEach(function(pos) {
+      const xmlStr = 7 - pos.string; // engine→MusicXML string
+      const midi   = TUNING_MIDI[xmlStr - 1] + pos.fret;
+      const p      = midiPitch(midi);
+      x.push('      <note>');
+      x.push('        <pitch><step>' + p.step + '</step>' +
+        (p.alter !== 0 ? '<alter>' + p.alter + '</alter>' : '') +
+        '<octave>' + p.octave + '</octave></pitch>');
+      x.push('        <duration>1</duration><type>eighth</type>');
+      x.push('        <notations><technical>');
+      x.push('          <string>' + xmlStr + '</string>');
+      x.push('          <fret>' + pos.fret + '</fret>');
+      x.push('        </technical></notations>');
+      x.push('      </note>');
+    });
+    x.push('    </measure>');
+  });
+
+  x.push('  </part>');
+  x.push('</score-partwise>');
+  return x.join('\n');
+}
+
+// Package ASCII tab + alphaTex + MusicXML into a ZIP and trigger download.
+async function exportSectionZip(barGroups, baseName) {
+  if (!window.JSZip) {
+    alert('JSZip not loaded — cannot create ZIP. Check your network connection and reload.');
+    return;
+  }
+  if (!barGroups || !barGroups.length) {
+    alert('No lick data to export — generate a section first.');
+    return;
+  }
+  const zip   = new JSZip();
+  const title = baseName.replace(/_/g, ' ');
+
+  zip.file(baseName + '_ascii.txt',  notesToTab(barGroups));
+  zip.file(baseName + '.alphatex',   buildAlphaTexString(barGroups, title));
+  zip.file(baseName + '.musicxml',   buildMusicXmlString(barGroups, title));
+
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = baseName + '_tabs.zip';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // Populate section dropdown and show/hide the section panel
@@ -2477,28 +2613,33 @@ document.getElementById('sectionGenBtn').addEventListener('click', function() {
     alert('Resonance Engine not loaded.');
     return;
   }
-  const targetKey = keySel.value;
-  const barGroups = generateSectionLicks(section, tune, targetKey);
-  const pre = document.getElementById('sectionTabDisplay');
-  const saveBtn = document.getElementById('sectionSaveTabBtn');
+  const targetKey   = keySel.value;
+  const barGroups   = generateSectionLicks(section, tune, targetKey);
+  const pre         = document.getElementById('sectionTabDisplay');
+  const saveBtn     = document.getElementById('sectionSaveTabBtn');
+  const exportBtn   = document.getElementById('sectionExportZipBtn');
   if (!barGroups.length) {
     pre.textContent = '(could not generate — ensure Resonance Engine is loaded)';
     pre.style.display = 'block';
+    _sectionBarGroups = null;
+    if (exportBtn) exportBtn.style.display = 'none';
     return;
   }
+  _sectionBarGroups = barGroups;
   pre.textContent = notesToTab(barGroups);
   pre.style.display = 'block';
   saveBtn.style.display = '';
+  if (exportBtn) exportBtn.style.display = '';
 });
 
 document.getElementById('sectionSaveTabBtn').addEventListener('click', function() {
   const tab = document.getElementById('sectionTabDisplay').textContent;
   if (!tab) return;
-  const name  = canonicalTuneTitle(tuneSel.value);
-  const tune  = SONGS[name];
+  const name    = canonicalTuneTitle(tuneSel.value);
+  const tune    = SONGS[name];
   const sIdxVal = document.getElementById('sectionSelect').value;
   const sections = tune ? getSectionsForSong(tune) : [];
-  const sName = (sections[parseInt(sIdxVal, 10)] || {}).name || 'section';
+  const sName   = (sections[parseInt(sIdxVal, 10)] || {}).name || 'section';
   const blob = new Blob([tab], { type: 'text/plain' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
@@ -2508,6 +2649,20 @@ document.getElementById('sectionSaveTabBtn').addEventListener('click', function(
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+});
+
+document.getElementById('sectionExportZipBtn').addEventListener('click', function() {
+  if (!_sectionBarGroups || !_sectionBarGroups.length) {
+    alert('Generate a section lick first.');
+    return;
+  }
+  const name    = canonicalTuneTitle(tuneSel.value);
+  const sIdxVal = document.getElementById('sectionSelect').value;
+  const tune    = SONGS[name];
+  const sections = tune ? getSectionsForSong(tune) : [];
+  const sName   = (sections[parseInt(sIdxVal, 10)] || {}).name || 'section';
+  const baseName = name.replace(/\s+/g, '_') + '_' + sName;
+  exportSectionZip(_sectionBarGroups, baseName);
 });
 
 document.getElementById('loopTargetSel').addEventListener('change', () => {
@@ -2544,6 +2699,7 @@ document.getElementById('printBtn').addEventListener('click', printLeadSheet);
   ['sectionSelect','Select song section for lick generation'],
   ['sectionGenBtn','Generate section licks as ASCII tab'],
   ['sectionSaveTabBtn','Save section tab as text file'],
+  ['sectionExportZipBtn','Download section lick as ZIP (ASCII tab, alphaTex, MusicXML)'],
   ['applyFilter','Apply tune filters'],['clearFilter','Clear tune filters'],['filterForm','Filter by form'],
   ['filterDiff','Filter by difficulty'],['filterStyle','Filter by style']
 ].forEach(([id,label]) => {
