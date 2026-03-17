@@ -1921,10 +1921,15 @@ async function exportSectionZip(barGroups, baseName) {
   const zip   = new JSZip();
   const title = baseName.replace(/_/g, ' ');
 
+  // Convert Uint8Array → binary string; JSZip {binary:true} is the most
+  // reliable path for binary data across all JSZip 3.x environments.
+  var _midiBytes = buildMidiFromBarGroups(barGroups, title, 120);
+  var _midiBin   = Array.from(_midiBytes, function(b) { return String.fromCharCode(b); }).join('');
+
   zip.file(baseName + '_ascii.txt',  notesToTab(barGroups));
   zip.file(baseName + '.alphatex',   buildAlphaTexString(barGroups, title));
   zip.file(baseName + '.musicxml',   buildMusicXmlString(barGroups, title));
-  zip.file(baseName + '.mid',        buildMidiFromBarGroups(barGroups, title, 120));
+  zip.file(baseName + '.mid',        _midiBin, { binary: true });
 
   const blob = await zip.generateAsync({ type: 'blob' });
   const url  = URL.createObjectURL(blob);
