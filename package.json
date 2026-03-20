@@ -1,0 +1,14 @@
+{
+  "name": "parker-songbook-tool",
+  "version": "7.0.0",
+  "description": "Charlie Parker Songbook Trainer — bebop practice web app",
+  "private": true,
+  "scripts": {
+    "build:resonance": "esbuild src/features/resonance-engine/index.js --bundle --format=iife --global-name=ResonanceEngine --outfile=js/resonanceEngine.js",
+    "build": "npm run build:resonance",
+    "test": "node tests/chordParser.test.js && node tests/chordDataService.transposition.test.js && node tests/filterJazzVoicings.test.js && node tests/resonanceEngine.test.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  }
+}

@@ -419,8 +419,20 @@
         isTense: true
       };
     }
-    if (subdominantPool.length) repaired.notes[0].degree = subdominantPool[0].degree;
-    repaired.notes[repaired.notes.length - 1].degree = '1';
+    if (subdominantPool.length) {
+      var sd = subdominantPool[0];
+      var sdMidi = midiFromNoteName(sd.noteName, octaveRange[0]);
+      repaired.notes[0].degree = sd.degree;
+      repaired.notes[0].note = noteNameFromMidi(sdMidi);
+      repaired.notes[0].midi = sdMidi;
+      repaired.notes[0].isTense = sd.isTense;
+    }
+    var rootMidi = midiFromNoteName(rootNote.noteName, octaveRange[0]);
+    var lastIdx = repaired.notes.length - 1;
+    repaired.notes[lastIdx].degree = '1';
+    repaired.notes[lastIdx].note = noteNameFromMidi(rootMidi);
+    repaired.notes[lastIdx].midi = rootMidi;
+    repaired.notes[lastIdx].isTense = false;
     repaired.containsTenseNote = repaired.notes.some(function (n) { return n.isTense; });
     repaired.startsOnSubdominant = true;
     repaired.endsOnRoot = true;

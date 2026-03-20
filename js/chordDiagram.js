@@ -92,7 +92,7 @@
   }
 
   // Mapping Function
-  function renderJazzVoicing(targetId, rawVoicing) {
+  function renderJazzVoicing(svgContainer, rawVoicing) {
     let formattedFingers = [];
 
     if (Array.isArray(rawVoicing)) {
@@ -123,7 +123,7 @@
       ]);
     }
 
-    const chart = new global.svguitar.Chart(targetId);
+    const chart = new global.svguitar.Chart(svgContainer);
     chart.set({
       fingers: formattedFingers,
       barres: rawVoicing.barres || [],
