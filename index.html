@@ -1225,19 +1225,26 @@ function _bbRide(ctx, t, vol) {
 }
 
 function _bbHihat(ctx, t, vol) {
-  const len = Math.floor(ctx.sampleRate * 0.05);
+  // Natural closed hi-hat: two parallel bandpass-filtered noise streams
+  // at cymbal resonance frequencies (~8kHz and ~12kHz), short decay.
+  // Using two separate buffer sources avoids the harsh all-frequencies blast.
+  const len = Math.floor(ctx.sampleRate * 0.08);
   const buf = ctx.createBuffer(1, len, ctx.sampleRate);
   const d = buf.getChannelData(0);
   for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  const hpf = ctx.createBiquadFilter();
-  hpf.type = 'highpass'; hpf.frequency.value = 9500;
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(vol * 0.22, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
-  src.connect(hpf); hpf.connect(g); g.connect(ctx.destination);
-  src.start(t); src.stop(t + 0.06);
+
+  // Each band: independent BufferSource → BPF → Gain → output
+  [[8200, 1.2, 0.07, 0.036], [12500, 0.9, 0.045, 0.024]].forEach(([freq, Q, gv, decay]) => {
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const bpf = ctx.createBiquadFilter();
+    bpf.type = 'bandpass'; bpf.frequency.value = freq; bpf.Q.value = Q;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gv * vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+    src.connect(bpf); bpf.connect(g); g.connect(ctx.destination);
+    src.start(t); src.stop(t + decay + 0.01);
+  });
 }
 
 function _bbKick(ctx, t, vol) {
