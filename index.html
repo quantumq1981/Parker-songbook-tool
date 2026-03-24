@@ -1206,6 +1206,127 @@ function playLibraryScale(noteNames) {
   });
 }
 
+// ============================================================
+// BEBOP SWING BACKING TRACK ENGINE
+// Authentic jazz rhythm section: ride cymbal swing 8ths,
+// hi-hat on 2 & 4, feathered kick, walking bass, shell comping
+// ============================================================
+
+function _bbRide(ctx, t, vol) {
+  // Metallic cymbal ping via inharmonic sine partials
+  [[3700, 0.35], [5600, 0.22], [8100, 0.13]].forEach(([f, decay]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(vol * 0.055, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+    o.start(t); o.stop(t + decay + 0.01);
+  });
+}
+
+function _bbHihat(ctx, t, vol) {
+  const len = Math.floor(ctx.sampleRate * 0.05);
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const hpf = ctx.createBiquadFilter();
+  hpf.type = 'highpass'; hpf.frequency.value = 9500;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vol * 0.22, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+  src.connect(hpf); hpf.connect(g); g.connect(ctx.destination);
+  src.start(t); src.stop(t + 0.06);
+}
+
+function _bbKick(ctx, t, vol) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(110, t);
+  o.frequency.exponentialRampToValueAtTime(42, t + 0.1);
+  o.connect(g); g.connect(ctx.destination);
+  g.gain.setValueAtTime(vol * 0.38, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+  o.start(t); o.stop(t + 0.22);
+}
+
+function _bbBassNote(ctx, t, freq, dur) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'triangle'; o.frequency.value = freq;
+  o.connect(g); g.connect(ctx.destination);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.32, t + 0.014);
+  g.gain.setValueAtTime(0.32, t + dur * 0.72);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.92);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+
+function _bbComp(ctx, t, root, chordSym, dur) {
+  // Rootless shell voicing: 3rd + 7th (+ 9th) — classic bebop piano comp
+  const base = FREQ[root] || 261.63;
+  let ivs;
+  if (/Δ|maj7/i.test(chordSym))     ivs = [4, 11, 14]; // M3, M7, M9
+  else if (/m7b5|ø/.test(chordSym)) ivs = [3, 10, 13]; // m3, m7, m9
+  else if (/dim/.test(chordSym))    ivs = [3, 9, 15];  // m3, dim7, m10
+  else if (/m7/.test(chordSym))     ivs = [3, 10, 14]; // m3, m7, M9
+  else                               ivs = [4, 10, 14]; // dom7: M3, m7, M9
+  ivs.forEach((semi, i) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = base * Math.pow(2, semi / 12);
+    o.connect(g); g.connect(ctx.destination);
+    const nt = t + i * 0.007;
+    g.gain.setValueAtTime(0, nt);
+    g.gain.linearRampToValueAtTime(0.075, nt + 0.011);
+    g.gain.exponentialRampToValueAtTime(0.0001, nt + dur);
+    o.start(nt); o.stop(nt + dur + 0.01);
+  });
+}
+
+function playBebopBackingBar(root, chordSym, bpm) {
+  if (!audioReady || !audioContext) return;
+  const ctx = audioContext;
+  ctx.resume().catch(() => {});
+  const bd = 60 / bpm;   // beat duration in seconds
+  const sw = 0.64;        // swing: downbeat 8th = 64% of beat (2:1 triplet feel)
+  const t0 = ctx.currentTime + 0.02;
+  const B = n => t0 + n * bd;           // downbeat of beat n (0-indexed)
+  const U = n => t0 + n * bd + bd * sw; // swing upbeat of beat n
+
+  // Ride cymbal: all 8 swing 8th notes per bar (the jazz ride pattern)
+  for (let i = 0; i < 4; i++) {
+    _bbRide(ctx, B(i), i === 0 ? 1.0 : 0.88);  // downbeats — beat 1 accented
+    _bbRide(ctx, U(i), 0.58);                   // swing upbeats — lighter
+  }
+
+  // Hi-hat pedal on beats 2 & 4 (the jazz "two and four" feel)
+  _bbHihat(ctx, B(1), 1.0);
+  _bbHihat(ctx, B(3), 1.0);
+
+  // Feathered bass drum (bebop style: very soft on all beats)
+  _bbKick(ctx, B(0), 0.50);
+  _bbKick(ctx, B(1), 0.18);
+  _bbKick(ctx, B(2), 0.28);
+  _bbKick(ctx, B(3), 0.18);
+
+  // Walking bass: chord tones on all 4 beats
+  const bassBase = (FREQ[root] || 261.63) / 2; // drop one octave
+  let walkIvs;
+  if (/Δ|maj7/i.test(chordSym))     walkIvs = [0, 7, 11, 4];  // R, 5, M7, 3
+  else if (/m7b5|ø/.test(chordSym)) walkIvs = [0, 6, 10, 3];  // R, b5, b7, b3
+  else if (/dim/.test(chordSym))    walkIvs = [0, 6, 9,  3];  // R, b5, dim7, b3
+  else if (/m7/.test(chordSym))     walkIvs = [0, 7, 10, 3];  // R, 5, b7, b3
+  else                               walkIvs = [0, 7, 10, 4];  // dom7: R, 5, b7, 3
+  walkIvs.forEach((semi, i) => {
+    _bbBassNote(ctx, B(i), bassBase * Math.pow(2, semi / 12), bd * 0.87);
+  });
+
+  // Bebop comping: rootless shell voicings on swing upbeats of 2 & 4
+  // This is the classic "behind the beat" piano comp feel
+  _bbComp(ctx, U(1), root, chordSym, 0.13);
+  _bbComp(ctx, U(3), root, chordSym, 0.13);
+}
+
 /* ============================================================
    FRETBOARD ENGINE — 3-mode display with fret position markers
 ============================================================ */
@@ -2441,14 +2562,16 @@ async function startPlayback() {
     bar.classList.add('playing');
     bar.scrollIntoView({behavior:'smooth',block:'nearest'});
     const { root, chord, scale } = bar.dataset;
-    if (audioMode === 'voicing') playChordVoicing(root, chord);
+    if (audioMode === 'bebop') playBebopBackingBar(root, chord, parseInt(document.getElementById('bpmInput').value) || 120);
+    else if (audioMode === 'voicing') playChordVoicing(root, chord);
     else playScaleRun(root, scale);
-    playMetronomeClick();
+    if (audioMode !== 'bebop') playMetronomeClick();
+    else if (metronomeEnabled) playMetronomeClick(); // keep visual flash when metro is on
     lastBarData = { root, scale, chord };
     updateChordScaleAnalysis(bar);
     if (document.getElementById('fbSection').style.display !== 'none') showFretboard(root, scale, chord);
     document.getElementById('playStatus').textContent =
-      `♩ Bar ${playIdx + 1} / ${bars.length}${loopEnabled ? ` · Loop ${loopSection.currentLoop + 1}` : ''} · ${audioMode === 'voicing' ? 'Chord Audio' : 'Scale Audio'}`;
+      `♩ Bar ${playIdx + 1} / ${bars.length}${loopEnabled ? ` · Loop ${loopSection.currentLoop + 1}` : ''} · ${audioMode === 'voicing' ? 'Chord Audio' : audioMode === 'bebop' ? 'Bebop Groove 🥁' : 'Scale Audio'}`;
     updatePlaybackProgress(playIdx + 1, bars.length);
     playIdx++;
     const bpm = Math.max(40, Math.min(320, parseInt(document.getElementById('bpmInput').value) || 120));
@@ -2594,12 +2717,13 @@ updateFuncLegend();
 if (lastBarData) showFretboard(lastBarData.root, lastBarData.scale, lastBarData.chord);
 });
 
-// Audio mode toggle: chord voicing vs scale run
+// Audio mode toggle: chord voicing → scale run → bebop groove (cycles)
 document.getElementById('toggleAudio').addEventListener('click', e => {
-audioMode = audioMode === 'voicing' ? 'scale' : 'voicing';
-e.target.textContent = audioMode === 'voicing' ? '🎵 Audio: Chord' : '🎵 Audio: Scale';
-e.target.classList.toggle('btn-audio-scale', audioMode === 'scale');
-e.target.classList.toggle('btn-sec', audioMode === 'voicing');
+const modes = ['voicing', 'scale', 'bebop'];
+audioMode = modes[(modes.indexOf(audioMode) + 1) % modes.length];
+const labels = { voicing: '🎵 Audio: Chord', scale: '🎵 Audio: Scale', bebop: '🥁 Bebop Groove' };
+e.target.textContent = labels[audioMode];
+e.target.className = audioMode === 'bebop' ? 'btn-ok' : audioMode === 'scale' ? 'btn-audio-scale' : 'btn-sec';
 });
 
 // Playback controls
