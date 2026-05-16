@@ -781,11 +781,11 @@ details.panel.heads-panel summary { color: #ce93d8; }
 .fret.hd-ghost { outline:2px dashed rgba(206,147,216,0.5)!important; opacity:.7; }
 
 /* ── alphaTab notation area ──────────────────────────────────────────────── */
-.at-score-wrap { position:relative; margin-top:10px; border-radius:6px; overflow:hidden;
-  min-height:130px; background:#fafafa; }
+.at-score-wrap { position:relative; margin-top:10px; border-radius:6px; overflow:hidden; background:#fafafa; }
 .at-score-wrap.at-empty { background:#111; }
 .at-score-wrap.at-loaded { background:#fff; }
-#atScore { width:100%; }
+#atScore { width:100%; height:220px; overflow-x:auto; overflow-y:hidden; cursor:pointer; }
+@media (min-width:700px) { #atScore { height:260px; } }
 .at-loading-overlay { position:absolute; inset:0; display:flex; align-items:center;
   justify-content:center; background:rgba(10,5,20,0.88); flex-direction:column;
   gap:8px; z-index:10; }
@@ -4858,15 +4858,16 @@ async function suggestNext() {
     try {
       api = new alphaTab.AlphaTabApi(container, {
         display: {
-          layoutMode: 1,       // 1 = Horizontal scroll
+          layoutMode: 1,       // 1 = Horizontal (GuitarPro-style linear scroll)
           staveProfile: 3,     // 3 = TabMixed (standard notation + TAB)
-          scale: 0.82
+          scale: 0.9
         },
         player: {
           enablePlayer: true,
           enableUserInteraction: true,
           soundFont: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/soundfont/sonivox.sf2',
-          scrollMode: 2        // 2 = Continuous
+          scrollMode: 2,       // 2 = Continuous cursor following
+          scrollElement: container  // scroll #atScore itself (not its overflow:hidden parent)
         }
       });
     } catch(err) {
