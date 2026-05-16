@@ -3784,16 +3784,45 @@ const FIFTHS_KEY = {
   '0':'C','1':'G','2':'D','3':'A','4':'E','5':'B','6':'F#','7':'C#'
 };
 
-// MusicXML kind attribute → chord quality suffix
+// MusicXML kind content → chord quality suffix
+// NOTE: 'major' = plain major triad (no 7th), NOT maj7
 const MXML_KIND = {
-  'major':'Δ7','minor':'m','dominant':'7',
+  'major':'','minor':'m','dominant':'7',
   'major-seventh':'Δ7','minor-seventh':'m7',
   'dominant-seventh':'7','major-minor':'mΔ7',
   'diminished':'dim','diminished-seventh':'dim7',
   'half-diminished':'m7b5','augmented':'aug',
+  'augmented-major-seventh':'augΔ7',
   'suspended-fourth':'sus4','suspended-second':'sus2',
   'power':'5','none':''
 };
+
+// Normalise the kind@text attribute (display string from notation software) → our suffix
+function normKindText(txt) {
+  const t = txt.replace(/\s/g,'').replace(/△/,'Δ');
+  const map = {
+    '':'', '5':'5',
+    'm':'m','min':'m','mi':'m','-':'m',
+    '7':'7',
+    'm7':'m7','min7':'m7','mi7':'m7','-7':'m7',
+    'maj7':'Δ7','ma7':'Δ7','M7':'Δ7','Δ7':'Δ7','Δ':'Δ7','maj':'Δ7',
+    'dim':'dim','°':'dim','o':'dim',
+    'dim7':'dim7','°7':'dim7','o7':'dim7',
+    'm7b5':'m7b5','m7♭5':'m7b5','ø':'m7b5','ø7':'m7b5',
+    'aug':'aug','+':'aug',
+    'aug7':'aug7','+7':'aug7',
+    'sus4':'sus4','sus':'sus4','sus2':'sus2',
+  };
+  return map[t] ?? t;
+}
+
+// Strip UUID/base64 suffix appended to filenames by some services
+function cleanFilename(name) {
+  return name
+    .replace(/[_-][A-Za-z0-9]{10,}$/, '') // strip UUID-like suffix
+    .replace(/_/g, ' ')
+    .trim();
+}
 
 const ROMAN_NAMES = ['I','bII','II','bIII','III','IV','#IV','V','bVI','VI','bVII','VII'];
 
@@ -3826,52 +3855,77 @@ function inferRoman(keyRoot, chordRoot, quality) {
 function parseMusicXML(xmlText) {
   const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
 
-  const title = (
-    doc.querySelector('work-title')?.textContent ||
-    doc.querySelector('movement-title')?.textContent ||
-    doc.querySelector('part-name')?.textContent ||
-    'Imported Tune'
-  ).trim();
+  // ── Title: work-title → movement-title → largest credit-words → part-name
+  let title = doc.querySelector('work-title')?.textContent?.trim() || '';
+  if (!title) title = doc.querySelector('movement-title')?.textContent?.trim() || '';
+  if (!title) {
+    // MuseScore puts the title in credit-words; pick the longest non-numeric one
+    const cw = [...doc.querySelectorAll('credit-words')]
+      .map(el => el.textContent.trim())
+      .filter(t => t.length > 1 && !/^\d+$/.test(t));
+    title = cw.sort((a,b) => b.length - a.length)[0] || '';
+  }
+  if (!title) title = doc.querySelector('part-name')?.textContent?.trim() || 'Imported Tune';
 
-  const fifths  = doc.querySelector('key fifths')?.textContent?.trim() || '0';
-  const mode    = doc.querySelector('key mode')?.textContent?.trim() || 'major';
-  const keyName = FIFTHS_KEY[fifths] || 'C';
+  // ── Read FIRST part only (avoids counting treble+bass+chord staves as 3× bars)
+  const firstPart = doc.querySelector('part') || doc;
+  const measures  = firstPart.querySelectorAll('measure');
 
+  // ── Key signature: scan measures until we find attributes>key>fifths
+  let fifths = 0, mode = 'major';
+  for (const m of measures) {
+    const fe = m.querySelector('attributes key fifths');
+    if (fe) {
+      fifths = parseInt(fe.textContent) || 0;
+      mode   = m.querySelector('attributes key mode')?.textContent?.trim() || 'major';
+      break;
+    }
+  }
+  const keyName = FIFTHS_KEY[String(fifths)] || 'C';
+
+  // ── Tempo
   let bpm = 120;
-  const soundEl = doc.querySelector('sound[tempo]');
-  if (soundEl) bpm = parseInt(soundEl.getAttribute('tempo')) || 120;
+  const soundEl = firstPart.querySelector('sound[tempo]') || doc.querySelector('sound[tempo]');
+  if (soundEl) bpm = Math.round(parseFloat(soundEl.getAttribute('tempo'))) || 120;
+  const perMin = doc.querySelector('per-minute');
+  if (perMin && !soundEl) bpm = parseInt(perMin.textContent) || 120;
 
-  const measures  = doc.querySelectorAll('measure');
-  const totalBars = measures.length || 32;
-  const form = totalBars <= 12 ? 'Blues' : totalBars <= 32 ? 'AABA' : 'Custom';
-
-  const progression = [];
-  let row = [];
-  let lastBeats = [{chord:`${keyName}Δ7`, roman:'IΔ7', scale:'Ionian'}];
+  // ── Collect chord changes: one per measure (first harmony element wins).
+  //    If a measure has no harmony, carry forward the previous chord.
+  const chords = [];
+  let lastBeat = {chord:`${keyName}Δ7`, roman:'IΔ7', scale:'Ionian'};
 
   measures.forEach(measure => {
     const harmonies = measure.querySelectorAll('harmony');
     if (harmonies.length === 0) {
-      row.push({...lastBeats[lastBeats.length - 1]});
-    } else {
-      harmonies.forEach((h, hi) => {
-        if (hi > 0) return; // one chord per bar (simplification)
-        const step  = h.querySelector('root root-step')?.textContent?.trim() || 'C';
-        const alter = parseInt(h.querySelector('root root-alter')?.textContent?.trim() || '0');
-        const kind  = h.querySelector('kind')?.textContent?.trim() || 'major';
-        const root  = step + (alter === 1 ? '#' : alter === -1 ? 'b' : '');
-        const q     = MXML_KIND[kind] ?? '7';
-        const chord = root + q;
-        const beat  = {chord, roman: inferRoman(keyName, root, q), scale: scaleForQuality(q)};
-        row.push(beat);
-        lastBeats = [beat];
-      });
+      chords.push({...lastBeat});
+      return;
     }
-    if (row.length >= 4) { progression.push(row.slice(0,4)); row = []; }
+    // Use the first harmony in the measure; ignore subsequent changes within bar
+    const h      = harmonies[0];
+    const step   = h.querySelector('root root-step')?.textContent?.trim() || 'C';
+    const alter  = parseInt(h.querySelector('root root-alter')?.textContent?.trim() || '0');
+    const root   = step + (alter === 1 ? '#' : alter === -1 ? 'b' : '');
+    const kindEl = h.querySelector('kind');
+    const kindContent = kindEl?.textContent?.trim() || 'major';
+    const kindText    = kindEl?.getAttribute('text') ?? '';
+    // Prefer kind@text (display string from notation software) over content mapping
+    const q = kindText.trim() ? normKindText(kindText) : (MXML_KIND[kindContent] ?? '7');
+
+    const chord = root + q;
+    lastBeat = {chord, roman: inferRoman(keyName, root, q), scale: scaleForQuality(q)};
+    chords.push({...lastBeat});
   });
-  if (row.length) progression.push(row);
+
+  // Group into rows of 4
+  const progression = [];
+  for (let i = 0; i < chords.length; i += 4) progression.push(chords.slice(i, i + 4));
+
+  const totalBars = chords.length || 32;
+  const form = totalBars <= 12 ? 'Blues' : totalBars <= 32 ? 'AABA' : 'Custom';
 
   return {
+    _parsedTitle: title, // surface for addImportedSong name selection
     key: keyName, form, bars: totalBars, bpm,
     difficulty: 'Custom', style: 'Imported', structure: 'Imported',
     description: `MusicXML import · ${totalBars} bars · ${keyName} ${mode}`,
@@ -4076,8 +4130,9 @@ async function handleImportFile(file) {
     if (ext === 'xml') {
       const text = await file.text();
       const tune = parseMusicXML(text);
-      addImportedSong(file.name.replace(/\.[^.]+$/, ''), tune);
-      statusEl.textContent = `✓ MusicXML · ${tune.bars} bars · key of ${tune.key}`;
+      const name = tune._parsedTitle || cleanFilename(file.name.replace(/\.[^.]+$/, ''));
+      addImportedSong(name, tune);
+      statusEl.textContent = `✓ MusicXML · "${name}" · ${tune.bars} bars · key of ${tune.key}`;
       statusEl.className   = 'import-status import-ok';
 
     } else if (ext === 'mxl') {
@@ -4097,8 +4152,9 @@ async function handleImportFile(file) {
       }
       if (!xmlText) throw new Error('No MusicXML found inside .mxl archive');
       const tune = parseMusicXML(xmlText);
-      addImportedSong(file.name.replace(/\.[^.]+$/, ''), tune);
-      statusEl.textContent = `✓ MXL/MusicXML · ${tune.bars} bars · key of ${tune.key}`;
+      const name = tune._parsedTitle || cleanFilename(file.name.replace(/\.[^.]+$/, ''));
+      addImportedSong(name, tune);
+      statusEl.textContent = `✓ MXL/MusicXML · "${name}" · ${tune.bars} bars · key of ${tune.key}`;
       statusEl.className   = 'import-status import-ok';
 
     } else if (ext === 'mid' || ext === 'midi') {
