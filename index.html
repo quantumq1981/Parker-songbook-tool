@@ -4999,9 +4999,16 @@ async function suggestNext() {
         const tracks = score.tracks || [];
 
         if (tracks.length > 1) {
-          // "All" button
+          // Auto-select a melody track if one is named as such (e.g. Confirmation's
+          // "Electric Bass (Melody)" vs "(Chords)"), otherwise default to all tracks.
+          const melodyTrack = tracks.find(t =>
+            t.name && t.name.toLowerCase().includes('melody')
+          );
+          const defaultTracks = melodyTrack ? [melodyTrack] : tracks;
+
+          // "All" button — active only when no specific melody track auto-selected
           const allBtn = document.createElement('button');
-          allBtn.className = 'hd-track-btn hd-tb-active';
+          allBtn.className = 'hd-track-btn' + (melodyTrack ? '' : ' hd-tb-active');
           allBtn.textContent = 'All';
           allBtn.addEventListener('click', () => {
             trackBtns.querySelectorAll('.hd-track-btn').forEach(b => b.classList.remove('hd-tb-active'));
@@ -5013,7 +5020,8 @@ async function suggestNext() {
           // One button per track
           tracks.forEach((track) => {
             const tb = document.createElement('button');
-            tb.className = 'hd-track-btn';
+            const isDefault = track === melodyTrack;
+            tb.className = 'hd-track-btn' + (isDefault ? ' hd-tb-active' : '');
             tb.textContent = track.name || ('Track ' + (tracks.indexOf(track) + 1));
             tb.addEventListener('click', () => {
               trackBtns.querySelectorAll('.hd-track-btn').forEach(b => b.classList.remove('hd-tb-active'));
@@ -5024,7 +5032,7 @@ async function suggestNext() {
           });
 
           trackRow.style.display = 'flex';
-          // Default: show all tracks so melody is always visible (e.g. Confirmation bass melody)
+          api.renderTracks(defaultTracks);
         } else {
           trackRow.style.display = 'none';
         }
