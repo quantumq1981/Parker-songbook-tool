@@ -4997,10 +4997,6 @@ async function suggestNext() {
 
     try {
       api = new alphaTab.AlphaTabApi(container, {
-        core: {
-          workerFile: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/alphaTab.worker.min.js',
-          fontDirectory: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/font/'
-        },
         display: {
           layoutMode: 1,       // 1 = Horizontal scroll
           staveProfile: 3,     // 3 = TabMixed (standard notation + TAB)
