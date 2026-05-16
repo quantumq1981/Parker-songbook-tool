@@ -781,11 +781,21 @@ details.panel.heads-panel summary { color: #ce93d8; }
 .fret.hd-ghost { outline:2px dashed rgba(206,147,216,0.5)!important; opacity:.7; }
 
 /* ── alphaTab notation area ──────────────────────────────────────────────── */
-.at-score-wrap { position:relative; margin-top:10px; border-radius:6px; overflow:hidden;
-  min-height:130px; background:#fafafa; }
+.at-score-wrap { position:relative; margin-top:10px; border-radius:6px; overflow:hidden; background:#fafafa; }
 .at-score-wrap.at-empty { background:#111; }
 .at-score-wrap.at-loaded { background:#fff; }
-#atScore { width:100%; }
+/* iOS touch scrolling: pan-x lets the score scroll horizontally without
+   conflicting with the page's vertical scroll gesture */
+#atScore {
+  width:100%; height:200px;
+  overflow-x:auto; overflow-y:hidden;
+  cursor:pointer;
+  touch-action:pan-x;
+  -webkit-overflow-scrolling:touch;  /* momentum scroll on older iOS */
+  -webkit-tap-highlight-color:transparent;
+}
+@media (min-width:768px) { #atScore { height:250px; } }   /* iPad portrait */
+@media (min-width:1024px) { #atScore { height:280px; } }  /* iPad landscape / desktop */
 .at-loading-overlay { position:absolute; inset:0; display:flex; align-items:center;
   justify-content:center; background:rgba(10,5,20,0.88); flex-direction:column;
   gap:8px; z-index:10; }
@@ -4855,18 +4865,23 @@ async function suggestNext() {
     if (overlay) overlay.classList.remove('at-hidden');
     if (loadMsg) loadMsg.textContent = 'Loading SoundFont…';
 
+    // Render scale tuned per device — smaller on narrow phones so more measures fit
+    const vw = window.innerWidth;
+    const atScale = vw < 480 ? 0.72 : vw < 768 ? 0.80 : vw < 1024 ? 0.88 : 0.92;
+
     try {
       api = new alphaTab.AlphaTabApi(container, {
         display: {
-          layoutMode: 1,       // 1 = Horizontal scroll
+          layoutMode: 1,       // 1 = Horizontal (GuitarPro-style linear scroll)
           staveProfile: 3,     // 3 = TabMixed (standard notation + TAB)
-          scale: 0.82
+          scale: atScale
         },
         player: {
           enablePlayer: true,
           enableUserInteraction: true,
           soundFont: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/soundfont/sonivox.sf2',
-          scrollMode: 2        // 2 = Continuous
+          scrollMode: 2,       // 2 = Continuous cursor following
+          scrollElement: container  // scroll #atScore (not its overflow:hidden parent)
         }
       });
     } catch(err) {
