@@ -528,6 +528,126 @@ body{padding:8px;}
   .app-tagline { font-size: 10px; }
 }
 
+/* =====================================================
+   GUIDE TONE & VOICE LEADING (Step 1)
+===================================================== */
+
+/* Guide-tone legend bar */
+.gt-legend {
+  display: none;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  font-size: 11px;
+  margin: 6px 0;
+  padding: 4px 0;
+  font-family: 'Courier New', monospace;
+}
+.gt-third   { color: #e040fb; font-weight: bold; }
+.gt-seventh { color: #26c6da; font-weight: bold; }
+.gt-root-ref{ color: #ff9800; font-weight: bold; opacity: 0.65; }
+
+/* Ghost fret: previous chord's guide tone position */
+.fret.gt-ghost {
+  outline: 1px dashed rgba(255,255,255,0.22);
+  outline-offset: -1px;
+  background: rgba(255,255,255,0.05) !important;
+  color: #666 !important;
+  font-size: 8px !important;
+  opacity: 0.55;
+}
+
+/* Voice Leading Panel */
+.voice-lead-panel {
+  background: #0c0818;
+  border: 1px solid #6a0080;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 10px;
+}
+.vl-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.vl-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #e040fb;
+  letter-spacing: 0.4px;
+}
+.vl-chord-label {
+  font-size: 13px;
+  color: var(--sym);
+  font-weight: bold;
+}
+.vl-tones-row {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  margin-bottom: 8px;
+  font-family: 'Courier New', monospace;
+}
+.vl-tone-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #1a0028;
+  border-radius: 6px;
+  padding: 4px 10px;
+  min-width: 54px;
+}
+.vl-tone-role { font-size: 9px; color: #888; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.8px; }
+.vl-tone-note { font-size: 14px; font-weight: bold; }
+.vl-divider   { height: 1px; background: #2a0040; margin: 6px 0; }
+.vl-motion-section { font-size: 10px; color: #666; margin-bottom: 4px; }
+.vl-motion-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  margin: 3px 0;
+}
+.vl-from  { min-width: 52px; }
+.vl-arrow { color: #444; }
+.vl-to    { min-width: 52px; }
+.vl-tag   {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: bold;
+  letter-spacing: 0.4px;
+}
+.vl-tag-hs  { background: #3b0000; color: #ef5350; }  /* half step  */
+.vl-tag-ws  { background: #2a1500; color: #ff9800; }  /* whole step */
+.vl-tag-ct  { background: #0a2a0a; color: #4caf50; }  /* common tone */
+.vl-tag-ls  { background: #0d1a3b; color: #7986cb; }  /* larger skip */
+.vl-empty   { color: #444; font-size: 11px; font-style: italic; }
+
+/* Guide-tone pills in voice leading panel */
+.vl-gt-pill {
+  display: inline-block; padding: 3px 10px; border-radius: 12px;
+  font-size: 12px; margin-right: 8px;
+}
+.vl-gt-pill.vl-third   { background: #3d006e; color: #e040fb; border: 1px solid #7b1fa2; }
+.vl-gt-pill.vl-seventh { background: #00363a; color: #26c6da; border: 1px solid #00838f; }
+
+/* Voice leading motion section */
+.vl-motion-details { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.vl-motion-item    { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: 'Courier New', monospace; }
+.vl-from-label     { color: #aaa; }
+.vl-to-label       { color: #aaa; }
+.vl-arrow          { color: #555; }
+.vl-dot {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; flex-shrink: 0;
+}
+.vl-third-dot   { background: #e040fb; }
+.vl-seventh-dot { background: #26c6da; }
+.vl-hint { font-size: 11px; color: #555; font-style: italic; margin: 4px 0 0; }
+
 /* Improved print support */
 @media print {
   body > *:not(.card) { display: none !important; }
@@ -647,11 +767,27 @@ body{padding:8px;}
       <span class="fl-dom">● Dominant (V, VII)</span>
       <span class="fl-other">● Mediant / Other</span>
     </div>
+    <div class="gt-legend" id="guideToneLegend" aria-label="Guide tone color key">
+      <span class="gt-third">■ 3rd — Color Tone</span>
+      <span class="gt-seventh">■ 7th — Guide Tone</span>
+      <span class="gt-root-ref">○ Root (reference)</span>
+      <span style="color:#555;font-size:10px;">Ghosted frets = prev chord position</span>
+    </div>
     <div id="fretboardWrap">
       <div class="fretboard" id="fretboard"></div>
       <div class="fret-markers" id="fretMarkers"></div>
       <svg id="gravityArrowsSvg" width="0" height="0"></svg>
     </div>
+  </div>
+
+  <!-- ===== Voice Leading Panel (Guide Tone mode) ===== -->
+  <div id="voiceLeadPanel" class="voice-lead-panel" style="display:none;" aria-live="polite" aria-label="Voice leading analysis">
+    <div class="vl-header">
+      <span class="vl-title">♩ Guide Tone Voice Leading</span>
+      <span class="vl-chord-label" id="vlChordLabel"></span>
+    </div>
+    <div class="vl-tones-row" id="vlTonesRow"></div>
+    <div id="vlMotionSection"></div>
   </div>
 
   <div id="resonancePanel" class="resonance-panel" style="display:none;">
@@ -1594,7 +1730,8 @@ function playBebopBackingBar(root, chordSym, bpm) {
 ============================================================ */
 const STRING_NOTES = ['E','B','G','D','A','E'];
 let lastBarData = null;
-let fbMode = 'chord'; // 'chord' | 'scale' | 'function'
+let prevBarData = null; // bar before the currently selected one (for voice leading)
+let fbMode = 'chord'; // 'chord' | 'scale' | 'guide-tones' | 'function'
 let audioMode = 'voicing'; // 'voicing' | 'scale'
 let showScales = false;
 
@@ -2401,7 +2538,7 @@ function clearFretboard() {
   clearLickStepHighlights();
   resonanceLickFretEls = [];
   document.querySelectorAll('.fret').forEach(fr => {
-    fr.className = 'fret'; fr.style.background = ''; fr.style.color = '';
+    fr.className = 'fret'; fr.style.background = ''; fr.style.color = ''; fr.style.opacity = '';
     fr.textContent = fr.dataset.fp === '0' ? fr.dataset.open : '';
     fr.removeAttribute('data-pulse');
     delete fr.dataset.resDegree;
@@ -2413,9 +2550,16 @@ function clearFretboard() {
 }
 
 function updateFuncLegend() {
-  document.getElementById('funcLegend').style.display =
-    (fbMode === 'function') ? 'flex' : 'none';
+  const fl = document.getElementById('funcLegend');
+  const gl = document.getElementById('guideToneLegend');
+  const vl = document.getElementById('voiceLeadPanel');
+  if (fl) fl.style.display = (fbMode === 'function')    ? 'flex'  : 'none';
+  if (gl) gl.style.display = (fbMode === 'guide-tones') ? 'flex'  : 'none';
+  if (vl && fbMode !== 'guide-tones') vl.style.display = 'none';
 }
+
+// Guide tone intervals by chord quality [3rd, 7th] in semitones from root
+const GT_IVLS = { maj7:[4,11], m7:[3,10], dom7:[4,10], halfdim:[3,10], dim:[3,9] };
 
 function showFretboard(root, scaleName, chordSym) {
   clearFretboard();
@@ -2425,12 +2569,19 @@ function showFretboard(root, scaleName, chordSym) {
   const nKey = uf ? 'nf' : 'ns';
   let pattern, label;
 
+  // Pre-compute guide tone intervals for this chord (used in both pattern + render)
+  const _gtQuality            = normalizeChordQuality(chordSym);
+  const [_gtThird, _gtSeventh]= GT_IVLS[_gtQuality] || [4, 10];
+
   if (fbMode === 'chord') {
     if (/Δ|maj7/i.test(chordSym))     { pattern=[0,4,7,11]; label=`${root} Maj7 — Chord Tones`; }
     else if (/m7b5|ø/.test(chordSym)) { pattern=[0,3,6,10]; label=`${root} m7♭5 — Chord Tones`; }
     else if (/dim/.test(chordSym))    { pattern=[0,3,6,9];  label=`${root} dim — Chord Tones`; }
     else if (/m7/.test(chordSym))     { pattern=[0,3,7,10]; label=`${root} m7 — Chord Tones`; }
     else                               { pattern=[0,4,7,10]; label=`${root} Dom7 — Chord Tones`; }
+  } else if (fbMode === 'guide-tones') {
+    pattern = [0, _gtThird, _gtSeventh];
+    label   = `${root} Guide Tones  ·  3rd & 7th  ·  Voice Leading Mode`;
   } else {
     const sk = scaleName.split('/')[0].trim();
     pattern = SCALE_IVS[sk] || SCALE_IVS['Mixolydian'];
@@ -2446,26 +2597,61 @@ function showFretboard(root, scaleName, chordSym) {
   document.querySelectorAll('.fret').forEach(fr => {
     const idx = parseInt(fr.dataset.idx, 10);
     if (isNaN(idx) || !tgt.has(idx)) return;
-    const iv = (idx - ri + 12) % 12;
+    const iv      = (idx - ri + 12) % 12;
+    const noteTxt = fr.dataset[nKey] || fr.dataset.nf;
     fr.classList.add('hl');
-    if (fbMode === 'function') {
-      // LAYER 2 — functional harmony coloring
+
+    if (fbMode === 'guide-tones') {
+      if (iv === _gtThird) {
+        fr.style.background = '#3d006e';
+        fr.style.color      = '#e040fb';
+        fr.textContent      = noteTxt + '\n3';
+      } else if (iv === _gtSeventh) {
+        fr.style.background = '#00363a';
+        fr.style.color      = '#26c6da';
+        fr.textContent      = noteTxt + '\n7';
+      } else { // root — ghost reference
+        fr.style.background = 'rgba(255,152,0,0.18)';
+        fr.style.color      = '#ff9800';
+        fr.textContent      = noteTxt + '\nR';
+      }
+      if (iv === 0) fr.classList.add('rt');
+    } else if (fbMode === 'function') {
       const fc = FUNC_CLASS[iv] || 'other';
-      fr.textContent      = (fr.dataset[nKey] || fr.dataset.nf) + '\n' + FUNC_LABEL[iv];
+      fr.textContent      = noteTxt + '\n' + FUNC_LABEL[iv];
       fr.style.background = FUNC_COLORS[fc];
+      fr.style.color      = '#000';
+      if (iv === 0) fr.classList.add('rt');
     } else {
-      // Interval colour system (v6.0)
-      const iNm = INT_NAMES[iv];
+      const iNm    = INT_NAMES[iv];
       const degree = intervalDegree(iv);
-      fr.textContent      = (fr.dataset[nKey] || fr.dataset.nf) + '\n' + `${degree} (${INT_NUMERIC[iv] || degree})`;
+      fr.textContent      = noteTxt + '\n' + `${degree} (${INT_NUMERIC[iv] || degree})`;
       fr.style.background = INT_COLORS[iNm] || '#4caf50';
+      fr.style.color      = '#000';
+      if (iv === 0) fr.classList.add('rt');
     }
-    fr.style.color = '#000';
-    if (iv === 0) fr.classList.add('rt');
   });
+
+  // Ghost markers: previous chord's guide tone positions (guide-tones mode only)
+  if (fbMode === 'guide-tones' && prevBarData && prevBarData.root) {
+    const prevQ               = normalizeChordQuality(prevBarData.chord || '');
+    const [pThird, pSeventh]  = GT_IVLS[prevQ] || [4, 10];
+    const prevRI              = NOTE_IDX[prevBarData.root] || 0;
+    const prevGT              = new Set([(prevRI + pThird) % 12, (prevRI + pSeventh) % 12]);
+    const prevUF              = FLAT_KEYS.includes(prevBarData.root) || prevBarData.root.endsWith('b');
+    document.querySelectorAll('.fret').forEach(fr => {
+      const idx = parseInt(fr.dataset.idx, 10);
+      if (isNaN(idx) || fr.classList.contains('hl') || !prevGT.has(idx)) return;
+      fr.classList.add('gt-ghost');
+      fr.textContent = (fr.dataset[prevUF ? 'nf' : 'ns'] || fr.dataset.nf) + '\n←';
+    });
+  }
 
   // Apply resonance overlays if mode is active
   if (resonanceModeEnabled) applyResonanceOverlays(root, scaleName);
+
+  // Update voice leading panel when in guide-tones mode
+  if (fbMode === 'guide-tones') updateVoiceLeadingPanel(root, chordSym, _gtThird, _gtSeventh);
 }
 
 // Scale Library fretboard display — always functional coloring in C reference
@@ -2623,6 +2809,7 @@ function renderLeadSheet(tuneName, targetKey) {
         document.querySelectorAll('.bar.active').forEach(b => b.classList.remove('active'));
         bar.classList.add('active');
         const { root, scale, chord } = bar.dataset;
+        prevBarData = lastBarData; // capture previous for voice leading
         lastBarData = { root, scale, chord };
         // Audio mode toggle determines what plays on click
         if (audioMode === 'voicing') playChordVoicing(root, chord);
@@ -2670,6 +2857,79 @@ function normalizeChordQuality(chordSym) {
   if (/Δ|maj7/i.test(chordSym)) return 'maj7';
   if (/m7/.test(chordSym)) return 'm7';
   return 'dom7';
+}
+
+// Returns voice-leading type between two pitch classes (mod 12)
+function calcVoiceLeading(fromPc, toPc) {
+  const diff = ((toPc - fromPc) % 12 + 12) % 12;
+  const min  = Math.min(diff, 12 - diff); // smallest semitone distance
+  if (min === 0) return 'ct';  // common tone
+  if (min === 1) return 'hs';  // half step
+  if (min === 2) return 'ws';  // whole step
+  return 'ls';                 // larger skip
+}
+
+// Render the voice-leading panel for the currently selected chord
+function updateVoiceLeadingPanel(root, chordSym, third, seventh) {
+  const panel = document.getElementById('voiceLeadPanel');
+  const tonesRow = document.getElementById('vlTonesRow');
+  const motionSec = document.getElementById('vlMotionSection');
+  const chordLabel = document.getElementById('vlChordLabel');
+  if (!panel || !tonesRow || !motionSec) return;
+
+  const ri = NOTE_IDX[root] || 0;
+  const thirdPc  = (ri + third)   % 12;
+  const sevPc    = (ri + seventh) % 12;
+  const uf       = FLAT_KEYS.includes(root) || root.endsWith('b');
+  const noteArr  = uf ? NOTES_FLAT : NOTES_SHARP;
+
+  chordLabel.textContent = chordSym;
+
+  // Display current chord's guide tones
+  tonesRow.innerHTML = `
+    <span class="vl-gt-pill vl-third">3rd: <strong>${noteArr[thirdPc]}</strong></span>
+    <span class="vl-gt-pill vl-seventh">7th: <strong>${noteArr[sevPc]}</strong></span>
+  `;
+
+  // Voice leading from previous chord
+  if (prevBarData && prevBarData.root) {
+    const pRi  = NOTE_IDX[prevBarData.root] || 0;
+    const pQ   = normalizeChordQuality(prevBarData.chord || '');
+    const [pT, pS] = GT_IVLS[pQ] || [4, 10];
+    const pThirdPc = (pRi + pT) % 12;
+    const pSevPc   = (pRi + pS) % 12;
+    const pNoteArr = (FLAT_KEYS.includes(prevBarData.root) || prevBarData.root.endsWith('b')) ? NOTES_FLAT : NOTES_SHARP;
+
+    const vlT = calcVoiceLeading(pThirdPc, thirdPc);
+    const vlS = calcVoiceLeading(pSevPc,   sevPc);
+
+    const TAG = { ct:'Common Tone', hs:'Half Step', ws:'Whole Step', ls:'Skip' };
+    const prevChordLabel = prevBarData.chord || '?';
+
+    motionSec.innerHTML = `
+      <div class="vl-motion-row">
+        <span class="vl-from-label">${prevChordLabel}</span>
+        <span class="vl-arrow">→</span>
+        <span class="vl-to-label">${chordSym}</span>
+      </div>
+      <div class="vl-motion-details">
+        <span class="vl-motion-item">
+          <span class="vl-dot vl-third-dot"></span>
+          3rd: ${pNoteArr[pThirdPc]} → ${noteArr[thirdPc]}
+          <span class="vl-tag vl-tag-${vlT}">${TAG[vlT]}</span>
+        </span>
+        <span class="vl-motion-item">
+          <span class="vl-dot vl-seventh-dot"></span>
+          7th: ${pNoteArr[pSevPc]} → ${noteArr[sevPc]}
+          <span class="vl-tag vl-tag-${vlS}">${TAG[vlS]}</span>
+        </span>
+      </div>
+    `;
+  } else {
+    motionSec.innerHTML = '<p class="vl-hint">← Click adjacent chords to see voice leading motion</p>';
+  }
+
+  panel.style.display = 'block';
 }
 
 function updateChordScaleAnalysis(bar) {
@@ -2969,11 +3229,11 @@ e.target.textContent = showScales ? 'Hide Scales' : 'Show Scales';
 document.querySelectorAll('.scale-sug').forEach(s => { s.className = showScales ? 'scale-sug' : 'scale-sug hidden'; });
 });
 
-// 3-way fretboard mode cycle
+// 4-way fretboard mode cycle
 document.getElementById('toggleMode').addEventListener('click', e => {
-const modes  = ['chord','scale','function'];
-const labels = ['Mode: Chord Tones','Mode: Full Scale','Mode: Functional'];
-fbMode = modes[(modes.indexOf(fbMode) + 1) % 3];
+const modes  = ['chord','scale','guide-tones','function'];
+const labels = ['Mode: Chord Tones','Mode: Full Scale','Mode: Guide Tones','Mode: Functional'];
+fbMode = modes[(modes.indexOf(fbMode) + 1) % 4];
 e.target.textContent = labels[modes.indexOf(fbMode)];
 updateFuncLegend();
 if (lastBarData) showFretboard(lastBarData.root, lastBarData.scale, lastBarData.chord);
