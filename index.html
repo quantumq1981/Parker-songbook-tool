@@ -4690,64 +4690,25 @@ async function suggestNext() {
 (function alphaTabHeadsModule() {
   'use strict';
 
-  const OMNIBOOK_BASE = 'https://raw.githubusercontent.com/lovejzzz/PDFtoXML/main/Omnibook%20xml/';
+  // GuitarPro files served via GitHub Pages from /docs/ — alphaTab auto-detects
+  // format from binary headers; no AlphaTex conversion required.
+  const OMNIBOOK_BASE = 'https://quantumq1981.github.io/Parker-songbook-tool/docs/';
   const OMNIBOOK_TUNES = [
-    { name: 'An Oscar for Treadwell', file: 'An_Oscar_For_Treadwell.xml' },
-    { name: 'Another Hairdo',         file: 'Another_Hairdo.xml' },
-    { name: 'Anthropology',           file: 'Anthropology.xml' },
-    { name: 'Au Privave (1)',         file: 'Au_Private_1.xml' },
-    { name: 'Au Privave (2)',         file: 'Au_Private_2.xml' },
-    { name: 'Back Home Blues',        file: 'Back_Home_Blues.xml' },
-    { name: 'Barbados',               file: 'Barbados.xml' },
-    { name: "Billie's Bounce",        file: 'Billies_Bounce.xml' },
-    { name: 'Bird Gets the Worm',     file: 'Bird_Gets_The_Worm.xml' },
-    { name: 'Bloomdido',              file: 'Bloomdido.xml' },
-    { name: 'Blue Bird',              file: 'Blue_Bird.xml' },
-    { name: 'Blues for Alice',        file: 'Blues_For_Alice.xml' },
-    { name: 'Buzzy',                  file: 'Buzzy.xml' },
-    { name: 'Card Board',             file: 'Card_Board.xml' },
-    { name: 'Celerity',               file: 'Celerity.xml' },
-    { name: 'Chasing the Bird',       file: 'Chasing_The_Bird.xml' },
-    { name: 'Cheryl',                 file: 'Cheryl.xml' },
-    { name: 'Chi Chi',                file: 'Chi_Chi.xml' },
-    { name: 'Confirmation',           file: 'Confirmation.xml' },
-    { name: 'Cosmic Rays',            file: 'Cosmic_Rays.xml' },
-    { name: 'Dewey Square',           file: 'Dewey_Square.xml' },
-    { name: 'Diverse',                file: 'Diverse.xml' },
-    { name: 'Donna Lee',              file: 'Donna_Lee.xml' },
-    { name: 'KC Blues',               file: 'KC_Blues.xml' },
-    { name: 'Kim (1)',                file: 'Kim_1.xml' },
-    { name: 'Kim (2)',                file: 'Kim_2.xml' },
-    { name: 'Ko-Ko',                  file: 'Ko_Ko.xml' },
-    { name: 'Laird Baird',            file: 'Laird_Baird.xml' },
-    { name: 'Marmaduke',              file: 'Marmaduke.xml' },
-    { name: 'Mohawk (1)',             file: 'Mohawk_1.xml' },
-    { name: 'Mohawk (2)',             file: 'Mohawk_2.xml' },
-    { name: 'Moose the Mooche',       file: 'Moose_The_Mooche.xml' },
-    { name: 'My Little Suede Shoes',  file: 'My_Little_Suede_Shoes.xml' },
-    { name: "Now's the Time (1)",     file: 'Nows_The_Time_1.xml' },
-    { name: "Now's the Time (2)",     file: 'Nows_The_Time_2.xml' },
-    { name: 'Ornithology',            file: 'Ornithology.xml' },
-    { name: 'Passport',               file: 'Passport.xml' },
-    { name: 'Perhaps',                file: 'Perhaps.xml' },
-    { name: 'Red Cross',              file: 'Red_Cross.xml' },
-    { name: 'Relaxing with Lee',      file: 'Relaxing_With_Lee.xml' },
-    { name: 'Scrapple from the Apple',file: 'Scrapple_From_The_Apple.xml' },
-    { name: 'Segment',                file: 'Segment.xml' },
-    { name: 'Shawnuff',               file: 'Shawnuff.xml' },
-    { name: 'Si Si',                  file: 'Si_Si.xml' },
-    { name: 'Steeplechase',           file: 'Steeplechase.xml' },
-    { name: 'The Bird',               file: 'The_Bird.xml' },
-    { name: 'Thriving from a Riff',   file: 'Thriving_From_A_Riff.xml' },
-    { name: 'Visa',                   file: 'Visa.xml' },
-    { name: 'Warming Up a Riff',      file: 'Warming_Up_A_Riff.xml' },
-    { name: 'Yardbird Suite',         file: 'Yardbird_Suite.xml' },
+    { name: 'Anthropology',        file: 'Charlie Parker - Anthropology.gp5' },
+    { name: 'Au Privave',          file: 'Charlie Parker - Au Privave.gp5' },
+    { name: "Billie's Bounce",     file: 'Charlie Parker - Billies Bounce.gp4' },
+    { name: 'Bloomdido',           file: 'Charlie Parker - Bloomdido.gp' },
+    { name: 'Blues for Alice',     file: 'Charlie Parker - Blues For Alice (ver 2).gp5' },
+    { name: 'Confirmation',        file: 'Charlie Parker - Confirmation.gp' },
+    { name: 'Donna Lee',           file: 'Charlie Parker - Donna Lee.gp3' },
+    { name: 'Loverman',            file: 'Charlie Parker - Loverman.gp5' },
+    { name: 'Moose the Mooche',    file: 'Charlie Parker - Moose The Mooche.gpx' },
+    { name: "Now's the Time",      file: 'Charlie Parker - Nows The Time.gp5' },
+    { name: 'Ornithology',         file: 'Charlie Parker - Ornithology.gp3' },
+    { name: "Parker's Mood",       file: 'Charlie Parker - Parkers Mood.gp4' },
+    { name: 'Yardbird Suite',      file: 'Charlie Parker - Yardbird Suite.gpx' },
+    { name: 'Cheryl',              file: 'parker_charlie-cheryl.gp4' },
   ];
-
-  // ── Persistent cache ─────────────────────────────────────────────────
-  const CACHE_KEY = 'cp_heads_v1';
-  let headCache = {};
-  try { const s = localStorage.getItem(CACHE_KEY); if (s) headCache = JSON.parse(s); } catch(e) {}
 
   // ── alphaTab state ────────────────────────────────────────────────────
   let api            = null;   // AlphaTabApi instance
@@ -4760,26 +4721,19 @@ async function suggestNext() {
   let hdLoopEndTick  = Infinity;
   let hdTotalMeasures= 0;
   let hdFbOn         = true;
+  let currentBtn     = null;   // button that triggered the current load
+  let currentTuneName = '';    // display name for the current load
 
   // Pre-built look-up tables for O(1) fretboard updates at bebop tempos
   // Map<pitchClass(0-11), HTMLElement[]> and Map<"eng_fret", HTMLElement>
   let pcFretMap   = null;
   let keyFretMap  = null;  // "eng_fret" → element
 
-  const STEP_PC   = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
   const IVL_NAMES = ['R','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
   const FLAT_NMS  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
   // alphaTab string numbering: 1=high E, 6=low E (GuitarPro convention)
-  // Our engine numbering: 1=low E, 6=high E
-  // Conversion: engineStr = 7 - atStr
+  // Our engine numbering: 1=low E, 6=high E → engineStr = 7 - atStr
   const AT_OPEN_MIDI = { 1:64, 2:59, 3:55, 4:50, 5:45, 6:40 };
-
-  // Note-name → AlphaTex pitch name
-  const NOTE_TO_AT = {
-    'C':'c','C#':'cs','Db':'db','D':'d','D#':'ds','Eb':'eb',
-    'E':'e','F':'f','F#':'fs','Gb':'gb','G':'g','G#':'gs',
-    'Ab':'ab','A':'a','A#':'as','Bb':'bb','B':'b'
-  };
 
   // ── Build fret element look-up tables ────────────────────────────────
   // Called once at init and again whenever the fretboard is rebuilt
@@ -4800,100 +4754,6 @@ async function suggestNext() {
         }
       }
     }
-  }
-
-  // ── MusicXML note extractor (first-part, concert pitch) ──────────────
-  function extractNotes(xmlText) {
-    const doc  = new DOMParser().parseFromString(xmlText, 'text/xml');
-    const part = doc.querySelector('part') || doc;
-
-    let title = doc.querySelector('work-title')?.textContent?.trim() || '';
-    if (!title) title = doc.querySelector('movement-title')?.textContent?.trim() || '';
-    if (!title) {
-      const cws = [...doc.querySelectorAll('credit-words')]
-        .map(e => e.textContent.trim()).filter(t => t.length > 1 && !/^\d+$/.test(t));
-      title = cws.sort((a,b) => b.length - a.length)[0] || 'Unknown';
-    }
-
-    let bpm = 160;
-    const te = doc.querySelector('sound[tempo]');
-    if (te) bpm = parseFloat(te.getAttribute('tempo')) || 160;
-
-    let divs = 1;
-    const de = part.querySelector('attributes divisions');
-    if (de) divs = parseInt(de.textContent) || 1;
-
-    const measures = [...part.querySelectorAll('measure')];
-    const notes = [];
-
-    measures.forEach((mEl, mIdx) => {
-      const nd = mEl.querySelector('attributes divisions');
-      if (nd) divs = parseInt(nd.textContent) || divs;
-      const nt = mEl.querySelector('sound[tempo]');
-      if (nt) bpm = parseFloat(nt.getAttribute('tempo')) || bpm;
-
-      mEl.querySelectorAll('note').forEach(nEl => {
-        if (nEl.querySelector('chord')) return;
-        const durTicks      = parseInt(nEl.querySelector('duration')?.textContent || '0');
-        const durationBeats = divs > 0 ? durTicks / divs : 1;
-        const isRest        = !!nEl.querySelector('rest');
-        if (isRest) { notes.push({ isRest:true, durationBeats, measureIdx:mIdx }); return; }
-        const stepEl = nEl.querySelector('pitch step');
-        if (!stepEl) return;
-        const step   = stepEl.textContent.trim();
-        const alter  = parseInt(nEl.querySelector('pitch alter')?.textContent || '0');
-        const octave = parseInt(nEl.querySelector('pitch octave')?.textContent || '4');
-        const pc     = ((STEP_PC[step] ?? 0) + alter + 12) % 12;
-        const midi   = 12 * (octave + 1) + (STEP_PC[step] ?? 0) + alter;
-        const acc    = alter === 1 ? '#' : alter === -1 ? 'b' : '';
-        notes.push({ midi, pc, name: step + acc, octave, durationBeats, isRest:false, measureIdx:mIdx });
-      });
-    });
-    return { title, bpm, notes, totalMeasures: measures.length };
-  }
-
-  // ── Convert extracted notes → AlphaTex (guitar-native format) ────────
-  // alphaTab renders this as standard notation + auto-generated guitar TAB
-  // The playedBeatChanged event then reports exact string/fret for highlighting
-  function beatsToAtDur(b) {
-    if (Math.abs(b - 4.0) < .06) return ':1';
-    if (Math.abs(b - 3.0) < .06) return ':2.';
-    if (Math.abs(b - 2.0) < .06) return ':2';
-    if (Math.abs(b - 1.5) < .06) return ':4.';
-    if (Math.abs(b - 1.0) < .06) return ':4';
-    if (Math.abs(b - 0.75) < .06) return ':8.';
-    if (Math.abs(b - 0.5) < .06) return ':8';
-    if (Math.abs(b - 0.25) < .06) return ':16';
-    return b >= 0.88 ? ':4' : b >= 0.38 ? ':8' : ':16';
-  }
-
-  function notesToAlphaTex(data) {
-    const esc  = s => (s || '').replace(/"/g, '\\"');
-    const out  = [
-      `\\title "${esc(data.title)}"`,
-      `\\tempo ${Math.round(data.bpm || 160)}`,
-      '\\instrument 25',   // GM 25 = Steel-string Guitar
-      '\\tuning e5 b4 g4 d4 a3 e3',
-      '.'
-    ];
-    const byM = [];
-    data.notes.forEach(n => {
-      if (!byM[n.measureIdx]) byM[n.measureIdx] = [];
-      byM[n.measureIdx].push(n);
-    });
-    let curDur = '';
-    byM.forEach(mNotes => {
-      if (!mNotes || !mNotes.length) return;
-      const parts = mNotes.map(note => {
-        const dur  = beatsToAtDur(note.durationBeats);
-        const pfx  = dur !== curDur ? (curDur = dur, dur + ' ') : '';
-        if (note.isRest) return pfx + 'r';
-        const an = NOTE_TO_AT[note.name] || 'c';
-        return pfx + an + note.octave;
-      });
-      out.push(parts.join(' ') + ' |');
-    });
-    return out.join('\n');
   }
 
   // ── Fretboard: clear all heads highlights ─────────────────────────────
@@ -5027,11 +4887,31 @@ async function suggestNext() {
     api.scoreLoaded.on(score => {
       atScore = score;
       hdTotalMeasures = score.masterBars ? score.masterBars.length : 0;
+
+      // Update button to loaded state
+      if (currentBtn) {
+        currentBtn.classList.remove('hd-loading');
+        currentBtn.classList.add('hd-loaded');
+        currentBtn.textContent = '✓ ' + currentTuneName;
+      }
+
+      // Update title with actual score title (may differ from button label)
+      const titleEl = document.getElementById('headMelodyTitle');
+      if (titleEl) titleEl.textContent = '🎵 ' + (score.title || currentTuneName);
+
+      // Reset note display to ready state
+      const ni = document.getElementById('headNoteInterval');
+      if (ni) ni.textContent = 'Press Play';
+
       // Update loop UI
       const loopInfo = document.getElementById('hdLoopInfo');
       if (loopInfo) loopInfo.textContent = '(' + hdTotalMeasures + ' total)';
       const loopEnd = document.getElementById('hdLoopEnd');
       if (loopEnd) { loopEnd.value = Math.min(4, hdTotalMeasures); hdLoopEndM = Math.min(4, hdTotalMeasures); }
+
+      if (typeof showToast === 'function')
+        showToast((score.title || currentTuneName) + ' — ready', 'success', 1800);
+
       // Re-build fret maps in case fretboard was rebuilt
       buildFretMaps();
     });
@@ -5082,6 +4962,11 @@ async function suggestNext() {
       const msg = (err && (err.message || err)) || 'unknown error';
       if (typeof showToast === 'function') showToast('alphaTab: ' + msg, 'error');
       if (overlay) overlay.classList.add('at-hidden');
+      if (currentBtn) {
+        currentBtn.classList.remove('hd-loading');
+        currentBtn.classList.add('hd-error');
+        currentBtn.textContent = '✗ ' + currentTuneName;
+      }
     });
 
     buildFretMaps();
@@ -5123,67 +5008,44 @@ async function suggestNext() {
     hdLoopEndTick   = nextBar ? nextBar.start : Infinity;
   }
 
-  // ── Load a head into alphaTab (converts to AlphaTex, calls api.load) ─
-  function hdLoad(data, displayName) {
+  // ── Load a GuitarPro file into alphaTab via URL ────────────────────────
+  // alphaTab fetches the binary file itself and auto-detects the format
+  // from the binary header — no AlphaTex conversion required.
+  function hdFetch(tune, btn) {
     if (!api) atInit();
-    if (!api) return;
+    if (!api) {
+      if (typeof showToast === 'function') showToast('alphaTab unavailable — check network', 'error');
+      return;
+    }
 
+    currentBtn       = btn;
+    currentTuneName  = tune.name;
+
+    btn.classList.remove('hd-error');
+    btn.classList.add('hd-loading');
+    btn.textContent = '⏳ ' + tune.name;
+
+    const bar     = document.getElementById('headMelodyBar');
     const titleEl = document.getElementById('headMelodyTitle');
-    if (titleEl) titleEl.textContent = '🎵 ' + (data.title || displayName) + ' — loading…';
-
-    const bar = document.getElementById('headMelodyBar');
-    if (bar) bar.classList.add('hd-visible');
-
     const wrap    = document.getElementById('atScoreWrap');
     const overlay = document.getElementById('atLoadingOverlay');
     const loadMsg = document.getElementById('atLoadingMsg');
+
+    if (bar)     bar.classList.add('hd-visible');
+    if (titleEl) titleEl.textContent = '🎵 ' + tune.name + ' — loading…';
     if (wrap)    { wrap.classList.remove('at-empty'); wrap.classList.add('at-loaded'); }
     if (overlay) overlay.classList.remove('at-hidden');
-    if (loadMsg) loadMsg.textContent = 'Converting to guitar notation…';
+    if (loadMsg) loadMsg.textContent = 'Loading ' + tune.name + '…';
 
-    // Convert to AlphaTex so alphaTab renders guitar TAB with proper string/fret data
-    const tex = notesToAlphaTex(data);
-    api.load(tex);
+    // Reset note display
+    const nd = document.getElementById('headNoteName');     if (nd) nd.textContent = '▶';
+    const ni = document.getElementById('headNoteInterval'); if (ni) ni.textContent = 'Loading…';
+    const nt = document.getElementById('headNoteType');     if (nt) nt.textContent = '';
+    const nm = document.getElementById('headNoteMeasure');  if (nm) nm.textContent = '';
 
-    if (titleEl) titleEl.textContent = '🎵 ' + (data.title || displayName);
-
-    // Reset display widgets
-    const nd = document.getElementById('headNoteName');      if (nd) nd.textContent = '▶';
-    const ni = document.getElementById('headNoteInterval');  if (ni) ni.textContent = 'Press Play';
-    const nt = document.getElementById('headNoteType');      if (nt) nt.textContent = '';
-    const nm = document.getElementById('headNoteMeasure');   if (nm) nm.textContent = '';
-  }
-
-  // ── Fetch from Omnibook archive → cache → load ────────────────────────
-  async function hdFetch(tune, btn) {
-    if (!api) atInit();
-
-    if (headCache[tune.file]) {
-      hdLoad(headCache[tune.file], tune.name);
-      if (typeof showToast === 'function') showToast(tune.name + ' — from cache', 'info');
-      return;
-    }
-    btn.classList.add('hd-loading');
-    btn.textContent = '⏳ ' + tune.name;
-    try {
-      const resp = await fetch(OMNIBOOK_BASE + tune.file);
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const data = extractNotes(await resp.text());
-      headCache[tune.file] = data;
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify(headCache)); } catch(e) {}
-      btn.classList.remove('hd-loading');
-      btn.classList.add('hd-loaded');
-      btn.textContent = '✓ ' + tune.name;
-      hdLoad(data, tune.name);
-      if (typeof showToast === 'function')
-        showToast((data.title || tune.name) + ' — ' + data.notes.length + ' notes ready', 'success');
-    } catch(err) {
-      btn.classList.remove('hd-loading');
-      btn.classList.add('hd-error');
-      btn.textContent = '✗ ' + tune.name;
-      if (typeof showToast === 'function')
-        showToast('Could not load ' + tune.name + ': ' + err.message, 'error');
-    }
+    // Pass the URL directly — alphaTab fetches and parses the binary GP file
+    const url = OMNIBOOK_BASE + encodeURIComponent(tune.file);
+    api.load(url);
   }
 
   // ── Tune grid ─────────────────────────────────────────────────────────
@@ -5200,15 +5062,16 @@ async function suggestNext() {
       const btn = document.createElement('button');
       btn.className = 'head-btn';
       btn.setAttribute('aria-label', 'Load head: ' + tune.name);
-      if (headCache[tune.file]) { btn.classList.add('hd-loaded'); btn.textContent = '✓ ' + tune.name; }
-      else btn.textContent = tune.name;
+      btn.textContent = tune.name;
       btn.addEventListener('click', () => hdFetch(tune, btn));
       grid.appendChild(btn);
     });
     if (countEl) countEl.textContent = n + ' / ' + OMNIBOOK_TUNES.length;
   }
 
-  // ── Import hook: auto-load melody when MusicXML dropped into importer ─
+  // ── Import hook: load local GP or MusicXML file via the importer ─────
+  // Passes the ArrayBuffer directly to alphaTab — format is auto-detected
+  // from the binary header (GP3/GP4/GP5/GPX) or XML declaration (MusicXML).
   function attachImportHook() {
     const fi = document.getElementById('importFileInput');
     if (!fi) return;
@@ -5216,22 +5079,37 @@ async function suggestNext() {
       const file = fi.files[0];
       if (!file) return;
       const ext = file.name.split('.').pop().toLowerCase();
-      if (!['xml','mxl'].includes(ext)) return;
+      if (!['xml','mxl','gp','gp3','gp4','gp5','gpx'].includes(ext)) return;
+
       const reader = new FileReader();
       reader.onload = ev => {
-        try {
-          const data = extractNotes(ev.target.result);
-          if (!data.notes.length) return;
-          setTimeout(() => {
-            hdLoad(data, file.name.replace(/\.[^.]+$/, ''));
-            const panel = document.getElementById('headsPanel');
-            if (panel) panel.open = true;
-            if (typeof showToast === 'function')
-              showToast('Melody extracted: ' + data.notes.length + ' notes', 'success');
-          }, 400);
-        } catch(e) {}
+        if (!api) atInit();
+        if (!api) {
+          if (typeof showToast === 'function') showToast('alphaTab unavailable', 'error');
+          return;
+        }
+        const displayName = file.name.replace(/\.[^.]+$/, '');
+        currentBtn        = null;
+        currentTuneName   = displayName;
+
+        const bar     = document.getElementById('headMelodyBar');
+        const titleEl = document.getElementById('headMelodyTitle');
+        const wrap    = document.getElementById('atScoreWrap');
+        const overlay = document.getElementById('atLoadingOverlay');
+        const loadMsg = document.getElementById('atLoadingMsg');
+
+        if (bar)     bar.classList.add('hd-visible');
+        if (titleEl) titleEl.textContent = '🎵 ' + displayName + ' — loading…';
+        if (wrap)    { wrap.classList.remove('at-empty'); wrap.classList.add('at-loaded'); }
+        if (overlay) overlay.classList.remove('at-hidden');
+        if (loadMsg) loadMsg.textContent = 'Loading ' + displayName + '…';
+
+        const panel = document.getElementById('headsPanel');
+        if (panel) panel.open = true;
+
+        api.load(ev.target.result); // ArrayBuffer — alphaTab auto-detects format
       };
-      reader.readAsText(file);
+      reader.readAsArrayBuffer(file);
     }, { passive: true });
   }
 
