@@ -5001,7 +5001,7 @@ async function suggestNext() {
         if (tracks.length > 1) {
           // "All" button
           const allBtn = document.createElement('button');
-          allBtn.className = 'hd-track-btn';
+          allBtn.className = 'hd-track-btn hd-tb-active';
           allBtn.textContent = 'All';
           allBtn.addEventListener('click', () => {
             trackBtns.querySelectorAll('.hd-track-btn').forEach(b => b.classList.remove('hd-tb-active'));
@@ -5011,10 +5011,10 @@ async function suggestNext() {
           trackBtns.appendChild(allBtn);
 
           // One button per track
-          tracks.forEach((track, i) => {
+          tracks.forEach((track) => {
             const tb = document.createElement('button');
-            tb.className = 'hd-track-btn' + (i === 0 ? ' hd-tb-active' : '');
-            tb.textContent = track.name || ('Track ' + (i + 1));
+            tb.className = 'hd-track-btn';
+            tb.textContent = track.name || ('Track ' + (tracks.indexOf(track) + 1));
             tb.addEventListener('click', () => {
               trackBtns.querySelectorAll('.hd-track-btn').forEach(b => b.classList.remove('hd-tb-active'));
               tb.classList.add('hd-tb-active');
@@ -5024,8 +5024,7 @@ async function suggestNext() {
           });
 
           trackRow.style.display = 'flex';
-          // Default: render only the first track (melody)
-          api.renderTracks([tracks[0]]);
+          // Default: show all tracks so melody is always visible (e.g. Confirmation bass melody)
         } else {
           trackRow.style.display = 'none';
         }
@@ -5178,9 +5177,23 @@ async function suggestNext() {
     const nt = document.getElementById('headNoteType');     if (nt) nt.textContent = '';
     const nm = document.getElementById('headNoteMeasure');  if (nm) nm.textContent = '';
 
-    // Pass the URL directly — alphaTab fetches and parses the binary GP file
+    // Pre-fetch as ArrayBuffer so api.renderTracks() never needs to re-fetch the URL.
+    // Passing a URL string to api.load() causes renderTracks() to re-fetch from network,
+    // which fails for multi-track files (e.g. Confirmation bass track).
     const url = OMNIBOOK_BASE + encodeURIComponent(tune.file);
-    api.load(url);
+    fetch(url)
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      .then(ab => { if (api) api.load(ab); })
+      .catch(err => {
+        if (currentBtn) {
+          currentBtn.classList.remove('hd-loading');
+          currentBtn.classList.add('hd-error');
+          currentBtn.textContent = '✗ ' + currentTuneName;
+        }
+        if (bar)     bar.classList.remove('hd-visible');
+        if (overlay) overlay.classList.add('at-hidden');
+        if (typeof showToast === 'function') showToast('Could not load ' + currentTuneName + ': ' + err.message, 'error');
+      });
   }
 
   // ── Tune grid ─────────────────────────────────────────────────────────
