@@ -778,6 +778,29 @@ details.panel.heads-panel summary { color: #ce93d8; }
 .fret.hd-best { background:rgba(206,147,216,0.80)!important; color:#000!important;
   font-weight:bold!important; box-shadow:0 0 16px rgba(206,147,216,1),inset 0 0 4px rgba(255,255,255,0.3)!important; }
 .fret.hd-rest { opacity:.2; transition:opacity .08s; }
+.fret.hd-ghost { outline:2px dashed rgba(206,147,216,0.5)!important; opacity:.7; }
+
+/* ── alphaTab notation area ──────────────────────────────────────────────── */
+.at-score-wrap { position:relative; margin-top:10px; border-radius:6px; overflow:hidden;
+  min-height:130px; background:#fafafa; }
+.at-score-wrap.at-empty { background:#111; }
+.at-score-wrap.at-loaded { background:#fff; }
+#atScore { width:100%; }
+.at-loading-overlay { position:absolute; inset:0; display:flex; align-items:center;
+  justify-content:center; background:rgba(10,5,20,0.88); flex-direction:column;
+  gap:8px; z-index:10; }
+.at-loading-overlay.at-hidden { display:none; }
+.at-load-spinner { width:22px; height:22px; border:2px solid #7b1fa2;
+  border-top-color:#ce93d8; border-radius:50%; animation:atSpin .65s linear infinite; }
+.at-load-msg { font-size:11px; color:#ce93d8; }
+@keyframes atSpin { to { transform:rotate(360deg); } }
+
+/* Speed + note info row */
+.hd-speed-row { display:flex; gap:8px; align-items:center; font-size:11px;
+  color:var(--ink-dim); flex-wrap:wrap; margin-top:8px; }
+.hd-speed-row input[type=range] { flex:1; min-width:80px; accent-color:#ce93d8;
+  cursor:pointer; }
+.hd-speed-val { min-width:34px; color:#ce93d8; font-weight:bold; }
 </style>
 
 
@@ -833,8 +856,8 @@ details.panel.heads-panel summary { color: #ce93d8; }
   <details class="panel heads-panel" id="headsPanel">
     <summary>🎵 Parker Heads Library — Omnibook Melodies</summary>
     <p style="font-size:11px;color:var(--ink-dim);margin:8px 0 4px;">
-      Click any tune to fetch its composed head (opening melody) from the Charlie Parker Omnibook.
-      Files are fetched on demand and cached locally. Also works with any MusicXML you import above.
+      Click any tune to fetch its composed head from the Charlie Parker Omnibook.
+      Renders guitar notation + TAB via alphaTab · SoundFont audio · fretboard sync.
     </p>
     <div class="heads-search-row">
       <input type="search" id="headsSearch" class="heads-search"
@@ -842,29 +865,56 @@ details.panel.heads-panel summary { color: #ce93d8; }
       <span class="heads-count" id="headsCount"></span>
     </div>
     <div class="heads-grid" id="headsGrid"></div>
+
+    <!-- Player (shown after tune loads) -->
     <div class="head-melody-bar" id="headMelodyBar">
       <div class="head-melody-title" id="headMelodyTitle">—</div>
+
+      <!-- Transport controls -->
       <div class="head-melody-controls">
         <button class="controls btn-ok"   id="headPlayBtn">▶ Play Head</button>
         <button class="controls btn-stop" id="headStopBtn">■ Stop</button>
         <button class="controls btn-sec"  id="headLoopToggle">⟳ Loop: Off</button>
         <button class="controls btn-sec"  id="headFbToggle">🎸 Fretboard: On</button>
       </div>
+
+      <!-- Tempo-scaling slider (api.playbackSpeed) -->
+      <div class="hd-speed-row">
+        <label for="hdSpeedSlider">Speed:</label>
+        <input type="range" id="hdSpeedSlider" min="25" max="150" value="100" step="5"
+               aria-label="Playback speed percentage">
+        <span class="hd-speed-val" id="hdSpeedLabel">100%</span>
+      </div>
+
+      <!-- Live note display -->
       <div class="head-note-display" id="headNoteDisplay">
-        <div class="hd-note-name" id="headNoteName">—</div>
+        <div class="hd-note-name"     id="headNoteName">—</div>
         <div class="hd-note-info">
           <div class="hd-note-interval" id="headNoteInterval">Load a head to begin</div>
           <div class="hd-note-type"     id="headNoteType"></div>
         </div>
-        <div class="hd-note-measure" id="headNoteMeasure"></div>
+        <div class="hd-note-measure"   id="headNoteMeasure"></div>
       </div>
+
+      <!-- Playback progress bar -->
       <div class="hd-progress"><div class="hd-progress-fill" id="hdProgressFill"></div></div>
+
+      <!-- Loop measure range -->
       <div class="hd-loop-row">
         Loop measures:
         <input type="number" id="hdLoopStart" value="1" min="1" aria-label="Loop start measure">
         to
         <input type="number" id="hdLoopEnd"   value="4" min="1" aria-label="Loop end measure">
         <span id="hdLoopInfo" style="color:var(--ink-dim);"></span>
+      </div>
+
+      <!-- alphaTab notation + TAB renderer -->
+      <div class="at-score-wrap at-empty" id="atScoreWrap">
+        <div id="atScore"></div>
+        <div class="at-loading-overlay" id="atLoadingOverlay">
+          <div class="at-load-spinner"></div>
+          <span class="at-load-msg" id="atLoadingMsg">Initializing player…</span>
+        </div>
       </div>
     </div>
   </details>
@@ -1030,6 +1080,8 @@ details.panel.heads-panel summary { color: #ce93d8; }
 
 <div id="toastContainer" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/alphaTab.min.js"
+        onerror="console.warn('alphaTab CDN failed — heads notation renderer unavailable')"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
         onerror="console.warn('JSZip CDN failed to load — ZIP export unavailable')"></script>
 <script src="js/resonanceEngine.js?v=1.0"></script>
@@ -4633,9 +4685,9 @@ async function suggestNext() {
 })(); // end practice IIFE
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PARKER HEADS LIBRARY — melody fetch + playback + fretboard highlighting
+// PARKER HEADS LIBRARY — alphaTab notation · SoundFont audio · fretboard sync
 // ═══════════════════════════════════════════════════════════════════════════
-(function headsLibraryModule() {
+(function alphaTabHeadsModule() {
   'use strict';
 
   const OMNIBOOK_BASE = 'https://raw.githubusercontent.com/lovejzzz/PDFtoXML/main/Omnibook%20xml/';
@@ -4692,28 +4744,65 @@ async function suggestNext() {
     { name: 'Yardbird Suite',         file: 'Yardbird_Suite.xml' },
   ];
 
-  // Local cache (avoid re-fetching on every open)
+  // ── Persistent cache ─────────────────────────────────────────────────
   const CACHE_KEY = 'cp_heads_v1';
   let headCache = {};
   try { const s = localStorage.getItem(CACHE_KEY); if (s) headCache = JSON.parse(s); } catch(e) {}
 
-  // Playback state
-  let hdNotes         = [];
-  let hdPlaying       = false;
-  let hdIdx           = 0;
-  let hdLoopOn        = false;
-  let hdFbOn          = true;
-  let hdLoopStartM    = 1;
-  let hdLoopEndM      = 4;
-  let hdTotalMeasures = 0;
-  let hdTimer         = null;
+  // ── alphaTab state ────────────────────────────────────────────────────
+  let api            = null;   // AlphaTabApi instance
+  let atReady        = false;  // SoundFont loaded
+  let atScore        = null;   // parsed Score object
+  let hdLoopOn       = false;
+  let hdLoopStartM   = 1;
+  let hdLoopEndM     = 4;
+  let hdLoopStartTick= 0;
+  let hdLoopEndTick  = Infinity;
+  let hdTotalMeasures= 0;
+  let hdFbOn         = true;
 
-  const STEP_PC    = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
-  const IVL_NAMES  = ['R','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
-  // Open-string MIDI by engine string (1=low E … 6=high E)
-  const OPEN_BY_ENG = { 1:40, 2:45, 3:50, 4:55, 5:59, 6:64 };
+  // Pre-built look-up tables for O(1) fretboard updates at bebop tempos
+  // Map<pitchClass(0-11), HTMLElement[]> and Map<"eng_fret", HTMLElement>
+  let pcFretMap   = null;
+  let keyFretMap  = null;  // "eng_fret" → element
 
-  // ── MusicXML note extractor ──────────────────────────────────────────
+  const STEP_PC   = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
+  const IVL_NAMES = ['R','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
+  const FLAT_NMS  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+  // alphaTab string numbering: 1=high E, 6=low E (GuitarPro convention)
+  // Our engine numbering: 1=low E, 6=high E
+  // Conversion: engineStr = 7 - atStr
+  const AT_OPEN_MIDI = { 1:64, 2:59, 3:55, 4:50, 5:45, 6:40 };
+
+  // Note-name → AlphaTex pitch name
+  const NOTE_TO_AT = {
+    'C':'c','C#':'cs','Db':'db','D':'d','D#':'ds','Eb':'eb',
+    'E':'e','F':'f','F#':'fs','Gb':'gb','G':'g','G#':'gs',
+    'Ab':'ab','A':'a','A#':'as','Bb':'bb','B':'b'
+  };
+
+  // ── Build fret element look-up tables ────────────────────────────────
+  // Called once at init and again whenever the fretboard is rebuilt
+  // (MutationObserver watches #fretboard for childList changes)
+  function buildFretMaps() {
+    pcFretMap  = new Map();
+    keyFretMap = new Map();
+    document.querySelectorAll('.fret[data-idx]').forEach(fr => {
+      const pc = parseInt(fr.dataset.idx, 10);
+      if (!pcFretMap.has(pc)) pcFretMap.set(pc, []);
+      pcFretMap.get(pc).push(fr);
+    });
+    if (typeof findFretEl === 'function') {
+      for (let eng = 1; eng <= 6; eng++) {
+        for (let f = 0; f <= 12; f++) {
+          const el = findFretEl(eng, f);
+          if (el) keyFretMap.set(`${eng}_${f}`, el);
+        }
+      }
+    }
+  }
+
+  // ── MusicXML note extractor (first-part, concert pitch) ──────────────
   function extractNotes(xmlText) {
     const doc  = new DOMParser().parseFromString(xmlText, 'text/xml');
     const part = doc.querySelector('part') || doc;
@@ -4744,17 +4833,11 @@ async function suggestNext() {
       if (nt) bpm = parseFloat(nt.getAttribute('tempo')) || bpm;
 
       mEl.querySelectorAll('note').forEach(nEl => {
-        if (nEl.querySelector('chord')) return; // skip simultaneous harmonic notes
-
+        if (nEl.querySelector('chord')) return;
         const durTicks      = parseInt(nEl.querySelector('duration')?.textContent || '0');
         const durationBeats = divs > 0 ? durTicks / divs : 1;
         const isRest        = !!nEl.querySelector('rest');
-
-        if (isRest) {
-          notes.push({ isRest:true, durationBeats, measureIdx:mIdx });
-          return;
-        }
-
+        if (isRest) { notes.push({ isRest:true, durationBeats, measureIdx:mIdx }); return; }
         const stepEl = nEl.querySelector('pitch step');
         if (!stepEl) return;
         const step   = stepEl.textContent.trim();
@@ -4763,198 +4846,325 @@ async function suggestNext() {
         const pc     = ((STEP_PC[step] ?? 0) + alter + 12) % 12;
         const midi   = 12 * (octave + 1) + (STEP_PC[step] ?? 0) + alter;
         const acc    = alter === 1 ? '#' : alter === -1 ? 'b' : '';
-
         notes.push({ midi, pc, name: step + acc, octave, durationBeats, isRest:false, measureIdx:mIdx });
       });
     });
-
     return { title, bpm, notes, totalMeasures: measures.length };
   }
 
-  // ── Best guitar fret for a given MIDI note ───────────────────────────
-  function bestFret(midi) {
-    const cands = [];
-    for (let eng = 1; eng <= 6; eng++) {
-      const fret = midi - OPEN_BY_ENG[eng];
-      if (fret >= 0 && fret <= 12) {
-        cands.push({ eng, fret, score: Math.abs(fret - 6) + (eng === 1 || eng === 6 ? 1 : 0) });
-      }
-    }
-    cands.sort((a,b) => a.score - b.score);
-    return cands[0] || null;
+  // ── Convert extracted notes → AlphaTex (guitar-native format) ────────
+  // alphaTab renders this as standard notation + auto-generated guitar TAB
+  // The playedBeatChanged event then reports exact string/fret for highlighting
+  function beatsToAtDur(b) {
+    if (Math.abs(b - 4.0) < .06) return ':1';
+    if (Math.abs(b - 3.0) < .06) return ':2.';
+    if (Math.abs(b - 2.0) < .06) return ':2';
+    if (Math.abs(b - 1.5) < .06) return ':4.';
+    if (Math.abs(b - 1.0) < .06) return ':4';
+    if (Math.abs(b - 0.75) < .06) return ':8.';
+    if (Math.abs(b - 0.5) < .06) return ':8';
+    if (Math.abs(b - 0.25) < .06) return ':16';
+    return b >= 0.88 ? ':4' : b >= 0.38 ? ':8' : ':16';
   }
 
-  // ── Fretboard highlight ──────────────────────────────────────────────
+  function notesToAlphaTex(data) {
+    const esc  = s => (s || '').replace(/"/g, '\\"');
+    const out  = [
+      `\\title "${esc(data.title)}"`,
+      `\\tempo ${Math.round(data.bpm || 160)}`,
+      '\\instrument 25',   // GM 25 = Steel-string Guitar
+      '\\tuning e5 b4 g4 d4 a3 e3',
+      '.'
+    ];
+    const byM = [];
+    data.notes.forEach(n => {
+      if (!byM[n.measureIdx]) byM[n.measureIdx] = [];
+      byM[n.measureIdx].push(n);
+    });
+    let curDur = '';
+    byM.forEach(mNotes => {
+      if (!mNotes || !mNotes.length) return;
+      const parts = mNotes.map(note => {
+        const dur  = beatsToAtDur(note.durationBeats);
+        const pfx  = dur !== curDur ? (curDur = dur, dur + ' ') : '';
+        if (note.isRest) return pfx + 'r';
+        const an = NOTE_TO_AT[note.name] || 'c';
+        return pfx + an + note.octave;
+      });
+      out.push(parts.join(' ') + ' |');
+    });
+    return out.join('\n');
+  }
+
+  // ── Fretboard: clear all heads highlights ─────────────────────────────
   function hdClearFb() {
-    document.querySelectorAll('.fret').forEach(fr => {
-      fr.classList.remove('hd-active','hd-best','hd-rest');
-    });
+    if (pcFretMap) {
+      pcFretMap.forEach(els => els.forEach(fr =>
+        fr.classList.remove('hd-active','hd-best','hd-ghost','hd-rest')
+      ));
+    } else {
+      document.querySelectorAll('.hd-active,.hd-best,.hd-ghost,.hd-rest').forEach(fr =>
+        fr.classList.remove('hd-active','hd-best','hd-ghost','hd-rest')
+      );
+    }
   }
 
-  function hdHighlight(note) {
+  // ── Fretboard: highlight beat from alphaTab playedBeatChanged event ───
+  // Runs inside requestAnimationFrame — avoids layout thrashing at 200+ BPM
+  function hdHighlightBeat(beat) {
     hdClearFb();
-    if (!hdFbOn) return;
-    if (note.isRest) {
-      document.querySelectorAll('.fret').forEach(fr => fr.classList.add('hd-rest'));
-      setTimeout(hdClearFb, 80);
-      return;
-    }
-    const { pc, midi } = note;
-    document.querySelectorAll('.fret[data-idx]').forEach(fr => {
-      if (parseInt(fr.dataset.idx, 10) === pc) fr.classList.add('hd-active');
+    if (!hdFbOn || !beat) return;
+    const notes = beat.notes;
+    if (!notes || !notes.length) return;
+
+    const seen = new Set();
+    notes.forEach(note => {
+      if (!note || note.isTieDestination || note.fret == null || note.fret < 0) return;
+
+      const atStr    = note.string;                   // alphaTab 1=high E
+      const engineSt = 7 - atStr;                    // our engine 6=high E
+      const fret     = note.fret;
+      const bestKey  = engineSt + '_' + fret;
+
+      // Exact string+fret highlight (bright) — using pre-built map, O(1)
+      if (!seen.has(bestKey)) {
+        seen.add(bestKey);
+        const bestEl = keyFretMap ? keyFretMap.get(bestKey) : null;
+        if (bestEl) {
+          bestEl.classList.add(note.isGhost ? 'hd-ghost' : 'hd-best');
+        }
+      }
+
+      // Pitch-class siblings (soft) — O(1) via pre-built map
+      const midi = (AT_OPEN_MIDI[atStr] || 64) + fret;
+      const pc   = ((midi % 12) + 12) % 12;
+      const pcEls = pcFretMap ? pcFretMap.get(pc) : null;
+      if (pcEls) pcEls.forEach(fr => {
+        if (!fr.classList.contains('hd-best') && !fr.classList.contains('hd-ghost'))
+          fr.classList.add('hd-active');
+      });
     });
-    const best = bestFret(midi);
-    if (best && typeof findFretEl === 'function') {
-      const el = findFretEl(best.eng, best.fret);
-      if (el) { el.classList.remove('hd-active'); el.classList.add('hd-best'); }
-    }
   }
 
-  // ── Note display ─────────────────────────────────────────────────────
-  function hdUpdateDisplay(note) {
+  // ── Note display: updates from alphaTab beat data ─────────────────────
+  function hdUpdateDisplay(beat) {
     const nameEl = document.getElementById('headNoteName');
     const intEl  = document.getElementById('headNoteInterval');
     const typeEl = document.getElementById('headNoteType');
     const measEl = document.getElementById('headNoteMeasure');
-    if (!nameEl) return;
-    measEl.textContent = `M${note.measureIdx + 1}`;
-    if (note.isRest) {
-      nameEl.textContent = '𝄽';
-      intEl.textContent  = 'rest';
-      typeEl.textContent = '';
-      return;
+    if (!nameEl || !beat) return;
+
+    // Measure number from beat's bar index
+    if (beat.voice && beat.voice.bar != null) {
+      measEl.textContent = 'M' + (beat.voice.bar.index + 1);
     }
-    nameEl.textContent = note.name;
-    typeEl.textContent = `${note.durationBeats.toFixed(1)} beat${note.durationBeats !== 1 ? 's' : ''}`;
+
+    const notes = (beat.notes || []).filter(n => n && !n.isTieDestination && n.fret >= 0);
+    if (!notes.length) {
+      nameEl.textContent = '𝄽'; intEl.textContent = 'rest'; typeEl.textContent = ''; return;
+    }
+
+    const n    = notes[0];
+    const midi = (AT_OPEN_MIDI[n.string] || 64) + n.fret;
+    const pc   = ((midi % 12) + 12) % 12;
+    nameEl.textContent = FLAT_NMS[pc];
+    typeEl.textContent = notes.length > 1 ? '+' + (notes.length - 1) + ' voices' : '';
+
     if (typeof lastBarData !== 'undefined' && lastBarData?.root && typeof NOTE_IDX !== 'undefined') {
       const ri  = (NOTE_IDX[lastBarData.root] || 0) % 12;
-      const ivl = ((note.pc - ri) + 12) % 12;
-      intEl.textContent = IVL_NAMES[ivl] || '';
+      intEl.textContent = IVL_NAMES[((pc - ri + 12) % 12)] || '';
     } else {
       intEl.textContent = '';
     }
   }
 
-  // ── Audio playback ───────────────────────────────────────────────────
-  function hdPlayAudio(note, bpm) {
-    if (note.isRest || typeof audioContext === 'undefined' || !audioContext || !audioReady) return;
-    const freq = 440 * Math.pow(2, (note.midi - 69) / 12);
-    const dur  = Math.max(0.04, (60 / bpm) * note.durationBeats * 0.88);
-    const ctx  = audioContext;
-    const now  = ctx.currentTime;
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'triangle';
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.15, now + 0.008);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-    osc.start(now); osc.stop(now + dur + 0.05);
+  // ── Initialize alphaTab API (lazy — triggered when panel opens) ───────
+  function atInit() {
+    if (api || !window.alphaTab) {
+      if (!window.alphaTab) {
+        const msg = document.getElementById('atLoadingMsg');
+        if (msg) msg.textContent = 'alphaTab unavailable — check network';
+      }
+      return;
+    }
+    const container = document.getElementById('atScore');
+    if (!container) return;
+
+    const overlay = document.getElementById('atLoadingOverlay');
+    const loadMsg = document.getElementById('atLoadingMsg');
+    if (overlay) overlay.classList.remove('at-hidden');
+    if (loadMsg) loadMsg.textContent = 'Loading SoundFont…';
+
+    try {
+      api = new alphaTab.AlphaTabApi(container, {
+        core: {
+          workerFile: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/alphaTab.worker.min.js',
+          fontDirectory: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/font/'
+        },
+        display: {
+          layoutMode: 1,       // 1 = Horizontal scroll
+          staveProfile: 3,     // 3 = TabMixed (standard notation + TAB)
+          scale: 0.82
+        },
+        player: {
+          enablePlayer: true,
+          enableUserInteraction: true,
+          soundFont: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/soundfont/sonivox.sf2',
+          scrollMode: 2        // 2 = Continuous
+        }
+      });
+    } catch(err) {
+      api = null;
+      if (typeof showToast === 'function') showToast('alphaTab init error: ' + err.message, 'error');
+      if (overlay) overlay.classList.add('at-hidden');
+      return;
+    }
+
+    // ── SoundFont ready ───────────────────────────────────────────────
+    api.playerReady.on(() => {
+      atReady = true;
+      if (overlay) overlay.classList.add('at-hidden');
+      if (typeof showToast === 'function') showToast('Player ready — SoundFont loaded', 'success', 1800);
+    });
+
+    // ── Score parsed ──────────────────────────────────────────────────
+    api.scoreLoaded.on(score => {
+      atScore = score;
+      hdTotalMeasures = score.masterBars ? score.masterBars.length : 0;
+      // Update loop UI
+      const loopInfo = document.getElementById('hdLoopInfo');
+      if (loopInfo) loopInfo.textContent = '(' + hdTotalMeasures + ' total)';
+      const loopEnd = document.getElementById('hdLoopEnd');
+      if (loopEnd) { loopEnd.value = Math.min(4, hdTotalMeasures); hdLoopEndM = Math.min(4, hdTotalMeasures); }
+      // Re-build fret maps in case fretboard was rebuilt
+      buildFretMaps();
+    });
+
+    // ── Note event → fretboard + display (core sync loop) ────────────
+    // requestAnimationFrame batches DOM mutations with browser paint cycle.
+    // This prevents layout thrashing at bebop tempos (200+ BPM = 300ms/beat).
+    api.playedBeatChanged.on(beat => {
+      if (!beat) return;
+      requestAnimationFrame(() => {
+        hdHighlightBeat(beat);
+        hdUpdateDisplay(beat);
+      });
+    });
+
+    // ── Player state → button label ───────────────────────────────────
+    api.playerStateChanged.on(args => {
+      const playing = args.state === 1; // PlayerState.Playing = 1
+      const btn = document.getElementById('headPlayBtn');
+      if (btn) btn.textContent = playing ? '⏸ Pause' : '▶ Play Head';
+    });
+
+    // ── Playback finished ─────────────────────────────────────────────
+    api.playerFinished.on(() => {
+      hdClearFb();
+      const fill = document.getElementById('hdProgressFill');
+      if (fill) fill.style.width = '0';
+      const btn = document.getElementById('headPlayBtn');
+      if (btn) btn.textContent = '▶ Play Head';
+      if (hdLoopOn && api) setTimeout(() => api.play(), 60);
+    });
+
+    // ── Position changed → progress bar + loop enforcement ───────────
+    // Loop is enforced by seeking api.tickPosition when endTick is crossed.
+    // api.tickPosition is a read/write property — setting it seeks immediately.
+    api.playerPositionChanged.on(args => {
+      const pct = args.endTime > 0 ? (args.currentTime / args.endTime) * 100 : 0;
+      const fill = document.getElementById('hdProgressFill');
+      if (fill) fill.style.width = Math.min(100, pct) + '%';
+
+      if (hdLoopOn && args.currentTick >= hdLoopEndTick && api) {
+        api.tickPosition = hdLoopStartTick;
+      }
+    });
+
+    // ── Error handler ─────────────────────────────────────────────────
+    api.error.on(err => {
+      const msg = (err && (err.message || err)) || 'unknown error';
+      if (typeof showToast === 'function') showToast('alphaTab: ' + msg, 'error');
+      if (overlay) overlay.classList.add('at-hidden');
+    });
+
+    buildFretMaps();
+
+    // Rebuild maps whenever the fretboard DOM is replaced (key change etc.)
+    const fb = document.getElementById('fretboard');
+    if (fb) {
+      new MutationObserver(() => { if (pcFretMap) buildFretMaps(); })
+        .observe(fb, { childList: true });
+    }
   }
 
-  // ── Playback engine ──────────────────────────────────────────────────
-  function hdStop() {
-    hdPlaying = false;
-    clearTimeout(hdTimer);
+  // ── Destroy instance cleanly (no orphaned audio contexts / listeners) ─
+  function atDestroy() {
+    if (!api) return;
+    try { api.stop(); } catch(e) {}
+    try { api.destroy(); } catch(e) {}
+    api = null; atReady = false; atScore = null;
+    pcFretMap = null; keyFretMap = null;
     hdClearFb();
-    const nameEl = document.getElementById('headNoteName');
-    if (nameEl) nameEl.textContent = '■';
-    const intEl = document.getElementById('headNoteInterval');
-    if (intEl) intEl.textContent = 'Stopped';
-    const typeEl = document.getElementById('headNoteType');
-    if (typeEl) typeEl.textContent = '';
-    const measEl = document.getElementById('headNoteMeasure');
-    if (measEl) measEl.textContent = '';
     const fill = document.getElementById('hdProgressFill');
     if (fill) fill.style.width = '0';
-    const playBtn = document.getElementById('headPlayBtn');
-    if (playBtn) playBtn.textContent = '▶ Play Head';
+    const wrap = document.getElementById('atScoreWrap');
+    if (wrap) { wrap.classList.add('at-empty'); wrap.classList.remove('at-loaded'); }
+    const overlay = document.getElementById('atLoadingOverlay');
+    if (overlay) overlay.classList.add('at-hidden');
   }
 
-  function hdTick() {
-    if (!hdPlaying) return;
-
-    if (hdIdx >= hdNotes.length) {
-      if (hdLoopOn) {
-        hdIdx = hdNotes.findIndex(n => n.measureIdx >= hdLoopStartM - 1);
-        if (hdIdx < 0) hdIdx = 0;
-      } else { hdStop(); return; }
-    }
-
-    const note = hdNotes[hdIdx];
-
-    if (hdLoopOn && note.measureIdx >= hdLoopEndM) {
-      hdIdx = hdNotes.findIndex(n => n.measureIdx >= hdLoopStartM - 1);
-      if (hdIdx < 0) hdIdx = 0;
-      hdTick(); return;
-    }
-
-    const bpm = parseInt(document.getElementById('bpmInput')?.value) || 160;
-
-    hdPlayAudio(note, bpm);
-    hdHighlight(note);
-    hdUpdateDisplay(note);
-
-    const pct = Math.min(100, (hdIdx / Math.max(1, hdNotes.length)) * 100);
-    const fill = document.getElementById('hdProgressFill');
-    if (fill) fill.style.width = pct + '%';
-
-    hdIdx++;
-    hdTimer = setTimeout(hdTick, note.durationBeats * (60000 / bpm));
+  // ── Convert measure index → tick position in loaded score ────────────
+  function measureToTick(idx) {
+    if (!atScore || !atScore.masterBars) return 0;
+    const bar = atScore.masterBars[Math.max(0, Math.min(idx, atScore.masterBars.length - 1))];
+    return bar ? bar.start : 0;
   }
 
-  function hdStartPlay() {
-    if (!hdNotes.length) { if (typeof showToast === 'function') showToast('Load a head first', 'warn'); return; }
-    hdPlaying = true;
-    const playBtn = document.getElementById('headPlayBtn');
-    if (playBtn) playBtn.textContent = '■ Pause';
-    if (typeof initAudio === 'function') {
-      initAudio().then(hdTick).catch(hdTick);
-    } else { hdTick(); }
+  function refreshLoopTicks() {
+    hdLoopStartTick = measureToTick(hdLoopStartM - 1);
+    const nextBar   = atScore?.masterBars?.[hdLoopEndM];
+    hdLoopEndTick   = nextBar ? nextBar.start : Infinity;
   }
 
-  function hdTogglePlay() {
-    if (hdPlaying) { hdStop(); } else { hdIdx = 0; hdStartPlay(); }
-  }
-
-  // ── Load parsed data into player ─────────────────────────────────────
+  // ── Load a head into alphaTab (converts to AlphaTex, calls api.load) ─
   function hdLoad(data, displayName) {
-    hdStop();
-    hdNotes         = data.notes;
-    hdTotalMeasures = data.totalMeasures;
-
-    const bpm = data.bpm || 160;
-    const bpmEl = document.getElementById('bpmInput');
-    if (bpmEl) { bpmEl.value = bpm; bpmEl.dispatchEvent(new Event('input')); }
+    if (!api) atInit();
+    if (!api) return;
 
     const titleEl = document.getElementById('headMelodyTitle');
-    if (titleEl) titleEl.textContent = `🎵 ${data.title || displayName} — ${hdTotalMeasures} measures`;
+    if (titleEl) titleEl.textContent = '🎵 ' + (data.title || displayName) + ' — loading…';
+
     const bar = document.getElementById('headMelodyBar');
     if (bar) bar.classList.add('hd-visible');
 
-    const loopEndEl = document.getElementById('hdLoopEnd');
-    if (loopEndEl) loopEndEl.value = Math.min(4, hdTotalMeasures);
-    hdLoopEndM = Math.min(4, hdTotalMeasures);
+    const wrap    = document.getElementById('atScoreWrap');
+    const overlay = document.getElementById('atLoadingOverlay');
+    const loadMsg = document.getElementById('atLoadingMsg');
+    if (wrap)    { wrap.classList.remove('at-empty'); wrap.classList.add('at-loaded'); }
+    if (overlay) overlay.classList.remove('at-hidden');
+    if (loadMsg) loadMsg.textContent = 'Converting to guitar notation…';
 
-    const loopInfo = document.getElementById('hdLoopInfo');
-    if (loopInfo) loopInfo.textContent = `(${hdTotalMeasures} total)`;
+    // Convert to AlphaTex so alphaTab renders guitar TAB with proper string/fret data
+    const tex = notesToAlphaTex(data);
+    api.load(tex);
 
-    const nameEl = document.getElementById('headNoteName');
-    if (nameEl) nameEl.textContent = '▶';
-    const intEl = document.getElementById('headNoteInterval');
-    if (intEl) intEl.textContent = 'Press Play to start';
-    const typeEl = document.getElementById('headNoteType');
-    if (typeEl) typeEl.textContent = '';
-    const measEl = document.getElementById('headNoteMeasure');
-    if (measEl) measEl.textContent = '';
+    if (titleEl) titleEl.textContent = '🎵 ' + (data.title || displayName);
+
+    // Reset display widgets
+    const nd = document.getElementById('headNoteName');      if (nd) nd.textContent = '▶';
+    const ni = document.getElementById('headNoteInterval');  if (ni) ni.textContent = 'Press Play';
+    const nt = document.getElementById('headNoteType');      if (nt) nt.textContent = '';
+    const nm = document.getElementById('headNoteMeasure');   if (nm) nm.textContent = '';
   }
 
-  // ── Fetch from Omnibook archive + cache ──────────────────────────────
+  // ── Fetch from Omnibook archive → cache → load ────────────────────────
   async function hdFetch(tune, btn) {
+    if (!api) atInit();
+
     if (headCache[tune.file]) {
       hdLoad(headCache[tune.file], tune.name);
-      if (typeof showToast === 'function') showToast(`${tune.name} — loaded from cache`, 'info');
+      if (typeof showToast === 'function') showToast(tune.name + ' — from cache', 'info');
       return;
     }
     btn.classList.add('hd-loading');
@@ -4970,17 +5180,17 @@ async function suggestNext() {
       btn.textContent = '✓ ' + tune.name;
       hdLoad(data, tune.name);
       if (typeof showToast === 'function')
-        showToast(`${data.title || tune.name} — ${data.notes.length} notes ready`, 'success');
+        showToast((data.title || tune.name) + ' — ' + data.notes.length + ' notes ready', 'success');
     } catch(err) {
       btn.classList.remove('hd-loading');
       btn.classList.add('hd-error');
       btn.textContent = '✗ ' + tune.name;
       if (typeof showToast === 'function')
-        showToast(`Could not load ${tune.name}: ${err.message}`, 'error');
+        showToast('Could not load ' + tune.name + ': ' + err.message, 'error');
     }
   }
 
-  // ── Render button grid ───────────────────────────────────────────────
+  // ── Tune grid ─────────────────────────────────────────────────────────
   function hdRenderGrid(filter) {
     const grid    = document.getElementById('headsGrid');
     const countEl = document.getElementById('headsCount');
@@ -5002,7 +5212,7 @@ async function suggestNext() {
     if (countEl) countEl.textContent = n + ' / ' + OMNIBOOK_TUNES.length;
   }
 
-  // ── Hook the file importer: also extract melody from dropped XMLs ────
+  // ── Import hook: auto-load melody when MusicXML dropped into importer ─
   function attachImportHook() {
     const fi = document.getElementById('importFileInput');
     if (!fi) return;
@@ -5010,7 +5220,7 @@ async function suggestNext() {
       const file = fi.files[0];
       if (!file) return;
       const ext = file.name.split('.').pop().toLowerCase();
-      if (!['xml', 'mxl'].includes(ext)) return;
+      if (!['xml','mxl'].includes(ext)) return;
       const reader = new FileReader();
       reader.onload = ev => {
         try {
@@ -5021,47 +5231,88 @@ async function suggestNext() {
             const panel = document.getElementById('headsPanel');
             if (panel) panel.open = true;
             if (typeof showToast === 'function')
-              showToast('Melody extracted: ' + data.notes.length + ' notes from ' + (data.title || file.name), 'success');
+              showToast('Melody extracted: ' + data.notes.length + ' notes', 'success');
           }, 400);
-        } catch(e) { /* silently skip non-melodic XMLs */ }
+        } catch(e) {}
       };
       reader.readAsText(file);
     }, { passive: true });
   }
 
-  // ── Init ─────────────────────────────────────────────────────────────
+  // ── Wire up all controls ──────────────────────────────────────────────
   function hdInit() {
     hdRenderGrid('');
+
+    // Lazy-init alphaTab the first time the panel is opened
+    const panel = document.getElementById('headsPanel');
+    if (panel) {
+      panel.addEventListener('toggle', () => {
+        if (panel.open && !api) atInit();
+      });
+    }
 
     document.getElementById('headsSearch')?.addEventListener('input', e => {
       hdRenderGrid(e.target.value);
     });
 
-    document.getElementById('headPlayBtn')?.addEventListener('click', hdTogglePlay);
-    document.getElementById('headStopBtn')?.addEventListener('click', () => { hdIdx = 0; hdStop(); });
+    // Play / Pause — delegates entirely to alphaTab event bus (no custom clock)
+    document.getElementById('headPlayBtn')?.addEventListener('click', () => {
+      if (!api) { if (typeof showToast === 'function') showToast('Load a head first', 'warn'); return; }
+      if (!atReady) { if (typeof showToast === 'function') showToast('SoundFont still loading…', 'warn'); return; }
+      api.playPause();
+    });
 
+    // Stop + reset position
+    document.getElementById('headStopBtn')?.addEventListener('click', () => {
+      if (!api) return;
+      api.stop();
+      hdClearFb();
+      const fill = document.getElementById('hdProgressFill');
+      if (fill) fill.style.width = '0';
+    });
+
+    // Loop toggle → recompute tick boundaries from current score
     document.getElementById('headLoopToggle')?.addEventListener('click', function() {
       hdLoopOn = !hdLoopOn;
       this.textContent = hdLoopOn ? '⟳ Loop: On' : '⟳ Loop: Off';
       this.classList.toggle('btn-loop-on', hdLoopOn);
+      if (hdLoopOn && atScore) refreshLoopTicks();
     });
 
+    // Fretboard highlight toggle
     document.getElementById('headFbToggle')?.addEventListener('click', function() {
       hdFbOn = !hdFbOn;
       this.textContent = hdFbOn ? '🎸 Fretboard: On' : '🎸 Fretboard: Off';
       if (!hdFbOn) hdClearFb();
     });
 
+    // Tempo-scaling slider → api.playbackSpeed (0.25–1.5 range)
+    // This slows/speeds without altering pitch — essential for bebop drill
+    document.getElementById('hdSpeedSlider')?.addEventListener('input', function() {
+      const ratio = parseInt(this.value) / 100;
+      if (api) api.playbackSpeed = ratio;
+      const lbl = document.getElementById('hdSpeedLabel');
+      if (lbl) lbl.textContent = this.value + '%';
+    });
+
+    // Loop range inputs → refresh tick boundaries
     document.getElementById('hdLoopStart')?.addEventListener('input', e => {
       hdLoopStartM = Math.max(1, parseInt(e.target.value) || 1);
+      if (hdLoopOn && atScore) refreshLoopTicks();
     });
     document.getElementById('hdLoopEnd')?.addEventListener('input', e => {
       hdLoopEndM = Math.max(1, parseInt(e.target.value) || 1);
+      if (hdLoopOn && atScore) refreshLoopTicks();
     });
 
+    // Stop head when user selects a different lead-sheet tune
     document.getElementById('tuneSel')?.addEventListener('change', () => {
-      if (hdPlaying) hdStop();
+      if (api) { api.stop(); hdClearFb(); }
     }, { passive: true });
+
+    // Proper lifecycle teardown — destroy API on page unload to prevent
+    // orphaned Web Audio contexts and detached DOM nodes
+    window.addEventListener('pagehide', atDestroy, { passive: true });
 
     attachImportHook();
   }
@@ -5072,7 +5323,7 @@ async function suggestNext() {
     hdInit();
   }
 
-})(); // end headsLibraryModule
+})(); // end alphaTabHeadsModule
 
 </script>
 
