@@ -5276,44 +5276,64 @@ async function suggestNext() {
   };
 
   // Load an AlphaTex string into the player (for lick/section preview).
-  // AlphaTex starts with '\' — alphaTab detects it as inline notation, not a URL.
   window.hdPreviewLick = function(alphaTex, displayName) {
-    const panel = document.getElementById('headsPanel');
+    const panel   = document.getElementById('headsPanel');
+    const wasOpen = panel && panel.open;
+
+    // Open the panel if needed — but DON'T call atInit/api.tex yet.
+    // The <details> element paints asynchronously after panel.open = true,
+    // so #atScore has zero dimensions until the next browser frame.
     if (panel && !panel.open) panel.open = true;
-    if (!api) atInit();
-    if (!api) {
-      if (typeof showToast === 'function') showToast('alphaTab unavailable', 'error');
-      return;
+
+    function doLoad() {
+      if (!api) atInit();
+      if (!api) {
+        if (typeof showToast === 'function') showToast('alphaTab unavailable — check network', 'error');
+        return;
+      }
+      try { api.stop(); } catch(e) {}
+      hdClearFb();
+
+      currentBtn      = null;
+      currentTuneName = displayName || 'Lick';
+
+      document.querySelectorAll('.head-btn').forEach(b => {
+        b.classList.remove('hd-loaded', 'hd-loading', 'hd-error');
+        if (b.dataset.tuneName) b.textContent = b.dataset.tuneName;
+      });
+
+      const bar      = document.getElementById('headMelodyBar');
+      const titleEl  = document.getElementById('headMelodyTitle');
+      const wrap     = document.getElementById('atScoreWrap');
+      const overlay  = document.getElementById('atLoadingOverlay');
+      const loadMsg  = document.getElementById('atLoadingMsg');
+      const trackRow = document.getElementById('hdTrackRow');
+
+      if (bar)      bar.classList.add('hd-visible');
+      if (titleEl)  titleEl.textContent = '🎵 ' + currentTuneName;
+      if (wrap)     { wrap.classList.remove('at-empty'); wrap.classList.add('at-loaded'); }
+      if (overlay)  overlay.classList.remove('at-hidden');
+      if (loadMsg)  loadMsg.textContent = 'Loading ' + currentTuneName + '…';
+      if (trackRow) trackRow.style.display = 'none';
+
+      // api.tex() is the explicit AlphaTex loader — api.load() treats strings as URLs
+      if (typeof api.tex === 'function') {
+        api.tex(alphaTex);
+      } else {
+        // Fallback for older alphaTab builds that don't expose tex()
+        api.load('\\' + alphaTex.replace(/^\\/,''));
+      }
+
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-    try { api.stop(); } catch(e) {}
-    hdClearFb();
 
-    currentBtn      = null;
-    currentTuneName = displayName || 'Lick';
-
-    document.querySelectorAll('.head-btn').forEach(b => {
-      b.classList.remove('hd-loaded', 'hd-loading', 'hd-error');
-      if (b.dataset.tuneName) b.textContent = b.dataset.tuneName;
-    });
-
-    const bar     = document.getElementById('headMelodyBar');
-    const titleEl = document.getElementById('headMelodyTitle');
-    const wrap    = document.getElementById('atScoreWrap');
-    const overlay = document.getElementById('atLoadingOverlay');
-    const loadMsg = document.getElementById('atLoadingMsg');
-    const trackRow = document.getElementById('hdTrackRow');
-
-    if (bar)      bar.classList.add('hd-visible');
-    if (titleEl)  titleEl.textContent = '🎵 ' + currentTuneName;
-    if (wrap)     { wrap.classList.remove('at-empty'); wrap.classList.add('at-loaded'); }
-    if (overlay)  overlay.classList.remove('at-hidden');
-    if (loadMsg)  loadMsg.textContent = 'Loading ' + currentTuneName + '…';
-    if (trackRow) trackRow.style.display = 'none';
-
-    // api.tex() is the explicit AlphaTex loader — api.load() treats strings as URLs
-    api.tex(alphaTex);
-
-    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (!wasOpen) {
+      // Wait two animation frames so the browser paints the panel and
+      // #atScore gets real dimensions before alphaTab tries to render into it.
+      requestAnimationFrame(() => requestAnimationFrame(doLoad));
+    } else {
+      doLoad();
+    }
   };
 
   // ── Wire up all controls ──────────────────────────────────────────────
