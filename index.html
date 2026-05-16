@@ -648,6 +648,46 @@ body{padding:8px;}
 .vl-seventh-dot { background: #26c6da; }
 .vl-hint { font-size: 11px; color: #555; font-style: italic; margin: 4px 0 0; }
 
+/* ── Practice Journal Panel ───────────────────────────────────────────── */
+details.panel.practice-panel summary { color: #ffb74d; }
+.prac-stats {
+  display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 6px;
+}
+.prac-stat-pill {
+  background: #1a1a2e; border: 1px solid var(--barline);
+  border-radius: 12px; padding: 3px 10px; font-size: 11px;
+  color: var(--ink-dim);
+}
+.prac-stat-pill strong { color: var(--sym); }
+.prac-needs-section { margin-bottom: 6px; }
+.prac-needs-label {
+  font-size: 10px; color: var(--ink-dim); text-transform: uppercase;
+  letter-spacing: 0.6px; margin-bottom: 4px;
+}
+.prac-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.prac-tune-chip {
+  background: #1e1430; border: 1px solid #7b1fa2; color: #ce93d8;
+  border-radius: 10px; padding: 2px 9px; font-size: 11px;
+  cursor: pointer; transition: background var(--transition);
+}
+.prac-tune-chip:hover { background: #2e1050; }
+.prac-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 11px; font-family: 'Courier New', monospace;
+  margin-top: 6px;
+}
+.prac-table th {
+  text-align: left; color: var(--ink-dim); font-weight: normal;
+  border-bottom: 1px solid var(--barline); padding: 2px 6px 4px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.prac-table td { padding: 3px 6px; border-bottom: 1px solid #1a1a1a; }
+.prac-table tr:hover td { background: #1a1a2e; }
+.prac-td-tune { color: var(--sym); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prac-td-when { color: var(--ink-dim); font-size: 10px; white-space: nowrap; }
+.prac-empty { font-size: 11px; color: #444; font-style: italic; margin: 4px 0; }
+.prac-controls { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
 /* ── Import Panel ─────────────────────────────────────────────────────── */
 details.panel.import-panel summary { color: var(--green); }
 .import-drop-zone {
@@ -883,6 +923,17 @@ details.panel.import-panel summary { color: var(--green); }
     <summary>📖 Bebop Scale Library — Click any scale to visualise &amp; hear</summary>
     <div class="lib-note">All scales shown in C as a reference. Functional harmony colouring: <span class="fl-root">Root</span> · <span class="fl-sub">Subdominant</span> · <span class="fl-dom">Dominant</span> · <span class="fl-other">Mediant</span></div>
     <div class="lib-grid" id="libGrid"></div>
+  </details>
+
+  <details class="panel practice-panel" id="practicePanel">
+    <summary>📊 Practice Journal — Session Tracking &amp; Drill Suggestions</summary>
+    <div id="pracStats"  class="prac-stats"         aria-live="polite"></div>
+    <div id="pracNeeds"  class="prac-needs-section" aria-live="polite"></div>
+    <div id="pracSessions"                           aria-live="polite"></div>
+    <div class="prac-controls">
+      <button id="pracSuggest" class="btn-sec">💡 Suggest Next Tune</button>
+      <button id="pracClear"   class="btn-stop">🗑 Clear History</button>
+    </div>
   </details>
 
   <div class="info-box">
@@ -4175,7 +4226,277 @@ async function handleImportFile(file) {
   renderImportedList();
 })();
 
-})(); // end IIFE
+})(); // end importer IIFE
+
+// ─── PRACTICE INTELLIGENCE ENGINE — Step 3 ───────────────────────────────────
+(function() {
+'use strict';
+
+const DB_NAME   = 'cp_practice_v1';
+const DB_VER    = 1;
+const MIN_SECS  = 10; // minimum session length to log
+let _db         = null;
+
+// ── IndexedDB wrapper ─────────────────────────────────────────────────────────
+function openDB() {
+  if (_db) return Promise.resolve(_db);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('sessions'))
+        db.createObjectStore('sessions', {keyPath:'id', autoIncrement:true});
+    };
+    req.onsuccess = e => { _db = e.target.result; resolve(_db); };
+    req.onerror   = () => reject(req.error);
+  });
+}
+function dbAdd(rec) {
+  return openDB().then(db => new Promise((res, rej) => {
+    const tx = db.transaction('sessions','readwrite');
+    tx.objectStore('sessions').add(rec).onsuccess = res;
+    tx.onerror = () => rej(tx.error);
+  }));
+}
+function dbGetAll() {
+  return openDB().then(db => new Promise((res, rej) => {
+    const tx  = db.transaction('sessions','readonly');
+    const req = tx.objectStore('sessions').getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  }));
+}
+function dbClear() {
+  return openDB().then(db => new Promise((res, rej) => {
+    const tx = db.transaction('sessions','readwrite');
+    tx.objectStore('sessions').clear().onsuccess = res;
+    tx.onerror = () => rej(tx.error);
+  }));
+}
+
+// ── Session tracking ──────────────────────────────────────────────────────────
+let _sessStart = null, _sessTune = null, _sessKey = null, _sessBpm = null;
+
+function practiceStart(tune, key, bpm) {
+  practiceEnd(); // flush previous
+  _sessStart = Date.now();
+  _sessTune  = tune;
+  _sessKey   = key;
+  _sessBpm   = bpm;
+}
+
+function practiceEnd() {
+  if (!_sessStart || !_sessTune) return;
+  const duration = Math.round((Date.now() - _sessStart) / 1000);
+  _sessStart = null;
+  if (duration < MIN_SECS) return;
+  const rec = {tune:_sessTune, key:_sessKey, bpm:_sessBpm,
+                startTime: Date.now() - duration * 1000, duration};
+  dbAdd(rec).then(() => {
+    const panel = document.getElementById('practicePanel');
+    if (panel && panel.open) refreshDashboard();
+  }).catch(() => {});
+  _sessTune = null;
+}
+
+function currentTune() {
+  return canonicalTuneTitle(document.getElementById('tuneSel').value);
+}
+function currentBpm() {
+  return parseInt(document.getElementById('bpmInput').value) || 120;
+}
+
+// ── Date helpers ──────────────────────────────────────────────────────────────
+function sameDay(ts, ref) {
+  const d = new Date(ts), r = new Date(ref);
+  return d.getFullYear()===r.getFullYear() && d.getMonth()===r.getMonth() && d.getDate()===r.getDate();
+}
+function fmtWhen(ts) {
+  if (sameDay(ts, Date.now()))            return 'Today ' + new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  if (sameDay(ts, Date.now() - 864e5))    return 'Yesterday';
+  return new Date(ts).toLocaleDateString([],{month:'short',day:'numeric'});
+}
+function fmtDur(s) {
+  return s >= 60 ? `${Math.floor(s/60)}m ${s%60}s` : `${s}s`;
+}
+
+// ── Dashboard renderer ────────────────────────────────────────────────────────
+async function refreshDashboard() {
+  const sessions = await dbGetAll().catch(() => []);
+
+  // Aggregate
+  const counts = {}, lastSeen = {};
+  let totalDur = 0;
+  sessions.forEach(s => {
+    counts[s.tune]   = (counts[s.tune] || 0) + 1;
+    lastSeen[s.tune] = Math.max(lastSeen[s.tune] || 0, s.startTime);
+    totalDur        += s.duration || 0;
+  });
+
+  // Streak
+  const daySet = new Set(sessions.map(s => new Date(s.startTime).toDateString()));
+  let streak = 0;
+  for (let d = 0; d < 90; d++) {
+    if (daySet.has(new Date(Date.now() - d * 864e5).toDateString())) streak++;
+    else if (d > 0) break;
+  }
+
+  // Stats row
+  document.getElementById('pracStats').innerHTML = [
+    `🎷 <strong>${sessions.length}</strong> sessions`,
+    `⏱ <strong>${Math.round(totalDur / 60)}</strong> min`,
+    `🔥 <strong>${streak}</strong>-day streak`,
+    `📚 <strong>${Object.keys(counts).length}</strong> tunes practiced`
+  ].map(t => `<div class="prac-stat-pill">${t}</div>`).join('');
+
+  // Needs attention
+  const allBuiltIn = Object.keys(SONGS).filter(n => !SONGS[n]._imported);
+  const unpracticed = allBuiltIn.filter(n => !counts[n]);
+  const rare        = allBuiltIn.filter(n => counts[n] === 1);
+  const needsList   = [...new Set([...unpracticed, ...rare])].slice(0, 8);
+  const needsEl     = document.getElementById('pracNeeds');
+  if (needsList.length) {
+    needsEl.innerHTML =
+      `<div class="prac-needs-label">Needs practice (${unpracticed.length} never · ${rare.length} once)</div>` +
+      `<div class="prac-chips">${
+        needsList.map(n => `<button class="prac-tune-chip" data-tune="${n.replace(/"/g,'&quot;')}">${n}</button>`).join('')
+      }</div>`;
+    needsEl.querySelectorAll('.prac-tune-chip').forEach(btn => {
+      btn.addEventListener('click', () => drillTune(btn.dataset.tune));
+    });
+  } else {
+    needsEl.innerHTML = sessions.length
+      ? '<div class="prac-needs-label" style="color:#4caf50">✓ All tunes practiced — keep it up!</div>'
+      : '';
+  }
+
+  // Recent sessions table
+  const recent  = [...sessions].reverse().slice(0, 12);
+  const sessEl  = document.getElementById('pracSessions');
+  if (!recent.length) {
+    sessEl.innerHTML = '<p class="prac-empty">No sessions yet — play through tunes to start tracking.</p>';
+  } else {
+    sessEl.innerHTML =
+      `<table class="prac-table" aria-label="Recent practice sessions">
+        <thead><tr><th>Tune</th><th>Key</th><th>BPM</th><th>Duration</th><th>When</th></tr></thead>
+        <tbody>${recent.map(s =>
+          `<tr>
+            <td class="prac-td-tune" title="${s.tune}">${s.tune}</td>
+            <td>${s.key}</td><td>${s.bpm}</td>
+            <td>${fmtDur(s.duration)}</td>
+            <td class="prac-td-when">${fmtWhen(s.startTime)}</td>
+          </tr>`
+        ).join('')}</tbody>
+      </table>`;
+  }
+}
+
+// ── Drill: select a specific tune to practice ─────────────────────────────────
+function drillTune(name) {
+  const t = SONGS[name]; if (!t) return;
+  const sel = document.getElementById('tuneSel');
+  const ks  = document.getElementById('keySel');
+  sel.value = name; ks.value = t.key;
+  if (typeof buildFretboard     === 'function') buildFretboard();
+  if (typeof renderLeadSheet    === 'function') renderLeadSheet(name, t.key);
+  if (typeof updateSectionDropdown === 'function') updateSectionDropdown();
+  practiceStart(name, t.key, currentBpm());
+  showToast(`Drilling: ${name}`, 'info', 2500);
+}
+
+// ── Weighted random (replaces the existing random button handler) ──────────────
+async function weightedRandom() {
+  const sessions = await dbGetAll().catch(() => []);
+  const counts   = {};
+  sessions.forEach(s => { counts[s.tune] = (counts[s.tune] || 0) + 1; });
+
+  const entries = getFilteredTunes();
+  if (!entries.length) return;
+
+  // Weight: never practiced = 4, once = 3, twice = 2, else = 1
+  const weighted = [];
+  entries.forEach(([name, t]) => {
+    const c = counts[name] || 0;
+    const w = c === 0 ? 4 : c === 1 ? 3 : c === 2 ? 2 : 1;
+    for (let i = 0; i < w; i++) weighted.push([name, t]);
+  });
+
+  const [name, t] = weighted[Math.floor(Math.random() * weighted.length)];
+  const sel = document.getElementById('tuneSel');
+  const ks  = document.getElementById('keySel');
+  sel.value = name; ks.value = t.key;
+  if (typeof buildFretboard     === 'function') buildFretboard();
+  if (typeof renderLeadSheet    === 'function') renderLeadSheet(name, t.key);
+  if (typeof updateSectionDropdown === 'function') updateSectionDropdown();
+  practiceStart(name, t.key, currentBpm());
+  const msg = (counts[name] || 0) === 0 ? `"${name}" — never practiced!` : `"${name}"`;
+  showToast(`🎲 ${msg}`, 'info', 2000);
+}
+
+// ── Suggest next (least recently practiced from filter) ───────────────────────
+async function suggestNext() {
+  const sessions = await dbGetAll().catch(() => []);
+  const lastSeen = {};
+  sessions.forEach(s => { lastSeen[s.tune] = Math.max(lastSeen[s.tune]||0, s.startTime); });
+
+  const entries = getFilteredTunes();
+  if (!entries.length) { showToast('No tunes match current filter', 'warn'); return; }
+
+  const sorted = [...entries].sort(([na],[nb]) => (lastSeen[na]||0) - (lastSeen[nb]||0));
+  const pool   = sorted.slice(0, Math.max(1, Math.ceil(sorted.length * 0.25)));
+  const [name, t] = pool[Math.floor(Math.random() * pool.length)];
+  drillTune(name);
+  showToast(`💡 Suggested: ${name}${(lastSeen[name]||0) === 0 ? ' (never practiced)' : ''}`, 'success', 3000);
+}
+
+// ── Wire up ───────────────────────────────────────────────────────────────────
+(function init() {
+  // Replace random button to swap out existing listener
+  const oldRnd = document.getElementById('randomTune');
+  if (oldRnd) {
+    const newRnd = oldRnd.cloneNode(true);
+    oldRnd.replaceWith(newRnd);
+    newRnd.addEventListener('click', weightedRandom);
+  }
+
+  // Suggest & clear buttons
+  document.getElementById('pracSuggest')?.addEventListener('click', suggestNext);
+  document.getElementById('pracClear')?.addEventListener('click', async () => {
+    if (!confirm('Clear all practice history?')) return;
+    await dbClear();
+    refreshDashboard();
+    showToast('Practice history cleared', 'info');
+  });
+
+  // Open panel → render dashboard
+  document.getElementById('practicePanel')?.addEventListener('toggle', e => {
+    if (e.target.open) refreshDashboard();
+  });
+
+  // Session tracking: start on tune change or generate
+  const tuneSel = document.getElementById('tuneSel');
+  tuneSel?.addEventListener('change', () => {
+    const name = canonicalTuneTitle(tuneSel.value);
+    const key  = document.getElementById('keySel').value;
+    practiceStart(name, key, currentBpm());
+  }, { passive: true });
+
+  document.getElementById('generateBtn')?.addEventListener('click', () => {
+    const name = canonicalTuneTitle(document.getElementById('tuneSel').value);
+    const key  = document.getElementById('keySel').value;
+    if (name !== _sessTune) practiceStart(name, key, currentBpm());
+  }, { passive: true });
+
+  // Flush on page hide (more reliable than beforeunload on mobile)
+  window.addEventListener('pagehide',    practiceEnd, { passive: true });
+  window.addEventListener('beforeunload', practiceEnd);
+  // Also flush when visibility goes hidden (tab switch)
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) practiceEnd();
+  }, { passive: true });
+})();
+
+})(); // end practice IIFE
 
 </script>
 
