@@ -942,6 +942,9 @@ details.panel.heads-panel summary { color: #ce93d8; }
           <span class="at-load-msg" id="atLoadingMsg">Initializing player…</span>
         </div>
       </div>
+      <div style="font-size:10px;color:var(--ink-dim);text-align:center;margin-top:4px;">
+        📵 No sound? On iPhone/iPad check the <strong>Ring/Silent switch</strong> and tap Play again.
+      </div>
     </div>
   </details>
 
@@ -3664,6 +3667,8 @@ document.getElementById('sectionGenBtn').addEventListener('click', function() {
   if (exportBtn) exportBtn.style.display = '';
   const previewBtn = document.getElementById('sectionPreviewBtn');
   if (previewBtn) previewBtn.style.display = '';
+  // Change button label so it's obvious you can re-run for a new lick variation
+  this.textContent = '↻ Regenerate Lick';
 });
 
 document.getElementById('sectionSaveTabBtn').addEventListener('click', function() {
@@ -5305,7 +5310,8 @@ async function suggestNext() {
     if (loadMsg)  loadMsg.textContent = 'Loading ' + currentTuneName + '…';
     if (trackRow) trackRow.style.display = 'none';
 
-    api.load(alphaTex);
+    // api.tex() is the explicit AlphaTex loader — api.load() treats strings as URLs
+    api.tex(alphaTex);
 
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
@@ -5314,22 +5320,28 @@ async function suggestNext() {
   function hdInit() {
     hdRenderGrid('');
 
-    // Lazy-init alphaTab the first time the panel is opened
-    const panel = document.getElementById('headsPanel');
-    if (panel) {
-      panel.addEventListener('toggle', () => {
-        if (panel.open && !api) atInit();
-      });
-    }
-
+    // NOTE: atInit() is intentionally NOT called on panel toggle.
+    // On iOS, the <details> toggle event fires asynchronously from the tap
+    // and is no longer inside the user-gesture context — creating an
+    // AudioContext there puts it in a suspended state that can't be resumed.
+    // atInit() is only called from direct click handlers (hdFetch, hdAutoLoad,
+    // hdPreviewLick) where iOS correctly treats it as a user gesture.
     document.getElementById('headsSearch')?.addEventListener('input', e => {
       hdRenderGrid(e.target.value);
     });
 
-    // Play / Pause — delegates entirely to alphaTab event bus (no custom clock)
+    // Play / Pause — called synchronously in a click handler so iOS
+    // accepts this as a user gesture and allows audio context resume.
     document.getElementById('headPlayBtn')?.addEventListener('click', () => {
       if (!api) { if (typeof showToast === 'function') showToast('Load a head first', 'warn'); return; }
-      if (!atReady) { if (typeof showToast === 'function') showToast('SoundFont still loading…', 'warn'); return; }
+      // Explicitly resume the app's AudioContext on iOS before delegating to alphaTab
+      if (typeof audioContext !== 'undefined' && audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().catch(() => {});
+      }
+      if (!atReady) {
+        if (typeof showToast === 'function') showToast('Audio loading — try again in a moment', 'warn');
+        // Still attempt play; alphaTab may handle the resume internally
+      }
       api.playPause();
     });
 
