@@ -811,6 +811,9 @@ details.panel.heads-panel summary { color: #ce93d8; }
 .hd-speed-row input[type=range] { flex:1; min-width:80px; accent-color:#ce93d8;
   cursor:pointer; }
 .hd-speed-val { min-width:34px; color:#ce93d8; font-weight:bold; }
+.hd-gp-badge { background:#1a0d2e; border:1px solid #7b1fa2; color:#ce93d8;
+  border-radius:20px; padding:3px 12px; font-size:11px; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; white-space:nowrap; }
 .hd-track-row { display:none; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px;
   font-size:11px; color:var(--ink-dim); }
 .hd-track-btns { display:flex; flex-wrap:wrap; gap:4px; }
@@ -953,6 +956,8 @@ details.panel.heads-panel summary { color: #ce93d8; }
     <button id="generateBtn" class="btn-ok">▶ Generate</button>
     <button id="toggleScales" class="btn-sec">Show Scales</button>
     <button id="printBtn" class="btn-sec">🖨️ Print</button>
+    <button id="hdGpBadge" class="hd-gp-badge" style="display:none;"
+            title="GuitarPro head available — click to load in player">🎵 Play Head</button>
   </div>
 
   <div class="playback-bar">
@@ -1045,6 +1050,7 @@ details.panel.heads-panel summary { color: #ce93d8; }
       <button id="resonanceStopBtn" class="btn-stop">⏹ Stop</button>
       <button id="resonanceArrowsBtn" class="btn-sec">Gravity Arrows: OFF</button>
       <button id="resonanceCopyTabBtn" class="btn-sec">📋 Copy Tab</button>
+      <button id="resonancePreviewBtn" class="btn-sec">🎵 Preview Lick</button>
       <button id="resonanceAutoPlayBtn" class="btn-sec">Auto-play: OFF</button>
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:8px;justify-content:center;flex-wrap:wrap;">
@@ -1066,6 +1072,7 @@ details.panel.heads-panel summary { color: #ce93d8; }
       <button id="sectionGenBtn" class="btn-sec">🎼 Generate Section</button>
       <button id="sectionSaveTabBtn" class="btn-sec" style="display:none;">💾 Save as TAB</button>
       <button id="sectionExportZipBtn" class="btn-sec" style="display:none;" title="Download ASCII tab, alphaTex, and MusicXML in a ZIP file">📦 Download ZIP</button>
+      <button id="sectionPreviewBtn" class="btn-sec" style="display:none;">🎵 Preview</button>
     </div>
     <pre id="sectionTabDisplay" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:11px;overflow-x:auto;white-space:pre;color:var(--ink);max-height:220px;line-height:1.5;margin:0;"></pre>
   </div>
@@ -3469,19 +3476,31 @@ buildFretboard();
 buildScaleLibrary();
 initFretboardResizeObserver();
 
+function updateGpBadge() {
+  const badge = document.getElementById('hdGpBadge');
+  if (!badge) return;
+  const match = window.hdHasGP && window.hdHasGP(tuneSel.value);
+  badge.style.display = match ? '' : 'none';
+}
+document.getElementById('hdGpBadge').addEventListener('click', () => {
+  if (window.hdAutoLoad) window.hdAutoLoad(tuneSel.value);
+});
 tuneSel.addEventListener('change', () => {
-const t = SONGS[canonicalTuneTitle(tuneSel.value)];
-if (t) { keySel.value = t.key; buildFretboard(); renderLeadSheet(tuneSel.value, t.key); updateSectionDropdown(); }
+  const t = SONGS[canonicalTuneTitle(tuneSel.value)];
+  if (t) { keySel.value = t.key; buildFretboard(); renderLeadSheet(tuneSel.value, t.key); updateSectionDropdown(); }
+  updateGpBadge();
 });
 document.getElementById('generateBtn').addEventListener('click', () => {
-if (tuneSel.value) { buildFretboard(); renderLeadSheet(tuneSel.value, keySel.value); updateSectionDropdown(); }
+  if (tuneSel.value) { buildFretboard(); renderLeadSheet(tuneSel.value, keySel.value); updateSectionDropdown(); }
+  updateGpBadge();
 });
 document.getElementById('randomTune').addEventListener('click', () => {
-const entries = getFilteredTunes();
-if (!entries.length) return;
-const [name, t] = entries[Math.floor(Math.random() * entries.length)];
-tuneSel.value = name; keySel.value = t.key;
-buildFretboard(); renderLeadSheet(name, t.key);
+  const entries = getFilteredTunes();
+  if (!entries.length) return;
+  const [name, t] = entries[Math.floor(Math.random() * entries.length)];
+  tuneSel.value = name; keySel.value = t.key;
+  buildFretboard(); renderLeadSheet(name, t.key);
+  updateGpBadge();
 });
 document.getElementById('toggleScales').addEventListener('click', e => {
 showScales = !showScales;
@@ -3594,6 +3613,16 @@ document.getElementById('resonanceCopyTabBtn').addEventListener('click', () => {
   }
 });
 
+document.getElementById('resonancePreviewBtn').addEventListener('click', () => {
+  if (!resonanceLickPath.length) {
+    if (typeof showToast === 'function') showToast('Generate a lick first', 'warn'); return;
+  }
+  if (!window.hdPreviewLick) { if (typeof showToast==='function') showToast('Player not ready', 'warn'); return; }
+  // Wrap the single lick path as a barGroup so buildAlphaTexString can consume it
+  const barGroups = [{ chordSymbol: 'Resonance Lick', scale: '', path: resonanceLickPath }];
+  window.hdPreviewLick(buildAlphaTexString(barGroups, 'Resonance Lick'), 'Resonance Lick');
+});
+
 // Auto-play toggle
 document.getElementById('resonanceAutoPlayBtn').addEventListener('click', e => {
   resonanceAutoPlay = !resonanceAutoPlay;
@@ -3633,6 +3662,8 @@ document.getElementById('sectionGenBtn').addEventListener('click', function() {
   pre.style.display = 'block';
   saveBtn.style.display = '';
   if (exportBtn) exportBtn.style.display = '';
+  const previewBtn = document.getElementById('sectionPreviewBtn');
+  if (previewBtn) previewBtn.style.display = '';
 });
 
 document.getElementById('sectionSaveTabBtn').addEventListener('click', function() {
@@ -3666,6 +3697,18 @@ document.getElementById('sectionExportZipBtn').addEventListener('click', functio
   const sName   = (sections[parseInt(sIdxVal, 10)] || {}).name || 'section';
   const baseName = name.replace(/\s+/g, '_') + '_' + sName;
   exportSectionZip(_sectionBarGroups, baseName);
+});
+
+document.getElementById('sectionPreviewBtn').addEventListener('click', function() {
+  if (!_sectionBarGroups || !_sectionBarGroups.length) return;
+  if (!window.hdPreviewLick) { if (typeof showToast==='function') showToast('Player not ready', 'warn'); return; }
+  const name    = canonicalTuneTitle(tuneSel.value);
+  const sIdxVal = document.getElementById('sectionSelect').value;
+  const tune    = SONGS[name];
+  const sections = tune ? getSectionsForSong(tune) : [];
+  const sName   = (sections[parseInt(sIdxVal, 10)] || {}).name || 'section';
+  const title   = (name || 'Lick') + ' · ' + sName;
+  window.hdPreviewLick(buildAlphaTexString(_sectionBarGroups, title), title);
 });
 
 document.getElementById('loopTargetSel').addEventListener('change', () => {
@@ -5106,9 +5149,11 @@ async function suggestNext() {
       }
     });
 
-    btn.classList.remove('hd-error');
-    btn.classList.add('hd-loading');
-    btn.textContent = '⏳ ' + tune.name;
+    if (btn) {
+      btn.classList.remove('hd-error');
+      btn.classList.add('hd-loading');
+      btn.textContent = '⏳ ' + tune.name;
+    }
 
     const bar     = document.getElementById('headMelodyBar');
     const titleEl = document.getElementById('headMelodyTitle');
@@ -5198,6 +5243,72 @@ async function suggestNext() {
       reader.readAsArrayBuffer(file);
     }, { passive: true });
   }
+
+  // ── Public API exposed to the rest of the page ────────────────────────
+
+  // Returns the matching OMNIBOOK_TUNES entry for a tune name, or null.
+  window.hdHasGP = function(tuneName) {
+    if (!tuneName) return null;
+    const lower = tuneName.toLowerCase().trim();
+    return OMNIBOOK_TUNES.find(t =>
+      lower.includes(t.name.toLowerCase()) || t.name.toLowerCase().includes(lower)
+    ) || null;
+  };
+
+  // Open the Heads panel and load the GP file matching tuneName (if any).
+  window.hdAutoLoad = function(tuneName) {
+    const match = window.hdHasGP(tuneName);
+    if (!match) return;
+    const panel = document.getElementById('headsPanel');
+    if (panel && !panel.open) panel.open = true;
+    if (!api) atInit();
+    // Find grid button for smooth visual feedback (may be null if filtered away)
+    let btn = null;
+    document.querySelectorAll('.head-btn').forEach(b => {
+      if (b.dataset.tuneName === match.name) btn = b;
+    });
+    hdFetch(match, btn);
+  };
+
+  // Load an AlphaTex string into the player (for lick/section preview).
+  // AlphaTex starts with '\' — alphaTab detects it as inline notation, not a URL.
+  window.hdPreviewLick = function(alphaTex, displayName) {
+    const panel = document.getElementById('headsPanel');
+    if (panel && !panel.open) panel.open = true;
+    if (!api) atInit();
+    if (!api) {
+      if (typeof showToast === 'function') showToast('alphaTab unavailable', 'error');
+      return;
+    }
+    try { api.stop(); } catch(e) {}
+    hdClearFb();
+
+    currentBtn      = null;
+    currentTuneName = displayName || 'Lick';
+
+    document.querySelectorAll('.head-btn').forEach(b => {
+      b.classList.remove('hd-loaded', 'hd-loading', 'hd-error');
+      if (b.dataset.tuneName) b.textContent = b.dataset.tuneName;
+    });
+
+    const bar     = document.getElementById('headMelodyBar');
+    const titleEl = document.getElementById('headMelodyTitle');
+    const wrap    = document.getElementById('atScoreWrap');
+    const overlay = document.getElementById('atLoadingOverlay');
+    const loadMsg = document.getElementById('atLoadingMsg');
+    const trackRow = document.getElementById('hdTrackRow');
+
+    if (bar)      bar.classList.add('hd-visible');
+    if (titleEl)  titleEl.textContent = '🎵 ' + currentTuneName;
+    if (wrap)     { wrap.classList.remove('at-empty'); wrap.classList.add('at-loaded'); }
+    if (overlay)  overlay.classList.remove('at-hidden');
+    if (loadMsg)  loadMsg.textContent = 'Loading ' + currentTuneName + '…';
+    if (trackRow) trackRow.style.display = 'none';
+
+    api.load(alphaTex);
+
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
 
   // ── Wire up all controls ──────────────────────────────────────────────
   function hdInit() {
