@@ -821,6 +821,49 @@ details.panel.heads-panel summary { color: #ce93d8; }
   border-radius:4px; padding:3px 10px; font-size:10px; cursor:pointer;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
 .hd-track-btn.hd-tb-active { background:#7b1fa2; color:#fff; border-color:#ce93d8; }
+
+/* ── Main lead-sheet view tabs (Chord Grid / Notation / Tab) ─────────────── */
+.at-view-tabs { display:flex; gap:5px; margin-bottom:6px; flex-wrap:wrap; }
+.at-view-tab {
+  padding:5px 15px; font-size:12px; border-radius:20px; cursor:pointer;
+  border:1px solid #444; background:#1a1a2e; color:var(--ink-dim);
+  font-family:inherit; font-weight:500; letter-spacing:.01em;
+  transition:background .15s, color .15s, border-color .15s;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+.at-view-tab:hover  { background:#252545; color:var(--ink); border-color:#7b1fa2; }
+.at-view-tab.active { background:#3d1a6e; border-color:#ce93d8; color:#fff; font-weight:700; }
+.at-view-tab:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+
+/* ── Notation / Tab viewer container ────────────────────────────────────── */
+#alphatab-container {
+  position:relative; background:#fff; border-radius:6px; overflow:hidden; margin-bottom:8px;
+}
+#atMainScore {
+  width:100%; min-height:240px; overflow-x:auto; overflow-y:hidden;
+  cursor:pointer; touch-action:pan-x;
+  -webkit-overflow-scrolling:touch; -webkit-tap-highlight-color:transparent;
+}
+@media (min-width:768px)  { #atMainScore { min-height:300px; } }
+@media (min-width:1024px) { #atMainScore { min-height:360px; } }
+.at-main-ctrl {
+  display:flex; gap:6px; align-items:center; flex-wrap:wrap;
+  padding:7px 10px; background:#0d0d1a; border-top:1px solid #2a2a3e;
+}
+.at-main-ctrl span.at-ctrl-hint { color:var(--ink-dim); font-size:10px; margin-left:4px; }
+.at-main-empty {
+  padding:30px 16px; text-align:center; color:var(--ink-dim); font-size:13px;
+  background:#111; border-radius:6px 6px 0 0;
+}
+.at-main-empty small {
+  display:block; font-size:11px; color:#555; margin-top:6px; line-height:1.65;
+}
+.at-main-overlay {
+  position:absolute; inset:0; display:flex; align-items:center;
+  justify-content:center; flex-direction:column; gap:8px;
+  background:rgba(10,5,20,0.88); z-index:10;
+}
+.at-main-overlay.at-hidden { display:none; }
 </style>
 
 
@@ -1005,8 +1048,47 @@ details.panel.heads-panel summary { color: #ce93d8; }
 
   <div class="legend">Tap any bar to hear the chord or scale · Use Playback to sequence at tempo · Open Scale Library for bebop theory reference</div>
 
+  <!-- ── View mode tabs: Chord Grid | Notation | Tab ──────────────────── -->
+  <div class="at-view-tabs" id="atViewTabs" role="tablist" aria-label="Lead sheet view mode">
+    <button class="at-view-tab active" data-view="grid" id="atTabGrid"
+            role="tab" aria-selected="true" aria-controls="sheet"
+            title="Interactive chord grid with Roman numerals, scale suggestions, and bar click-to-play">📋 Chord Grid</button>
+    <button class="at-view-tab" data-view="notation" id="atTabNotation"
+            role="tab" aria-selected="false" aria-controls="alphatab-container"
+            title="Standard music notation rendered by AlphaTab — available for Omnibook tunes">♩ Notation</button>
+    <button class="at-view-tab" data-view="tab" id="atTabTab"
+            role="tab" aria-selected="false" aria-controls="alphatab-container"
+            title="Guitar tablature rendered by AlphaTab — available for Omnibook tunes">𝄩 Tab</button>
+  </div>
+
   <div id="sheet" class="sheet">
     <div style="text-align:center;color:var(--ink-dim);padding:30px;">Select a tune and click Generate to begin.</div>
+  </div>
+
+  <!-- ── AlphaTab main notation/tab viewer (replaces chord grid when active) ── -->
+  <div id="alphatab-container" style="display:none;"
+       role="tabpanel" aria-labelledby="atTabNotation atTabTab">
+    <div id="atMainScore"></div>
+    <div class="at-main-overlay at-hidden" id="atMainOverlay">
+      <div class="at-load-spinner"></div>
+      <span class="at-load-msg" id="atMainLoadMsg">Loading notation…</span>
+    </div>
+    <div class="at-main-empty" id="atMainEmpty" style="display:none;">
+      <p>No notation file available for this tune.</p>
+      <small>Notation available for: Anthropology · Au Privave · Billie's Bounce · Bloomdido ·
+        Blues for Alice · Confirmation · Donna Lee · Loverman · Moose the Mooche ·
+        Now's the Time · Ornithology · Parker's Mood · Yardbird Suite · Cheryl</small>
+    </div>
+    <div class="at-main-ctrl">
+      <button class="controls btn-ok"   id="atMainPlayBtn">▶ Play</button>
+      <button class="controls btn-stop" id="atMainStopBtn">■ Stop</button>
+      <label for="atMainSpeedSlider" style="color:var(--ink-dim);font-size:11px;white-space:nowrap;">Speed:</label>
+      <input  type="range" id="atMainSpeedSlider" min="25" max="150" value="100" step="5"
+              style="width:90px;accent-color:#ce93d8;cursor:pointer;"
+              aria-label="Playback speed percentage">
+      <span id="atMainSpeedLabel" style="color:#ce93d8;font-size:11px;min-width:32px;">100%</span>
+      <span class="at-ctrl-hint">AlphaTab · SoundFont · click any note to seek</span>
+    </div>
   </div>
 
   <div class="fb-section" id="fbSection" style="display:none;">
@@ -5448,6 +5530,380 @@ async function suggestNext() {
   }
 
 })(); // end alphaTabHeadsModule
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN NOTATION VIEWER — AlphaTab standard notation + TAB in the lead sheet
+// Provides tabbed switching between Chord Grid, Notation, and Tab views.
+// Binds transposition to the global keySel dropdown via AlphaTab's
+// transpositionPitches setting, and exposes playback controls for the viewer.
+// ═══════════════════════════════════════════════════════════════════════════
+(function alphaTabNotationModule() {
+  'use strict';
+
+  // Same GuitarPro catalog as the Heads Library panel
+  const OMNIBOOK_BASE = 'https://quantumq1981.github.io/Parker-songbook-tool/docs/';
+  const OMNIBOOK_TUNES = [
+    { name: 'Anthropology',        file: 'Charlie Parker - Anthropology.gp5' },
+    { name: 'Au Privave',          file: 'Charlie Parker - Au Privave.gp5' },
+    { name: "Billie's Bounce",     file: 'Charlie Parker - Billies Bounce.gp4' },
+    { name: 'Bloomdido',           file: 'Charlie Parker - Bloomdido.gp' },
+    { name: 'Blues for Alice',     file: 'Charlie Parker - Blues For Alice (ver 2).gp5' },
+    { name: 'Confirmation',        file: 'Charlie Parker - Confirmation.gp' },
+    { name: 'Donna Lee',           file: 'Charlie Parker - Donna Lee.gp3' },
+    { name: 'Loverman',            file: 'Charlie Parker - Loverman.gp5' },
+    { name: 'Moose the Mooche',    file: 'Charlie Parker - Moose The Mooche.gpx' },
+    { name: "Now's the Time",      file: 'Charlie Parker - Nows The Time.gp5' },
+    { name: 'Ornithology',         file: 'Charlie Parker - Ornithology.gp3' },
+    { name: "Parker's Mood",       file: 'Charlie Parker - Parkers Mood.gp4' },
+    { name: 'Yardbird Suite',      file: 'Charlie Parker - Yardbird Suite.gpx' },
+    { name: 'Cheryl',              file: 'parker_charlie-cheryl.gp4' },
+  ];
+
+  // Resolve AlphaTab enum values at runtime so the code is safe across builds.
+  // Fallback numerics match the @coderline/alphatab@latest StaveProfile / LayoutMode enums.
+  const SP_SCORE = () => window.alphaTab?.StaveProfile?.Score        ?? 2;
+  const SP_TAB   = () => window.alphaTab?.StaveProfile?.Tab          ?? 3;
+  const LM_PAGE  = () => window.alphaTab?.LayoutMode?.Page           ?? 0;
+  const LM_HORIZ = () => window.alphaTab?.LayoutMode?.Horizontal     ?? 1;
+
+  let api            = null;   // AlphaTabApi instance (lazy-created)
+  let atScore        = null;   // Parsed Score object
+  let currentView    = 'grid'; // 'grid' | 'notation' | 'tab'
+  let loadedTuneName = '';     // Friendly name of the currently loaded GP tune
+  let pendingLoad    = null;   // { tune, semitones } deferred until atInit() completes
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+
+  // Semitone delta from originalKey → targetKey, mapped to [-5, +6]
+  function getSemitones(originalKey, targetKey) {
+    if (!window.NOTE_IDX || !originalKey || !targetKey) return 0;
+    const iv = ((NOTE_IDX[targetKey] - NOTE_IDX[originalKey]) % 12 + 12) % 12;
+    return iv > 6 ? iv - 12 : iv;
+  }
+
+  // Look up the composed key for a tune from the global SONGS object
+  function getTuneOriginalKey(tuneName) {
+    if (!window.SONGS) return null;
+    const name = typeof canonicalTuneTitle === 'function'
+      ? canonicalTuneTitle(tuneName) : tuneName;
+    return (SONGS[name] || SONGS[tuneName])?.key || null;
+  }
+
+  // Return the OMNIBOOK_TUNES entry matching a tune name, or null
+  function findOmnibookTune(tuneName) {
+    if (!tuneName) return null;
+    const lower = tuneName.toLowerCase().trim();
+    return OMNIBOOK_TUNES.find(t =>
+      lower.includes(t.name.toLowerCase()) || t.name.toLowerCase().includes(lower)
+    ) || null;
+  }
+
+  // ── AlphaTab initialization (lazy — called on first Notation/Tab open) ─
+  function atInit() {
+    if (api || !window.alphaTab) {
+      if (!window.alphaTab) {
+        const msg = document.getElementById('atMainLoadMsg');
+        if (msg) msg.textContent = 'alphaTab library unavailable — check network';
+        const ov = document.getElementById('atMainOverlay');
+        if (ov) ov.classList.remove('at-hidden');
+      }
+      return;
+    }
+
+    const container = document.getElementById('atMainScore');
+    if (!container) return;
+
+    const overlay = document.getElementById('atMainOverlay');
+    const loadMsg = document.getElementById('atMainLoadMsg');
+    if (overlay) overlay.classList.remove('at-hidden');
+    if (loadMsg) loadMsg.textContent = 'Initializing notation engine…';
+
+    const vw      = window.innerWidth;
+    const scale   = vw < 480 ? 0.70 : vw < 768 ? 0.78 : vw < 1024 ? 0.88 : 0.92;
+    const layout  = vw < 768 ? LM_HORIZ() : LM_PAGE();
+    const profile = currentView === 'tab' ? SP_TAB() : SP_SCORE();
+
+    try {
+      api = new alphaTab.AlphaTabApi(container, {
+        display: {
+          layoutMode:   layout,
+          staveProfile: profile,
+          scale:        scale
+        },
+        player: {
+          enablePlayer:          true,
+          enableUserInteraction: true,
+          soundFont: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/soundfont/sonivox.sf2',
+          scrollMode:    2,           // continuous cursor
+          scrollElement: container
+        }
+      });
+    } catch (err) {
+      api = null;
+      if (overlay) overlay.classList.add('at-hidden');
+      if (typeof showToast === 'function') showToast('Notation viewer init error: ' + err.message, 'error');
+      return;
+    }
+
+    // SoundFont ready — hide spinner
+    api.playerReady.on(() => {
+      const ov = document.getElementById('atMainOverlay');
+      if (ov) ov.classList.add('at-hidden');
+    });
+
+    // Score parsed — hide spinner, auto-select melody track in multi-track files
+    api.scoreLoaded.on(score => {
+      atScore = score;
+      const ov = document.getElementById('atMainOverlay');
+      if (ov) ov.classList.add('at-hidden');
+      const tracks = score.tracks || [];
+      if (tracks.length > 1) {
+        const mel = tracks.find(t => t.name && t.name.toLowerCase().includes('melody'));
+        if (mel) api.renderTracks([mel]);
+      }
+    });
+
+    // Play state → button label
+    api.playerStateChanged.on(args => {
+      const btn = document.getElementById('atMainPlayBtn');
+      if (btn) btn.textContent = args.state === 1 ? '⏸ Pause' : '▶ Play';
+    });
+
+    api.playerFinished.on(() => {
+      const btn = document.getElementById('atMainPlayBtn');
+      if (btn) btn.textContent = '▶ Play';
+    });
+
+    // Error
+    api.error.on(err => {
+      const msg = (err && (err.message || err)) || 'unknown error';
+      if (typeof showToast === 'function') showToast('Notation: ' + msg, 'error');
+      const ov = document.getElementById('atMainOverlay');
+      if (ov) ov.classList.add('at-hidden');
+    });
+
+    // Drain any load that was queued during init
+    if (pendingLoad) {
+      const { tune, semitones } = pendingLoad;
+      pendingLoad = null;
+      _fetchAndLoad(tune, semitones);
+    }
+  }
+
+  // ── Fetch GP file and pass ArrayBuffer to api.load() ──────────────────
+  function _fetchAndLoad(tune, semitones) {
+    const overlay = document.getElementById('atMainOverlay');
+    const loadMsg = document.getElementById('atMainLoadMsg');
+    if (overlay) overlay.classList.remove('at-hidden');
+    if (loadMsg) loadMsg.textContent = 'Loading ' + tune.name + '…';
+
+    const emptyEl = document.getElementById('atMainEmpty');
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    const url = OMNIBOOK_BASE + encodeURIComponent(tune.file);
+    fetch(url)
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      .then(ab => {
+        if (!api) return;
+        // Transposition pitches are per-track arrays; set before load so the
+        // first render is already in the target key.
+        if (semitones !== 0) {
+          // We don't know the track count yet — use [semitones] as a single-element
+          // array; AlphaTab applies it to all tracks when the array is shorter than
+          // the track count.
+          api.settings.display.transpositionPitches = [semitones];
+          api.updateSettings();
+        }
+        api.load(ab);
+        loadedTuneName = tune.name;
+      })
+      .catch(err => {
+        if (overlay) overlay.classList.add('at-hidden');
+        if (typeof showToast === 'function')
+          showToast('Notation load failed: ' + err.message, 'error');
+      });
+  }
+
+  // ── Public: load notation for tuneName transposed to targetKey ─────────
+  function loadNotation(tuneName, targetKey) {
+    const tune    = findOmnibookTune(tuneName);
+    const emptyEl = document.getElementById('atMainEmpty');
+
+    if (!tune) {
+      // No GP file for this tune — show the "not available" message
+      if (emptyEl) emptyEl.style.display = '';
+      atScore = null; loadedTuneName = '';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    const origKey   = getTuneOriginalKey(tuneName) || targetKey || 'C';
+    const semitones = getSemitones(origKey, targetKey || origKey);
+
+    if (!api) {
+      // Queue the load; atInit() will drain it once the instance is ready
+      pendingLoad = { tune, semitones };
+      atInit();
+    } else {
+      _fetchAndLoad(tune, semitones);
+    }
+  }
+
+  // ── Apply live transposition to an already-loaded score ───────────────
+  // Called when the user changes key via keySel without switching tunes.
+  function applyTranspose(targetKey) {
+    if (!api || !atScore || !loadedTuneName) return;
+    const origKey   = getTuneOriginalKey(loadedTuneName) || targetKey;
+    const semitones = getSemitones(origKey, targetKey);
+    // One pitch offset per track; extend array to cover all tracks in the score
+    const pitches = (atScore.tracks || [{ }]).map(() => semitones);
+    api.settings.display.transpositionPitches = pitches;
+    api.updateSettings();
+    api.render();
+  }
+
+  // ── Change stave profile without reloading the score ──────────────────
+  function setStaveProfile(view) {
+    if (!api) return;
+    api.settings.display.staveProfile = view === 'tab' ? SP_TAB() : SP_SCORE();
+    api.updateSettings();
+    api.render();
+  }
+
+  // ── Switch the visible view (chord grid / notation / tab) ─────────────
+  function switchView(view) {
+    currentView = view;
+
+    const sheet     = document.getElementById('sheet');
+    const container = document.getElementById('alphatab-container');
+
+    // Update ARIA + visual state of tab buttons
+    document.querySelectorAll('.at-view-tab').forEach(t => {
+      const active = t.dataset.view === view;
+      t.classList.toggle('active', active);
+      t.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+
+    if (view === 'grid') {
+      if (sheet)     sheet.style.display     = '';
+      if (container) container.style.display = 'none';
+    } else {
+      if (sheet)     sheet.style.display     = 'none';
+      if (container) container.style.display = '';
+
+      if (api && atScore) {
+        // Score already loaded — just switch the rendering profile
+        setStaveProfile(view);
+      } else {
+        // First open of Notation/Tab: load the currently selected tune
+        const tuneSel = document.getElementById('tuneSel');
+        const keySel  = document.getElementById('keySel');
+        if (tuneSel?.value) loadNotation(tuneSel.value, keySel?.value);
+      }
+    }
+
+    // Persist preference alongside existing localStorage prefs
+    try {
+      const prefs = JSON.parse(localStorage.getItem('cp_songbook_v7_prefs') || '{}');
+      prefs.notationView = view;
+      localStorage.setItem('cp_songbook_v7_prefs', JSON.stringify(prefs));
+    } catch (e) {}
+  }
+
+  // ── Wire up all controls ───────────────────────────────────────────────
+  function atNotInit() {
+    // Tab navigation buttons
+    document.querySelectorAll('.at-view-tab').forEach(btn => {
+      btn.addEventListener('click', () => switchView(btn.dataset.view));
+    });
+
+    // Tune dropdown change → reload notation (small delay so keySel is updated first)
+    document.getElementById('tuneSel')?.addEventListener('change', () => {
+      if (currentView === 'grid') return;
+      setTimeout(() => {
+        const tuneSel = document.getElementById('tuneSel');
+        const keySel  = document.getElementById('keySel');
+        if (tuneSel?.value) loadNotation(tuneSel.value, keySel?.value);
+      }, 60);
+    }, { passive: true });
+
+    // Generate button → reload notation for the newly generated sheet
+    document.getElementById('generateBtn')?.addEventListener('click', () => {
+      if (currentView === 'grid') return;
+      const tuneSel = document.getElementById('tuneSel');
+      const keySel  = document.getElementById('keySel');
+      if (tuneSel?.value) loadNotation(tuneSel.value, keySel?.value);
+    }, { passive: true });
+
+    // Key change → live transposition on already-loaded score
+    document.getElementById('keySel')?.addEventListener('change', e => {
+      if (currentView === 'grid' || !atScore) return;
+      applyTranspose(e.target.value);
+    }, { passive: true });
+
+    // Play / Pause
+    document.getElementById('atMainPlayBtn')?.addEventListener('click', () => {
+      if (!api) {
+        if (typeof showToast === 'function') showToast('Load a tune first', 'warn');
+        return;
+      }
+      // Resume iOS AudioContext from a direct click handler (user-gesture context)
+      if (typeof audioContext !== 'undefined' && audioContext?.state === 'suspended') {
+        audioContext.resume().catch(() => {});
+      }
+      api.playPause();
+    });
+
+    // Stop
+    document.getElementById('atMainStopBtn')?.addEventListener('click', () => {
+      if (api) api.stop();
+    });
+
+    // Speed slider — api.playbackSpeed accepts 0.25–1.5
+    document.getElementById('atMainSpeedSlider')?.addEventListener('input', function () {
+      if (api) api.playbackSpeed = parseInt(this.value, 10) / 100;
+      const lbl = document.getElementById('atMainSpeedLabel');
+      if (lbl) lbl.textContent = this.value + '%';
+    });
+
+    // Responsive resize → toggle Page / Horizontal layout mode
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (!api) return;
+        const newMode = window.innerWidth < 768 ? LM_HORIZ() : LM_PAGE();
+        if (api.settings.display.layoutMode !== newMode) {
+          api.settings.display.layoutMode = newMode;
+          api.updateSettings();
+          api.render();
+        }
+      }, 250);
+    }, { passive: true });
+
+    // Restore saved view preference (after initial lead-sheet render settles)
+    try {
+      const prefs = JSON.parse(localStorage.getItem('cp_songbook_v7_prefs') || '{}');
+      if (prefs.notationView && prefs.notationView !== 'grid') {
+        setTimeout(() => switchView(prefs.notationView), 0);
+      }
+    } catch (e) {}
+
+    // Lifecycle cleanup — destroy API on unload to free AudioContext
+    window.addEventListener('pagehide', () => {
+      if (!api) return;
+      try { api.stop(); } catch (e) {}
+      try { api.destroy(); } catch (e) {}
+      api = null;
+    }, { passive: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', atNotInit);
+  } else {
+    atNotInit();
+  }
+})(); // end alphaTabNotationModule
 
 </script>
 
