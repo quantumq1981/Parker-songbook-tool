@@ -811,6 +811,13 @@ details.panel.heads-panel summary { color: #ce93d8; }
 .hd-speed-row input[type=range] { flex:1; min-width:80px; accent-color:#ce93d8;
   cursor:pointer; }
 .hd-speed-val { min-width:34px; color:#ce93d8; font-weight:bold; }
+.hd-track-row { display:none; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px;
+  font-size:11px; color:var(--ink-dim); }
+.hd-track-btns { display:flex; flex-wrap:wrap; gap:4px; }
+.hd-track-btn { background:#1a0d2e; border:1px solid #7b1fa2; color:#ce93d8;
+  border-radius:4px; padding:3px 10px; font-size:10px; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+.hd-track-btn.hd-tb-active { background:#7b1fa2; color:#fff; border-color:#ce93d8; }
 </style>
 
 
@@ -894,6 +901,12 @@ details.panel.heads-panel summary { color: #ce93d8; }
         <input type="range" id="hdSpeedSlider" min="25" max="150" value="100" step="5"
                aria-label="Playback speed percentage">
         <span class="hd-speed-val" id="hdSpeedLabel">100%</span>
+      </div>
+
+      <!-- Track selector — shown when GP file has multiple tracks -->
+      <div class="hd-track-row" id="hdTrackRow">
+        <span>Track:</span>
+        <div class="hd-track-btns" id="hdTrackBtns"></div>
       </div>
 
       <!-- Live note display -->
@@ -4927,6 +4940,49 @@ async function suggestNext() {
       if (typeof showToast === 'function')
         showToast((score.title || currentTuneName) + ' — ready', 'success', 1800);
 
+      // ── Track selector ────────────────────────────────────────────────
+      // GP files often have multiple tracks (melody, chords, bass, drums).
+      // Default to rendering track 0 only (usually the melody line).
+      // The selector lets the user switch to any track or view all.
+      const trackRow  = document.getElementById('hdTrackRow');
+      const trackBtns = document.getElementById('hdTrackBtns');
+      if (trackRow && trackBtns) {
+        trackBtns.innerHTML = '';
+        const tracks = score.tracks || [];
+
+        if (tracks.length > 1) {
+          // "All" button
+          const allBtn = document.createElement('button');
+          allBtn.className = 'hd-track-btn';
+          allBtn.textContent = 'All';
+          allBtn.addEventListener('click', () => {
+            trackBtns.querySelectorAll('.hd-track-btn').forEach(b => b.classList.remove('hd-tb-active'));
+            allBtn.classList.add('hd-tb-active');
+            api.renderTracks(tracks);
+          });
+          trackBtns.appendChild(allBtn);
+
+          // One button per track
+          tracks.forEach((track, i) => {
+            const tb = document.createElement('button');
+            tb.className = 'hd-track-btn' + (i === 0 ? ' hd-tb-active' : '');
+            tb.textContent = track.name || ('Track ' + (i + 1));
+            tb.addEventListener('click', () => {
+              trackBtns.querySelectorAll('.hd-track-btn').forEach(b => b.classList.remove('hd-tb-active'));
+              tb.classList.add('hd-tb-active');
+              api.renderTracks([track]);
+            });
+            trackBtns.appendChild(tb);
+          });
+
+          trackRow.style.display = 'flex';
+          // Default: render only the first track (melody)
+          api.renderTracks([tracks[0]]);
+        } else {
+          trackRow.style.display = 'none';
+        }
+      }
+
       // Re-build fret maps in case fretboard was rebuilt
       buildFretMaps();
     });
@@ -5033,8 +5089,22 @@ async function suggestNext() {
       return;
     }
 
+    // Stop + clear any currently-loaded tune before switching
+    try { api.stop(); } catch(e) {}
+    hdClearFb();
+    const trackRow = document.getElementById('hdTrackRow');
+    if (trackRow) trackRow.style.display = 'none';
+
     currentBtn       = btn;
     currentTuneName  = tune.name;
+
+    // Reset all other grid buttons to plain (unloaded) state
+    document.querySelectorAll('.head-btn').forEach(b => {
+      if (b !== btn) {
+        b.classList.remove('hd-loaded', 'hd-loading', 'hd-error');
+        if (b.dataset.tuneName) b.textContent = b.dataset.tuneName;
+      }
+    });
 
     btn.classList.remove('hd-error');
     btn.classList.add('hd-loading');
@@ -5077,6 +5147,7 @@ async function suggestNext() {
       const btn = document.createElement('button');
       btn.className = 'head-btn';
       btn.setAttribute('aria-label', 'Load head: ' + tune.name);
+      btn.dataset.tuneName = tune.name;
       btn.textContent = tune.name;
       btn.addEventListener('click', () => hdFetch(tune, btn));
       grid.appendChild(btn);
