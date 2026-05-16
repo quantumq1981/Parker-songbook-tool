@@ -12,6 +12,12 @@
   --bg:#121212;--panel:#1a1a1a;--ink:#eee;--ink-dim:#aaa;
   --accent:#ff9800;--accent2:#42a5f5;--barline:#666;--sym:#ffb733;
   --indigo:#6366f1;--green:#4caf50;--red:#ef5350;
+  /* Compatibility aliases used in inline styles */
+  --border:var(--barline);--card:var(--panel);
+  /* Design tokens */
+  --radius:6px;--transition:.15s ease;
+  --shadow-md:0 4px 12px rgba(0,0,0,.4);
+  --focus-ring:0 0 0 2px rgba(66,165,245,.6);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{margin:0;background:radial-gradient(circle at top,#1f2433 0%,#111827 50%,#090b11 100%);color:var(--ink);font-family:'Courier New',monospace;padding:10px;line-height:1.35;}
@@ -303,18 +309,257 @@ body{padding:8px;}
   overflow: visible;
 }
 #fretboardWrap { position: relative; }
+
+/* =====================================================
+   REDESIGN v7.1 — ACCESSIBILITY, UX & VISUAL POLISH
+===================================================== */
+
+/* Skip navigation link (focus-only) */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  background: var(--accent);
+  color: #000;
+  padding: 8px 18px;
+  z-index: 10001;
+  border-radius: 0 0 8px 0;
+  font-weight: bold;
+  font-size: 14px;
+  text-decoration: none;
+  font-family: 'Courier New', monospace;
+  transition: top 0.1s;
+}
+.skip-link:focus { top: 0; }
+
+/* App tagline under h1 */
+.app-tagline {
+  text-align: center;
+  color: var(--ink-dim);
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  margin: -8px 0 12px;
+  font-family: 'Courier New', monospace;
+}
+
+/* Quick search bar */
+.search-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.search-input {
+  flex: 1;
+  background: #1e1e1e;
+  color: var(--sym);
+  border: 1px solid var(--barline);
+  padding: 9px 12px 9px 34px;
+  border-radius: var(--radius);
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 10px center;
+  background-size: 14px;
+}
+.search-input:focus {
+  border-color: var(--accent2);
+  box-shadow: var(--focus-ring);
+}
+.search-input::placeholder { color: #555; }
+.search-count {
+  color: var(--ink-dim);
+  font-size: 11px;
+  white-space: nowrap;
+  min-width: 60px;
+  text-align: right;
+  font-family: 'Courier New', monospace;
+}
+
+/* Toast notification system */
+#toastContainer {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  pointer-events: none;
+  max-width: 300px;
+}
+.toast {
+  background: #252535;
+  border: 1px solid var(--barline);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 12px;
+  color: var(--ink);
+  font-family: 'Courier New', monospace;
+  animation: toastSlideIn 0.2s ease;
+  pointer-events: auto;
+  line-height: 1.4;
+}
+.toast-success { border-color: var(--green); color: #81c784; }
+.toast-error   { border-color: var(--red);   color: #ef9a9a; }
+.toast-info    { border-color: var(--accent2);color: #9fd2ff; }
+.toast-warn    { border-color: var(--accent); color: #ffb733; }
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes toastFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; transform: translateX(12px); }
+}
+
+/* Global focus ring (WCAG AA) */
+*:focus-visible {
+  outline: 2px solid var(--accent2);
+  outline-offset: 2px;
+}
+.controls button:focus-visible,
+.controls select:focus-visible,
+.controls input:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+/* Keyboard shortcut badge */
+.kbd {
+  display: inline-block;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  border-bottom: 2px solid #444;
+  border-radius: 3px;
+  padding: 0 5px;
+  font-size: 9px;
+  color: #999;
+  vertical-align: middle;
+  margin-left: 3px;
+  font-family: 'Courier New', monospace;
+}
+
+/* Shortcut hint row under playback bar */
+.shortcut-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 10px;
+  color: #555;
+  font-family: 'Courier New', monospace;
+  padding: 4px 2px 0;
+}
+.shortcut-hint span { display: flex; align-items: center; gap: 3px; }
+
+/* Improved bar active/playing states */
+.bar.active {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.bar:focus-visible {
+  outline: 2px solid var(--accent2);
+  outline-offset: 1px;
+}
+
+/* Progress bar clickable hint */
+.playback-progress { cursor: pointer; }
+.playback-progress:hover .playback-progress-fill { filter: brightness(1.15); }
+
+/* Stat pills interactive */
+.stat-pill { cursor: default; transition: border-color var(--transition); }
+.stat-pill:hover { border-color: var(--accent); }
+
+/* Main heading accuracy */
+.tune-count-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: #000;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* Section divider */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--barline) 30%, var(--barline) 70%, transparent 100%);
+  margin: 10px 0;
+  border: none;
+}
+
+/* Improved scrollbars (dark theme) */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #666; }
+
+/* Smooth bar animation during playback */
+.bar.playing {
+  background: #0d2e0d !important;
+  border-color: var(--green) !important;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+/* Audio ready animation */
+@keyframes audioReadyPop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.audio-status.ready { animation: audioReadyPop 0.35s ease; }
+
+/* Responsive fine-tuning */
+@media (max-width: 480px) {
+  .search-row { flex-direction: column; align-items: stretch; }
+  .search-count { text-align: center; min-width: auto; }
+  .shortcut-hint { display: none; }
+  .controls button, .controls select, .controls input {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+}
+@media (max-width: 600px) {
+  .app-tagline { font-size: 10px; }
+}
+
+/* Improved print support */
+@media print {
+  body > *:not(.card) { display: none !important; }
+  .card > *:not(#sheet):not(.tune-header):not(.tune-meta) { display: none !important; }
+  .card { border: none !important; box-shadow: none !important; padding: 0 !important; }
+  #sheet { border: none !important; background: white !important; color: black !important; }
+  #sheet .bar { border-color: #ccc !important; background: white !important; }
+  #sheet .chord { color: black !important; }
+  #sheet .roman { color: #555 !important; }
+}
 </style>
 
 
 </head>
 <body>
-<h1>🎷 Charlie Parker Songbook Trainer v7.0</h1>
-<div class="card">
-  <h2>18 Bebop Classics — PRO Edition</h2>
-  <div class="stats-bar" id="statsBar"></div>
+<a class="skip-link" href="#sheet">Skip to lead sheet</a>
+<h1>🎷 Charlie Parker Songbook Trainer</h1>
+<p class="app-tagline" aria-hidden="true">Interactive Bebop Practice Tool · AI Resonance Engine · Guitar Fretboard Visualizer</p>
+<main class="card" id="main-content" role="main" aria-label="Charlie Parker Songbook Trainer">
+  <h2 id="main-heading">Complete Bebop Songbook</h2>
+  <div class="stats-bar" id="statsBar" role="status" aria-live="polite" aria-label="Songbook statistics"></div>
+
+  <div class="search-row" role="search" aria-label="Search tunes by name">
+    <input type="search" id="tuneSearch" class="search-input"
+           placeholder="Search tunes by name…"
+           aria-label="Quick search tunes by name"
+           autocomplete="off" spellcheck="false"/>
+    <span class="search-count" id="searchCount" aria-live="polite" aria-atomic="true"></span>
+  </div>
 
   <details class="panel filter-panel">
-    <summary>🔍 Filter &amp; Search Tunes</summary>
+    <summary>🔧 Advanced Filters</summary>
     <div class="filter-grid">
       <div><label>Form</label>
         <select id="filterForm"><option value="">All Forms</option></select></div>
@@ -365,13 +610,19 @@ body{padding:8px;}
     </div>
     <div class="metro-indicator" id="metroIndicator">🕒 Metronome click</div>
     <div class="playback-progress"><div class="playback-progress-fill" id="playbackProgressFill"></div></div>
-    <div class="play-status" id="playStatus">Ready — generate a lead sheet to begin</div>
-    <div class="audio-status" id="audioStatus">🎵 Tap anywhere to enable audio</div>
+    <div class="play-status" id="playStatus" role="status" aria-live="polite" aria-atomic="true">Ready — generate a lead sheet to begin</div>
+    <div class="audio-status" id="audioStatus" aria-live="polite">🎵 Tap anywhere to enable audio</div>
+    <div class="shortcut-hint" aria-label="Keyboard shortcuts">
+      <span><kbd class="kbd">Space</kbd> Play/Stop</span>
+      <span><kbd class="kbd">R</kbd> Random</span>
+      <span><kbd class="kbd">G</kbd> Generate</span>
+      <span><kbd class="kbd">Esc</kbd> Stop all</span>
+    </div>
   </div>
 
-  <div class="analysis-panel" id="analysisPanel">
+  <div class="analysis-panel" id="analysisPanel" aria-live="polite" aria-label="Chord scale analysis">
     <div class="analysis-title">Chord-Scale Relationship Guide</div>
-    <div class="analysis-row" id="analysisChord">Select a bar to analyze compatibility.</div>
+    <div class="analysis-row" id="analysisChord" aria-live="polite">Select a bar to analyze compatibility.</div>
     <div class="analysis-row" id="analysisScales"></div>
     <div class="analysis-row" id="analysisNotes"></div>
     <div class="analysis-row" id="analysisTension"></div>
@@ -419,7 +670,7 @@ body{padding:8px;}
              style="width:120px;accent-color:var(--indigo);cursor:pointer;" />
       <span id="lickLengthDisplay" style="color:var(--indigo);font-size:12px;font-weight:bold;min-width:48px;">6 notes</span>
     </div>
-    <div class="resonance-status" id="resonanceStatus">Select a bar to activate the Resonance Engine.</div>
+    <div class="resonance-status" id="resonanceStatus" role="status" aria-live="polite">Select a bar to activate the Resonance Engine.</div>
   </div>
 
   <!-- ===== Section Lick Generator Panel ===== -->
@@ -447,15 +698,19 @@ body{padding:8px;}
     Study Roman numerals for harmonic function · Transpose to all 12 keys ·
     Focus on ii-V-I patterns and tritone substitutions · Use Playback at slow tempo first ·
     Toggle <em>Mode</em> between Chord Tones, Full Scale, and Functional Harmony ·
-    Toggle <em>Audio</em> between Chord Voicing and Scale Run ·
+    Toggle <em>Audio</em> between Chord Voicing, Scale Run, and Bebop Groove ·
     Open Scale Library to visualise bebop scales across the neck ·
     <span class="diff-b">B</span> Beginner &nbsp;
     <span class="diff-i">I</span> Intermediate &nbsp;
-    <span class="diff-a">A</span> Advanced
+    <span class="diff-a">A</span> Advanced ·
+    <strong style="color:var(--ink-dim)">Keyboard:</strong> <kbd class="kbd">Space</kbd> Play · <kbd class="kbd">R</kbd> Random · <kbd class="kbd">G</kbd> Generate · <kbd class="kbd">Esc</kbd> Stop
   </div>
-</div>
+</main>
 
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<div id="toastContainer" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
+        onerror="console.warn('JSZip CDN failed to load — ZIP export unavailable')"></script>
 <script src="js/resonanceEngine.js?v=1.0"></script>
 <script src="js/chordParser.js?v=7.2"></script>
 <script src="js/jazzChordDatabase.js?v=7.2"></script>
@@ -2940,6 +3195,215 @@ tuneSel.value = 'Anthropology'; keySel.value = 'Bb';
 renderLeadSheet('Anthropology','Bb');
 updateSectionDropdown();
 document.getElementById('loopTargetSel').dispatchEvent(new Event('change'));
+
+/* ============================================================
+   v7.1 ENHANCEMENTS — Toast · localStorage · Search · Keyboard
+============================================================ */
+
+// ── Toast notification system ──────────────────────────────
+function showToast(msg, type = 'info', duration = 2500) {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  const hide = () => {
+    toast.style.animation = 'toastFadeOut 0.3s ease forwards';
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 320);
+  };
+  const timer = setTimeout(hide, duration);
+  toast.addEventListener('click', () => { clearTimeout(timer); hide(); });
+}
+
+// ── localStorage preference persistence ────────────────────
+const _PREFS_KEY = 'cp_songbook_v7_prefs';
+
+function _savePrefs() {
+  try {
+    localStorage.setItem(_PREFS_KEY, JSON.stringify({
+      tune: tuneSel.value,
+      key:  keySel.value,
+      bpm:  document.getElementById('bpmInput').value,
+      showScales,
+      audioMode
+    }));
+  } catch (e) { /* Storage might be blocked */ }
+}
+
+function _loadAndApplyPrefs() {
+  let prefs = {};
+  try { prefs = JSON.parse(localStorage.getItem(_PREFS_KEY) || '{}'); } catch (e) { return; }
+
+  // Restore BPM
+  const bpmVal = parseInt(prefs.bpm, 10);
+  if (bpmVal >= 40 && bpmVal <= 320) document.getElementById('bpmInput').value = bpmVal;
+
+  // Restore show-scales toggle
+  if (typeof prefs.showScales === 'boolean' && prefs.showScales !== showScales) {
+    document.getElementById('toggleScales').click();
+  }
+
+  // Restore audio mode (cycle the button the right number of times)
+  if (prefs.audioMode && prefs.audioMode !== audioMode) {
+    const modes = ['voicing', 'scale', 'bebop'];
+    const cur  = modes.indexOf(audioMode);
+    const tgt  = modes.indexOf(prefs.audioMode);
+    if (tgt >= 0) {
+      const steps = ((tgt - cur) + modes.length) % modes.length;
+      for (let i = 0; i < steps; i++) document.getElementById('toggleAudio').click();
+    }
+  }
+
+  // Restore last tune (only if valid)
+  const savedTune = prefs.tune;
+  if (savedTune && SONGS[canonicalTuneTitle(savedTune)]) {
+    const savedKey = prefs.key || SONGS[canonicalTuneTitle(savedTune)].key || 'Bb';
+    tuneSel.value = savedTune;
+    keySel.value  = savedKey;
+    buildFretboard();
+    renderLeadSheet(savedTune, savedKey);
+    updateSectionDropdown();
+  }
+}
+
+// Wire up preference saving on relevant control changes
+tuneSel.addEventListener('change', _savePrefs, { passive: true });
+keySel.addEventListener('change', _savePrefs, { passive: true });
+document.getElementById('bpmInput').addEventListener('change', _savePrefs, { passive: true });
+// Also save after each generate
+document.getElementById('generateBtn').addEventListener('click', _savePrefs, { passive: true });
+
+// Restore preferences (runs once on load; may re-render the sheet)
+_loadAndApplyPrefs();
+
+// ── Quick tune search ──────────────────────────────────────
+(function initSearch() {
+  const searchEl = document.getElementById('tuneSearch');
+  const countEl  = document.getElementById('searchCount');
+  if (!searchEl) return;
+
+  searchEl.addEventListener('input', function () {
+    const q   = this.value.toLowerCase().trim();
+    const all = Object.entries(SONGS);
+    if (!q) {
+      populateTuneDropdown(null);
+      if (countEl) countEl.textContent = '';
+      return;
+    }
+    const filtered = all.filter(([name, t]) =>
+      name.toLowerCase().includes(q) ||
+      (t.style  || '').toLowerCase().includes(q) ||
+      (t.form   || '').toLowerCase().includes(q) ||
+      (t.key    || '').toLowerCase().includes(q)
+    );
+    populateTuneDropdown(filtered.length < all.length ? filtered : null);
+    if (countEl) {
+      countEl.textContent = `${filtered.length} / ${all.length}`;
+    }
+    // Auto-select first match
+    if (filtered.length === 1) {
+      tuneSel.value = filtered[0][0];
+    }
+  });
+
+  // Clear search when a tune is selected from dropdown
+  tuneSel.addEventListener('change', function () {
+    if (searchEl.value) {
+      searchEl.value = '';
+      if (countEl) countEl.textContent = '';
+      populateTuneDropdown(null);
+    }
+  });
+})();
+
+// ── Keyboard shortcuts ─────────────────────────────────────
+document.addEventListener('keydown', function kbShortcuts(e) {
+  // Ignore when typing in form fields or using modifier keys
+  const tag = (e.target || {}).tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  switch (e.key) {
+    case ' ':
+      e.preventDefault();
+      if (isPlaying) stopPlayback();
+      else startPlayback();
+      break;
+    case 'Escape':
+      stopPlayback();
+      stopResonanceLick();
+      break;
+    case 'r':
+    case 'R':
+      if (!e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('randomTune').click();
+      }
+      break;
+    case 'g':
+    case 'G':
+      e.preventDefault();
+      document.getElementById('generateBtn').click();
+      break;
+  }
+});
+
+// ── Enhanced random tune with toast confirmation ───────────
+(function patchRandomTune() {
+  const btn = document.getElementById('randomTune');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    const name = tuneSel.value;
+    if (name) showToast(`🎲 ${name}`, 'info', 1800);
+  }, { passive: true });
+})();
+
+// ── Improved JSZip error handling ─────────────────────────
+// Wrap exportSectionZip to show toast instead of alert when JSZip is absent
+const _origExportZip = exportSectionZip;
+window.exportSectionZip = async function exportSectionZipEnhanced(barGroups, baseName) {
+  if (!window.JSZip) {
+    showToast('JSZip unavailable — check your connection and reload.', 'error', 4000);
+    return;
+  }
+  try {
+    await _origExportZip(barGroups, baseName);
+    showToast('✓ ZIP downloaded!', 'success', 2000);
+  } catch (err) {
+    console.error('ZIP export failed:', err);
+    showToast('Export failed — see console for details.', 'error', 3500);
+  }
+};
+
+// ── Tab copy → toast feedback ──────────────────────────────
+(function patchTabCopy() {
+  const btn = document.getElementById('resonanceCopyTabBtn');
+  if (!btn) return;
+  const origClick = btn.onclick;
+  btn.addEventListener('click', function () {
+    if (resonanceLickPath && resonanceLickPath.length) {
+      // Toast confirmation in addition to status text
+      setTimeout(() => showToast('📋 Tab copied to clipboard!', 'success', 2000), 100);
+    }
+  }, { passive: true });
+})();
+
+// Clear search box when advanced filters are applied or cleared
+(function syncFilterWithSearch() {
+  const clearSearch = () => {
+    const si = document.getElementById('tuneSearch');
+    const sc = document.getElementById('searchCount');
+    if (si && si.value) { si.value = ''; if (sc) sc.textContent = ''; }
+  };
+  ['applyFilter', 'clearFilter'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', clearSearch, { passive: true });
+  });
+})();
+
+console.log('🎷 Charlie Parker Songbook Trainer v7.1 — Enhanced Edition loaded');
+console.log(`📚 ${Object.keys(SONGS).length} tunes · ${Object.values(SCALE_LIBRARY).reduce((a,c)=>a+c.length,0)} scales`);
 </script>
 
 </body>
