@@ -648,6 +648,47 @@ body{padding:8px;}
 .vl-seventh-dot { background: #26c6da; }
 .vl-hint { font-size: 11px; color: #555; font-style: italic; margin: 4px 0 0; }
 
+/* ── Import Panel ─────────────────────────────────────────────────────── */
+details.panel.import-panel summary { color: var(--green); }
+.import-drop-zone {
+  border: 2px dashed var(--barline);
+  border-radius: var(--radius);
+  padding: 20px 12px;
+  text-align: center;
+  cursor: pointer;
+  margin: 8px 0;
+  transition: border-color var(--transition), background var(--transition);
+  user-select: none;
+}
+.import-drop-zone:hover, .import-drop-zone.drag-over {
+  border-color: var(--green);
+  background: rgba(129,199,132,0.06);
+}
+.import-drop-icon { font-size: 26px; margin-bottom: 4px; pointer-events: none; }
+.import-drop-text { font-size: 13px; color: var(--sym); pointer-events: none; }
+.import-drop-formats {
+  font-size: 10px; color: var(--ink-dim); margin-top: 4px;
+  font-family: 'Courier New', monospace; letter-spacing: 0.3px;
+  pointer-events: none;
+}
+.import-status {
+  font-size: 11px; min-height: 16px; padding: 3px 0;
+  color: var(--ink-dim); line-height: 1.4;
+}
+.import-status.import-ok   { color: #81c784; }
+.import-status.import-warn { color: #ffb74d; }
+.import-status.import-err  { color: #ef9a9a; }
+.imported-list  { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.imported-item  {
+  display: flex; align-items: center; gap: 8px;
+  background: #141420; border: 1px solid var(--barline);
+  border-radius: var(--radius); padding: 5px 8px;
+}
+.imported-name  { flex: 1; font-size: 12px; color: var(--sym); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imported-meta  { font-size: 10px; color: var(--ink-dim); font-family: 'Courier New', monospace; white-space: nowrap; }
+.import-del     { padding: 1px 6px !important; font-size: 11px !important; min-width: 0 !important; }
+.import-empty   { font-size: 11px; color: #444; font-style: italic; margin: 4px 0; }
+
 /* Improved print support */
 @media print {
   body > *:not(.card) { display: none !important; }
@@ -693,6 +734,21 @@ body{padding:8px;}
       <button id="clearFilter" class="btn-sec">Clear</button>
       <span id="filterResults" style="color:var(--ink-dim);font-size:11px;"></span>
     </div>
+  </details>
+
+  <details class="panel import-panel" id="importPanel">
+    <summary>📂 Import Tune — MusicXML · GuitarPro · MIDI</summary>
+    <div id="importDropZone" class="import-drop-zone" role="button" tabindex="0"
+         aria-label="Drop a tune file here or click to browse">
+      <div class="import-drop-icon">📂</div>
+      <div class="import-drop-text">Drop file here or click to browse</div>
+      <div class="import-drop-formats">.xml &nbsp;·&nbsp; .mxl &nbsp;·&nbsp; .mid &nbsp;·&nbsp; .midi &nbsp;·&nbsp; .gp &nbsp;·&nbsp; .gp3 &nbsp;·&nbsp; .gp4 &nbsp;·&nbsp; .gp5 &nbsp;·&nbsp; .gp7 &nbsp;·&nbsp; .gpx</div>
+      <input type="file" id="importFileInput"
+             accept=".xml,.mxl,.mid,.midi,.gp,.gp3,.gp4,.gp5,.gp7,.gpx"
+             style="display:none" aria-hidden="true">
+    </div>
+    <div id="importStatus" class="import-status" aria-live="polite" role="status"></div>
+    <div id="importedList" class="imported-list" aria-label="Imported tunes"></div>
   </details>
 
   <div class="controls">
@@ -2881,7 +2937,7 @@ function updateVoiceLeadingPanel(root, chordSym, third, seventh) {
   const thirdPc  = (ri + third)   % 12;
   const sevPc    = (ri + seventh) % 12;
   const uf       = FLAT_KEYS.includes(root) || root.endsWith('b');
-  const noteArr  = uf ? NOTES_FLAT : NOTES_SHARP;
+  const noteArr  = uf ? FLAT_NAMES : SHARP_NAMES;
 
   chordLabel.textContent = chordSym;
 
@@ -2898,7 +2954,7 @@ function updateVoiceLeadingPanel(root, chordSym, third, seventh) {
     const [pT, pS] = GT_IVLS[pQ] || [4, 10];
     const pThirdPc = (pRi + pT) % 12;
     const pSevPc   = (pRi + pS) % 12;
-    const pNoteArr = (FLAT_KEYS.includes(prevBarData.root) || prevBarData.root.endsWith('b')) ? NOTES_FLAT : NOTES_SHARP;
+    const pNoteArr = (FLAT_KEYS.includes(prevBarData.root) || prevBarData.root.endsWith('b')) ? FLAT_NAMES : SHARP_NAMES;
 
     const vlT = calcVoiceLeading(pThirdPc, thirdPc);
     const vlS = calcVoiceLeading(pSevPc,   sevPc);
@@ -3664,6 +3720,463 @@ window.exportSectionZip = async function exportSectionZipEnhanced(barGroups, bas
 
 console.log('🎷 Charlie Parker Songbook Trainer v7.1 — Enhanced Edition loaded');
 console.log(`📚 ${Object.keys(SONGS).length} tunes · ${Object.values(SCALE_LIBRARY).reduce((a,c)=>a+c.length,0)} scales`);
+
+// ─── TUNE IMPORTER — Step 2 ──────────────────────────────────────────────────
+(function() {
+'use strict';
+
+const IMPORT_STORE_KEY = 'cp_songbook_v7_imported';
+
+// fifths → major key name
+const FIFTHS_KEY = {
+  '-7':'Cb','-6':'Gb','-5':'Db','-4':'Ab','-3':'Eb','-2':'Bb','-1':'F',
+  '0':'C','1':'G','2':'D','3':'A','4':'E','5':'B','6':'F#','7':'C#'
+};
+
+// MusicXML kind attribute → chord quality suffix
+const MXML_KIND = {
+  'major':'Δ7','minor':'m','dominant':'7',
+  'major-seventh':'Δ7','minor-seventh':'m7',
+  'dominant-seventh':'7','major-minor':'mΔ7',
+  'diminished':'dim','diminished-seventh':'dim7',
+  'half-diminished':'m7b5','augmented':'aug',
+  'suspended-fourth':'sus4','suspended-second':'sus2',
+  'power':'5','none':''
+};
+
+const ROMAN_NAMES = ['I','bII','II','bIII','III','IV','#IV','V','bVI','VI','bVII','VII'];
+
+function scaleForQuality(q) {
+  if (q.includes('Δ'))                      return 'Ionian';
+  if (q.includes('m7b5') || q === 'ø')      return 'Locrian';
+  if (q.includes('dim'))                    return 'Diminished';
+  if (q.startsWith('m') || q.includes('min')) return 'Dorian';
+  return 'Mixolydian';
+}
+
+function inferRoman(keyRoot, chordRoot, quality) {
+  const ki = NOTE_IDX[keyRoot] ?? 0;
+  const ci = NOTE_IDX[chordRoot] ?? (function(){
+    const base = NOTE_IDX[chordRoot.replace(/[#b]/g,'')];
+    return base !== undefined
+      ? (chordRoot.endsWith('#') ? (base+1)%12 : (base-1+12)%12)
+      : 0;
+  })();
+  const interval = ((ci - ki) % 12 + 12) % 12;
+  const rn = ROMAN_NAMES[interval] || 'I';
+  if (quality.includes('Δ'))              return rn + 'Δ7';
+  if (quality.includes('m7b5'))           return rn + 'm7b5';
+  if (quality.includes('dim'))            return rn + 'dim';
+  if (quality.startsWith('m') && quality !== 'major') return rn + 'm7';
+  return rn + '7';
+}
+
+// ── MusicXML ──────────────────────────────────────────────────────────────────
+function parseMusicXML(xmlText) {
+  const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+
+  const title = (
+    doc.querySelector('work-title')?.textContent ||
+    doc.querySelector('movement-title')?.textContent ||
+    doc.querySelector('part-name')?.textContent ||
+    'Imported Tune'
+  ).trim();
+
+  const fifths  = doc.querySelector('key fifths')?.textContent?.trim() || '0';
+  const mode    = doc.querySelector('key mode')?.textContent?.trim() || 'major';
+  const keyName = FIFTHS_KEY[fifths] || 'C';
+
+  let bpm = 120;
+  const soundEl = doc.querySelector('sound[tempo]');
+  if (soundEl) bpm = parseInt(soundEl.getAttribute('tempo')) || 120;
+
+  const measures  = doc.querySelectorAll('measure');
+  const totalBars = measures.length || 32;
+  const form = totalBars <= 12 ? 'Blues' : totalBars <= 32 ? 'AABA' : 'Custom';
+
+  const progression = [];
+  let row = [];
+  let lastBeats = [{chord:`${keyName}Δ7`, roman:'IΔ7', scale:'Ionian'}];
+
+  measures.forEach(measure => {
+    const harmonies = measure.querySelectorAll('harmony');
+    if (harmonies.length === 0) {
+      row.push({...lastBeats[lastBeats.length - 1]});
+    } else {
+      harmonies.forEach((h, hi) => {
+        if (hi > 0) return; // one chord per bar (simplification)
+        const step  = h.querySelector('root root-step')?.textContent?.trim() || 'C';
+        const alter = parseInt(h.querySelector('root root-alter')?.textContent?.trim() || '0');
+        const kind  = h.querySelector('kind')?.textContent?.trim() || 'major';
+        const root  = step + (alter === 1 ? '#' : alter === -1 ? 'b' : '');
+        const q     = MXML_KIND[kind] ?? '7';
+        const chord = root + q;
+        const beat  = {chord, roman: inferRoman(keyName, root, q), scale: scaleForQuality(q)};
+        row.push(beat);
+        lastBeats = [beat];
+      });
+    }
+    if (row.length >= 4) { progression.push(row.slice(0,4)); row = []; }
+  });
+  if (row.length) progression.push(row);
+
+  return {
+    key: keyName, form, bars: totalBars, bpm,
+    difficulty: 'Custom', style: 'Imported', structure: 'Imported',
+    description: `MusicXML import · ${totalBars} bars · ${keyName} ${mode}`,
+    progression: progression.length ? progression : [[{chord:`${keyName}Δ7`,roman:'IΔ7',scale:'Ionian'}]]
+  };
+}
+
+// ── MIDI ──────────────────────────────────────────────────────────────────────
+function parseMIDI(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let pos = 0;
+
+  function r4()  { const v=(bytes[pos]<<24)|(bytes[pos+1]<<16)|(bytes[pos+2]<<8)|bytes[pos+3]; pos+=4; return v>>>0; }
+  function r2()  { const v=(bytes[pos]<<8)|bytes[pos+1]; pos+=2; return v; }
+  function r1()  { return bytes[pos++]; }
+  function vlq() { let v=0,b; do{b=r1();v=(v<<7)|(b&0x7f);}while(b&0x80); return v; }
+
+  if (r4() !== 0x4d546864) throw new Error('Not a valid MIDI file');
+  r4(); // header length
+  r2(); // format
+  const ntracks  = r2();
+  const division = r2() || 480;
+
+  let title = 'Imported MIDI', tempo = 500000, keyFifths = 0;
+  const noteEvents = [];
+
+  for (let tr = 0; tr < ntracks; tr++) {
+    if (pos + 8 > bytes.length) break;
+    if (r4() !== 0x4d54726b) { pos += r4(); continue; } // skip non-MTrk
+    const trackEnd = pos + r4();
+    let tick = 0, runStatus = 0;
+
+    while (pos < trackEnd) {
+      tick += vlq();
+      let st = bytes[pos];
+      if (st & 0x80) { runStatus = st; pos++; } else { st = runStatus; }
+      const type = st & 0xf0;
+
+      if      (type === 0x90) { const p=r1(),v=r1(); if(v>0) noteEvents.push({tick,pitch:p}); }
+      else if (type === 0x80) { r1(); r1(); }
+      else if (type === 0xa0||type===0xb0||type===0xe0) { r1(); r1(); }
+      else if (type === 0xc0||type===0xd0) { r1(); }
+      else if (st === 0xff) {
+        const mt = r1(), ml = vlq(), ms = pos;
+        if (mt === 0x03 && tr === 0) {
+          title = String.fromCharCode(...bytes.slice(pos, pos+ml)).trim() || title;
+        } else if (mt === 0x51 && ml === 3) {
+          tempo = (bytes[pos]<<16)|(bytes[pos+1]<<8)|bytes[pos+2];
+        } else if (mt === 0x59 && ml === 2) {
+          keyFifths = new Int8Array(bytes.buffer, pos, 1)[0];
+        }
+        pos = ms + ml;
+      } else if (st === 0xf0 || st === 0xf7) { pos += vlq(); }
+    }
+    pos = trackEnd;
+  }
+
+  const bpm     = Math.round(60000000 / tempo);
+  const keyName = FIFTHS_KEY[String(keyFifths)] || 'C';
+
+  // Group notes into chord windows (half-bar width)
+  const winTicks = division * 2;
+  const groups = [];
+  noteEvents.sort((a,b) => a.tick - b.tick);
+  let i = 0;
+  while (i < noteEvents.length) {
+    const start = noteEvents[i].tick;
+    const pcs   = new Set();
+    while (i < noteEvents.length && noteEvents[i].tick < start + winTicks / 2) {
+      pcs.add(noteEvents[i++].pitch % 12);
+    }
+    if (pcs.size >= 2) groups.push([...pcs].sort((a,b)=>a-b));
+  }
+
+  const CHORD_PATS = [
+    {iv:[0,4,7,10],q:'7'},{iv:[0,4,7,11],q:'Δ7'},{iv:[0,3,7,10],q:'m7'},
+    {iv:[0,3,6,10],q:'m7b5'},{iv:[0,3,6,9],q:'dim7'},
+    {iv:[0,4,7],q:'Δ7'},{iv:[0,3,7],q:'m'}
+  ];
+
+  function matchChord(pcs) {
+    const r0 = pcs[0];
+    const normed = pcs.map(p => ((p-r0)%12+12)%12).sort((a,b)=>a-b);
+    for (const {iv,q} of CHORD_PATS) {
+      if (iv.every(x => normed.includes(x))) return {root:r0, q};
+    }
+    return {root: r0, q: '7'};
+  }
+
+  const progression = [];
+  let row = [];
+  groups.slice(0, 64).forEach(pcs => {
+    const {root, q} = matchChord(pcs);
+    const rootName  = noteName(root, FLAT_KEYS.includes(keyName) || keyName.endsWith('b'));
+    const chord     = rootName + q;
+    row.push({chord, roman: inferRoman(keyName, rootName, q), scale: scaleForQuality(q)});
+    if (row.length === 4) { progression.push(row); row = []; }
+  });
+  if (row.length) progression.push(row);
+
+  return {
+    key: keyName, bpm,
+    form: groups.length <= 12 ? 'Blues' : 'Custom',
+    bars: groups.length || 32,
+    difficulty: 'Custom', style: 'Imported', structure: 'Imported',
+    description: `MIDI import · ${bpm} BPM · key of ${keyName} · ${groups.length} chord groups`,
+    progression: progression.length
+      ? progression
+      : [[{chord:`${keyName}Δ7`,roman:'IΔ7',scale:'Ionian'}]]
+  };
+}
+
+// ── GuitarPro binary header (title extraction) ────────────────────────────────
+function parseGPHeader(buffer, filename) {
+  try {
+    const bytes = new Uint8Array(buffer);
+    let pos = 31; // skip version string
+    function readPascal() {
+      if (pos >= bytes.length) return '';
+      const len = bytes[pos++];
+      const s   = String.fromCharCode(...bytes.slice(pos, pos + len)).trim();
+      pos += Math.max(len, 40 - 1); // GP strings are padded to 40 bytes total
+      return s;
+    }
+    const title  = readPascal() || filename.replace(/\.[^.]+$/, '');
+    const artist = readPascal();
+    const album  = readPascal();
+    return { title, artist, album };
+  } catch(e) {
+    return { title: filename.replace(/\.[^.]+$/, ''), artist: '', album: '' };
+  }
+}
+
+// ── Storage & list management ─────────────────────────────────────────────────
+let IMPORTED_SONGS = {};
+
+function saveImported() {
+  try { localStorage.setItem(IMPORT_STORE_KEY, JSON.stringify(IMPORTED_SONGS)); } catch(e) {}
+}
+
+function renderImportedList() {
+  const list = document.getElementById('importedList');
+  if (!list) return;
+  const names = Object.keys(IMPORTED_SONGS);
+  if (!names.length) {
+    list.innerHTML = '<p class="import-empty">No imported tunes yet.</p>';
+    return;
+  }
+  list.innerHTML = names.map(n => {
+    const t = IMPORTED_SONGS[n];
+    const safeN = n.replace(/"/g, '&quot;');
+    return `<div class="imported-item">
+      <span class="imported-name">📁 ${n}</span>
+      <span class="imported-meta">${t.key} · ${t.bars}b</span>
+      <button class="btn btn-stop import-del" data-name="${safeN}" title="Remove imported tune" aria-label="Remove ${safeN}">✕</button>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.import-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.dataset.name;
+      delete IMPORTED_SONGS[name];
+      delete SONGS[name];
+      saveImported();
+      populateTuneDropdown();
+      renderStats();
+      renderImportedList();
+      showToast(`"${name}" removed`, 'info');
+    });
+  });
+}
+
+function addImportedSong(rawName, tuneObj) {
+  let name = rawName.trim() || 'Imported Tune';
+  let n = 1;
+  while (SONGS[name]) name = `${rawName} (${++n})`;
+  tuneObj._imported = true;
+  IMPORTED_SONGS[name] = tuneObj;
+  SONGS[name]          = tuneObj;
+  saveImported();
+  populateTuneDropdown();
+  renderStats();
+  renderImportedList();
+  // Auto-select the imported tune
+  const sel    = document.getElementById('tuneSel');
+  const keySel = document.getElementById('keySel');
+  if (sel)    sel.value    = name;
+  if (keySel) keySel.value = tuneObj.key;
+  if (typeof buildFretboard === 'function') buildFretboard();
+  if (typeof renderLeadSheet === 'function') renderLeadSheet(name, tuneObj.key);
+  if (typeof updateSectionDropdown === 'function') updateSectionDropdown();
+  showToast(`"${name}" imported successfully`, 'success', 3000);
+}
+
+// ── File handler ──────────────────────────────────────────────────────────────
+async function handleImportFile(file) {
+  const ext      = file.name.split('.').pop().toLowerCase();
+  const statusEl = document.getElementById('importStatus');
+  statusEl.textContent = `Parsing "${file.name}"…`;
+  statusEl.className   = 'import-status';
+
+  try {
+    if (ext === 'xml') {
+      const text = await file.text();
+      const tune = parseMusicXML(text);
+      addImportedSong(file.name.replace(/\.[^.]+$/, ''), tune);
+      statusEl.textContent = `✓ MusicXML · ${tune.bars} bars · key of ${tune.key}`;
+      statusEl.className   = 'import-status import-ok';
+
+    } else if (ext === 'mxl') {
+      if (typeof JSZip === 'undefined') throw new Error('JSZip not loaded — MXL requires JSZip (reload the page)');
+      const zip = await JSZip.loadAsync(file);
+      let xmlText;
+      const containerFile = zip.file('META-INF/container.xml');
+      if (containerFile) {
+        const cText  = await containerFile.async('string');
+        const cDoc   = new DOMParser().parseFromString(cText, 'text/xml');
+        const rfPath = cDoc.querySelector('rootfile')?.getAttribute('full-path');
+        if (rfPath) xmlText = await zip.file(rfPath)?.async('string');
+      }
+      if (!xmlText) {
+        const xmlFile = Object.values(zip.files).find(f => f.name.endsWith('.xml') && !f.dir);
+        if (xmlFile) xmlText = await xmlFile.async('string');
+      }
+      if (!xmlText) throw new Error('No MusicXML found inside .mxl archive');
+      const tune = parseMusicXML(xmlText);
+      addImportedSong(file.name.replace(/\.[^.]+$/, ''), tune);
+      statusEl.textContent = `✓ MXL/MusicXML · ${tune.bars} bars · key of ${tune.key}`;
+      statusEl.className   = 'import-status import-ok';
+
+    } else if (ext === 'mid' || ext === 'midi') {
+      const buf  = await file.arrayBuffer();
+      const tune = parseMIDI(buf);
+      addImportedSong(file.name.replace(/\.[^.]+$/, ''), tune);
+      statusEl.textContent = `✓ MIDI · ${tune.bpm} BPM · ${tune.bars} chord groups · key of ${tune.key}`;
+      statusEl.className   = 'import-status import-ok';
+
+    } else if (['gp','gp3','gp4','gp5'].includes(ext)) {
+      const buf = await file.arrayBuffer();
+      const {title, artist, album} = parseGPHeader(buf, file.name);
+      const tune = {
+        key:'C', form:'Custom', bars:32, difficulty:'Custom',
+        style:'Imported', structure:'Imported',
+        description:`GuitarPro .${ext} import${artist?' · '+artist:''}${album?' · '+album:''} — export as MusicXML for full chord data`,
+        progression:[[
+          {chord:'CΔ7',roman:'IΔ7',scale:'Ionian'},
+          {chord:'Am7',roman:'VIm7',scale:'Dorian'},
+          {chord:'Dm7',roman:'IIm7',scale:'Dorian'},
+          {chord:'G7', roman:'V7',  scale:'Mixolydian'}
+        ]]
+      };
+      addImportedSong(title, tune);
+      statusEl.textContent = `⚠ GuitarPro .${ext}: title "${title}" extracted · chord symbols unavailable in binary format · export as MusicXML for full import`;
+      statusEl.className   = 'import-status import-warn';
+
+    } else if (ext === 'gpx' || ext === 'gp7') {
+      let parsed = false;
+      if (typeof JSZip !== 'undefined') {
+        try {
+          const zip      = await JSZip.loadAsync(file);
+          const gpifFile = zip.file('Content/score.gpif')
+                        || zip.file('score.gpif')
+                        || Object.values(zip.files).find(f => f.name.endsWith('.gpif') && !f.dir);
+          if (gpifFile) {
+            const gpifText = await gpifFile.async('string');
+            const gpifDoc  = new DOMParser().parseFromString(gpifText, 'text/xml');
+            const gpTitle  = (
+              gpifDoc.querySelector('Title')?.textContent ||
+              gpifDoc.querySelector('ScoreTitle')?.textContent ||
+              file.name.replace(/\.[^.]+$/, '')
+            ).trim();
+            const gpTempo = parseInt(gpifDoc.querySelector('Tempo value')?.textContent || '120') || 120;
+            const tune = {
+              key:'C', bpm:gpTempo, form:'Custom', bars:32,
+              difficulty:'Custom', style:'Imported', structure:'Imported',
+              description:`GuitarPro .${ext} import · ${gpTempo} BPM — export as MusicXML for full chord data`,
+              progression:[[
+                {chord:'CΔ7',roman:'IΔ7',scale:'Ionian'},
+                {chord:'Am7',roman:'VIm7',scale:'Dorian'},
+                {chord:'Dm7',roman:'IIm7',scale:'Dorian'},
+                {chord:'G7', roman:'V7',  scale:'Mixolydian'}
+              ]]
+            };
+            addImportedSong(gpTitle, tune);
+            statusEl.textContent = `⚠ GuitarPro .${ext}: "${gpTitle}" · ${gpTempo} BPM extracted — export as MusicXML for full chord import`;
+            statusEl.className   = 'import-status import-warn';
+            parsed = true;
+          }
+        } catch(_) {}
+      }
+      if (!parsed) {
+        const buf    = await file.arrayBuffer();
+        const {title} = parseGPHeader(buf, file.name);
+        const tune = {
+          key:'C', form:'Custom', bars:32, difficulty:'Custom',
+          style:'Imported', structure:'Imported',
+          description:`GuitarPro .${ext} import — chord data unavailable; export as MusicXML`,
+          progression:[[
+            {chord:'CΔ7',roman:'IΔ7',scale:'Ionian'},
+            {chord:'Am7',roman:'VIm7',scale:'Dorian'},
+            {chord:'Dm7',roman:'IIm7',scale:'Dorian'},
+            {chord:'G7', roman:'V7',  scale:'Mixolydian'}
+          ]]
+        };
+        addImportedSong(title, tune);
+        statusEl.textContent = `⚠ GuitarPro .${ext}: metadata only · export as MusicXML for full chord import`;
+        statusEl.className   = 'import-status import-warn';
+      }
+
+    } else {
+      throw new Error(`Unsupported format: .${ext}`);
+    }
+  } catch(err) {
+    statusEl.textContent = `✗ ${err.message}`;
+    statusEl.className   = 'import-status import-err';
+    showToast(err.message, 'error');
+  }
+}
+
+// ── Drop zone ─────────────────────────────────────────────────────────────────
+(function setupImporter() {
+  const zone      = document.getElementById('importDropZone');
+  const fileInput = document.getElementById('importFileInput');
+  if (!zone || !fileInput) return;
+
+  zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) handleImportFile(f);
+  });
+  zone.addEventListener('click', () => fileInput.click());
+  zone.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) { handleImportFile(fileInput.files[0]); fileInput.value = ''; }
+  });
+
+  // Restore previously imported tunes from localStorage
+  try {
+    const raw = localStorage.getItem(IMPORT_STORE_KEY);
+    if (raw) {
+      IMPORTED_SONGS = JSON.parse(raw) || {};
+      Object.assign(SONGS, IMPORTED_SONGS);
+      populateTuneDropdown();
+      renderStats();
+    }
+  } catch(e) {}
+
+  renderImportedList();
+})();
+
+})(); // end IIFE
+
 </script>
 
 </body>
