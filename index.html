@@ -739,6 +739,45 @@ details.panel.import-panel summary { color: var(--green); }
   #sheet .chord { color: black !important; }
   #sheet .roman { color: #555 !important; }
 }
+
+/* ── Parker Heads Library ─────────────────────────────────────────────── */
+details.panel.heads-panel summary { color: #ce93d8; }
+.heads-search-row { display:flex; gap:8px; margin:10px 0 6px; align-items:center; }
+.heads-search { flex:1; background:#252525; color:var(--sym); border:1px solid #7b1fa2;
+  border-radius:5px; padding:7px 10px; font-family:'Courier New',monospace; font-size:12px; }
+.heads-count { font-size:11px; color:var(--ink-dim); white-space:nowrap; }
+.heads-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  gap:5px; margin-top:8px; max-height:270px; overflow-y:auto; }
+.head-btn { background:#1a0d2e; border:1px solid #7b1fa2; color:#ce93d8; padding:7px 10px;
+  border-radius:6px; cursor:pointer; font-size:11px; font-family:'Courier New',monospace;
+  text-align:left; transition:.15s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.head-btn:hover { background:#2a1a42; border-color:#ce93d8; }
+.head-btn.hd-loading { opacity:.6; cursor:wait; }
+.head-btn.hd-loaded { border-color:var(--green); color:#81c784; background:#0a2a0a; }
+.head-btn.hd-error { border-color:var(--red); color:#ef9a9a; }
+.head-melody-bar { margin-top:10px; background:#0c0818; border:1px solid #7b1fa2;
+  border-radius:8px; padding:10px; display:none; }
+.head-melody-bar.hd-visible { display:block; }
+.head-melody-title { font-size:12px; color:#ce93d8; font-weight:bold; margin-bottom:8px; }
+.head-melody-controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; }
+.head-note-display { display:flex; gap:12px; align-items:center; background:#111;
+  border:1px solid #4a0060; border-radius:6px; padding:8px 12px; margin:8px 0; min-height:48px; }
+.hd-note-name { font-size:24px; color:#ce93d8; font-weight:bold; min-width:40px; text-align:center; }
+.hd-note-info { display:flex; flex-direction:column; gap:2px; }
+.hd-note-interval { font-size:12px; color:#9fa8da; }
+.hd-note-type { font-size:10px; color:var(--ink-dim); }
+.hd-note-measure { font-size:11px; color:var(--ink-dim); margin-left:auto; }
+.hd-progress { height:6px; background:#222; border-radius:999px; overflow:hidden; margin:6px 0; }
+.hd-progress-fill { height:100%; background:linear-gradient(90deg,#7b1fa2,#ce93d8); width:0; transition:width .1s linear; }
+.hd-loop-row { display:flex; gap:8px; align-items:center; font-size:11px; color:var(--ink-dim); flex-wrap:wrap; }
+.hd-loop-row input[type=number] { width:58px; background:#252525; color:var(--sym);
+  border:1px solid #7b1fa2; border-radius:4px; padding:4px 6px; font-size:11px;
+  font-family:'Courier New',monospace; }
+.fret.hd-active { background:rgba(206,147,216,0.30)!important; color:#fff!important;
+  box-shadow:0 0 6px rgba(206,147,216,0.5)!important; }
+.fret.hd-best { background:rgba(206,147,216,0.80)!important; color:#000!important;
+  font-weight:bold!important; box-shadow:0 0 16px rgba(206,147,216,1),inset 0 0 4px rgba(255,255,255,0.3)!important; }
+.fret.hd-rest { opacity:.2; transition:opacity .08s; }
 </style>
 
 
@@ -789,6 +828,45 @@ details.panel.import-panel summary { color: var(--green); }
     </div>
     <div id="importStatus" class="import-status" aria-live="polite" role="status"></div>
     <div id="importedList" class="imported-list" aria-label="Imported tunes"></div>
+  </details>
+
+  <details class="panel heads-panel" id="headsPanel">
+    <summary>🎵 Parker Heads Library — Omnibook Melodies</summary>
+    <p style="font-size:11px;color:var(--ink-dim);margin:8px 0 4px;">
+      Click any tune to fetch its composed head (opening melody) from the Charlie Parker Omnibook.
+      Files are fetched on demand and cached locally. Also works with any MusicXML you import above.
+    </p>
+    <div class="heads-search-row">
+      <input type="search" id="headsSearch" class="heads-search"
+             placeholder="Filter tunes…" autocomplete="off" aria-label="Filter Parker heads">
+      <span class="heads-count" id="headsCount"></span>
+    </div>
+    <div class="heads-grid" id="headsGrid"></div>
+    <div class="head-melody-bar" id="headMelodyBar">
+      <div class="head-melody-title" id="headMelodyTitle">—</div>
+      <div class="head-melody-controls">
+        <button class="controls btn-ok"   id="headPlayBtn">▶ Play Head</button>
+        <button class="controls btn-stop" id="headStopBtn">■ Stop</button>
+        <button class="controls btn-sec"  id="headLoopToggle">⟳ Loop: Off</button>
+        <button class="controls btn-sec"  id="headFbToggle">🎸 Fretboard: On</button>
+      </div>
+      <div class="head-note-display" id="headNoteDisplay">
+        <div class="hd-note-name" id="headNoteName">—</div>
+        <div class="hd-note-info">
+          <div class="hd-note-interval" id="headNoteInterval">Load a head to begin</div>
+          <div class="hd-note-type"     id="headNoteType"></div>
+        </div>
+        <div class="hd-note-measure" id="headNoteMeasure"></div>
+      </div>
+      <div class="hd-progress"><div class="hd-progress-fill" id="hdProgressFill"></div></div>
+      <div class="hd-loop-row">
+        Loop measures:
+        <input type="number" id="hdLoopStart" value="1" min="1" aria-label="Loop start measure">
+        to
+        <input type="number" id="hdLoopEnd"   value="4" min="1" aria-label="Loop end measure">
+        <span id="hdLoopInfo" style="color:var(--ink-dim);"></span>
+      </div>
+    </div>
   </details>
 
   <div class="controls">
@@ -4553,6 +4631,448 @@ async function suggestNext() {
 })();
 
 })(); // end practice IIFE
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PARKER HEADS LIBRARY — melody fetch + playback + fretboard highlighting
+// ═══════════════════════════════════════════════════════════════════════════
+(function headsLibraryModule() {
+  'use strict';
+
+  const OMNIBOOK_BASE = 'https://raw.githubusercontent.com/lovejzzz/PDFtoXML/main/Omnibook%20xml/';
+  const OMNIBOOK_TUNES = [
+    { name: 'An Oscar for Treadwell', file: 'An_Oscar_For_Treadwell.xml' },
+    { name: 'Another Hairdo',         file: 'Another_Hairdo.xml' },
+    { name: 'Anthropology',           file: 'Anthropology.xml' },
+    { name: 'Au Privave (1)',         file: 'Au_Private_1.xml' },
+    { name: 'Au Privave (2)',         file: 'Au_Private_2.xml' },
+    { name: 'Back Home Blues',        file: 'Back_Home_Blues.xml' },
+    { name: 'Barbados',               file: 'Barbados.xml' },
+    { name: "Billie's Bounce",        file: 'Billies_Bounce.xml' },
+    { name: 'Bird Gets the Worm',     file: 'Bird_Gets_The_Worm.xml' },
+    { name: 'Bloomdido',              file: 'Bloomdido.xml' },
+    { name: 'Blue Bird',              file: 'Blue_Bird.xml' },
+    { name: 'Blues for Alice',        file: 'Blues_For_Alice.xml' },
+    { name: 'Buzzy',                  file: 'Buzzy.xml' },
+    { name: 'Card Board',             file: 'Card_Board.xml' },
+    { name: 'Celerity',               file: 'Celerity.xml' },
+    { name: 'Chasing the Bird',       file: 'Chasing_The_Bird.xml' },
+    { name: 'Cheryl',                 file: 'Cheryl.xml' },
+    { name: 'Chi Chi',                file: 'Chi_Chi.xml' },
+    { name: 'Confirmation',           file: 'Confirmation.xml' },
+    { name: 'Cosmic Rays',            file: 'Cosmic_Rays.xml' },
+    { name: 'Dewey Square',           file: 'Dewey_Square.xml' },
+    { name: 'Diverse',                file: 'Diverse.xml' },
+    { name: 'Donna Lee',              file: 'Donna_Lee.xml' },
+    { name: 'KC Blues',               file: 'KC_Blues.xml' },
+    { name: 'Kim (1)',                file: 'Kim_1.xml' },
+    { name: 'Kim (2)',                file: 'Kim_2.xml' },
+    { name: 'Ko-Ko',                  file: 'Ko_Ko.xml' },
+    { name: 'Laird Baird',            file: 'Laird_Baird.xml' },
+    { name: 'Marmaduke',              file: 'Marmaduke.xml' },
+    { name: 'Mohawk (1)',             file: 'Mohawk_1.xml' },
+    { name: 'Mohawk (2)',             file: 'Mohawk_2.xml' },
+    { name: 'Moose the Mooche',       file: 'Moose_The_Mooche.xml' },
+    { name: 'My Little Suede Shoes',  file: 'My_Little_Suede_Shoes.xml' },
+    { name: "Now's the Time (1)",     file: 'Nows_The_Time_1.xml' },
+    { name: "Now's the Time (2)",     file: 'Nows_The_Time_2.xml' },
+    { name: 'Ornithology',            file: 'Ornithology.xml' },
+    { name: 'Passport',               file: 'Passport.xml' },
+    { name: 'Perhaps',                file: 'Perhaps.xml' },
+    { name: 'Red Cross',              file: 'Red_Cross.xml' },
+    { name: 'Relaxing with Lee',      file: 'Relaxing_With_Lee.xml' },
+    { name: 'Scrapple from the Apple',file: 'Scrapple_From_The_Apple.xml' },
+    { name: 'Segment',                file: 'Segment.xml' },
+    { name: 'Shawnuff',               file: 'Shawnuff.xml' },
+    { name: 'Si Si',                  file: 'Si_Si.xml' },
+    { name: 'Steeplechase',           file: 'Steeplechase.xml' },
+    { name: 'The Bird',               file: 'The_Bird.xml' },
+    { name: 'Thriving from a Riff',   file: 'Thriving_From_A_Riff.xml' },
+    { name: 'Visa',                   file: 'Visa.xml' },
+    { name: 'Warming Up a Riff',      file: 'Warming_Up_A_Riff.xml' },
+    { name: 'Yardbird Suite',         file: 'Yardbird_Suite.xml' },
+  ];
+
+  // Local cache (avoid re-fetching on every open)
+  const CACHE_KEY = 'cp_heads_v1';
+  let headCache = {};
+  try { const s = localStorage.getItem(CACHE_KEY); if (s) headCache = JSON.parse(s); } catch(e) {}
+
+  // Playback state
+  let hdNotes         = [];
+  let hdPlaying       = false;
+  let hdIdx           = 0;
+  let hdLoopOn        = false;
+  let hdFbOn          = true;
+  let hdLoopStartM    = 1;
+  let hdLoopEndM      = 4;
+  let hdTotalMeasures = 0;
+  let hdTimer         = null;
+
+  const STEP_PC    = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
+  const IVL_NAMES  = ['R','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
+  // Open-string MIDI by engine string (1=low E … 6=high E)
+  const OPEN_BY_ENG = { 1:40, 2:45, 3:50, 4:55, 5:59, 6:64 };
+
+  // ── MusicXML note extractor ──────────────────────────────────────────
+  function extractNotes(xmlText) {
+    const doc  = new DOMParser().parseFromString(xmlText, 'text/xml');
+    const part = doc.querySelector('part') || doc;
+
+    let title = doc.querySelector('work-title')?.textContent?.trim() || '';
+    if (!title) title = doc.querySelector('movement-title')?.textContent?.trim() || '';
+    if (!title) {
+      const cws = [...doc.querySelectorAll('credit-words')]
+        .map(e => e.textContent.trim()).filter(t => t.length > 1 && !/^\d+$/.test(t));
+      title = cws.sort((a,b) => b.length - a.length)[0] || 'Unknown';
+    }
+
+    let bpm = 160;
+    const te = doc.querySelector('sound[tempo]');
+    if (te) bpm = parseFloat(te.getAttribute('tempo')) || 160;
+
+    let divs = 1;
+    const de = part.querySelector('attributes divisions');
+    if (de) divs = parseInt(de.textContent) || 1;
+
+    const measures = [...part.querySelectorAll('measure')];
+    const notes = [];
+
+    measures.forEach((mEl, mIdx) => {
+      const nd = mEl.querySelector('attributes divisions');
+      if (nd) divs = parseInt(nd.textContent) || divs;
+      const nt = mEl.querySelector('sound[tempo]');
+      if (nt) bpm = parseFloat(nt.getAttribute('tempo')) || bpm;
+
+      mEl.querySelectorAll('note').forEach(nEl => {
+        if (nEl.querySelector('chord')) return; // skip simultaneous harmonic notes
+
+        const durTicks      = parseInt(nEl.querySelector('duration')?.textContent || '0');
+        const durationBeats = divs > 0 ? durTicks / divs : 1;
+        const isRest        = !!nEl.querySelector('rest');
+
+        if (isRest) {
+          notes.push({ isRest:true, durationBeats, measureIdx:mIdx });
+          return;
+        }
+
+        const stepEl = nEl.querySelector('pitch step');
+        if (!stepEl) return;
+        const step   = stepEl.textContent.trim();
+        const alter  = parseInt(nEl.querySelector('pitch alter')?.textContent || '0');
+        const octave = parseInt(nEl.querySelector('pitch octave')?.textContent || '4');
+        const pc     = ((STEP_PC[step] ?? 0) + alter + 12) % 12;
+        const midi   = 12 * (octave + 1) + (STEP_PC[step] ?? 0) + alter;
+        const acc    = alter === 1 ? '#' : alter === -1 ? 'b' : '';
+
+        notes.push({ midi, pc, name: step + acc, octave, durationBeats, isRest:false, measureIdx:mIdx });
+      });
+    });
+
+    return { title, bpm, notes, totalMeasures: measures.length };
+  }
+
+  // ── Best guitar fret for a given MIDI note ───────────────────────────
+  function bestFret(midi) {
+    const cands = [];
+    for (let eng = 1; eng <= 6; eng++) {
+      const fret = midi - OPEN_BY_ENG[eng];
+      if (fret >= 0 && fret <= 12) {
+        cands.push({ eng, fret, score: Math.abs(fret - 6) + (eng === 1 || eng === 6 ? 1 : 0) });
+      }
+    }
+    cands.sort((a,b) => a.score - b.score);
+    return cands[0] || null;
+  }
+
+  // ── Fretboard highlight ──────────────────────────────────────────────
+  function hdClearFb() {
+    document.querySelectorAll('.fret').forEach(fr => {
+      fr.classList.remove('hd-active','hd-best','hd-rest');
+    });
+  }
+
+  function hdHighlight(note) {
+    hdClearFb();
+    if (!hdFbOn) return;
+    if (note.isRest) {
+      document.querySelectorAll('.fret').forEach(fr => fr.classList.add('hd-rest'));
+      setTimeout(hdClearFb, 80);
+      return;
+    }
+    const { pc, midi } = note;
+    document.querySelectorAll('.fret[data-idx]').forEach(fr => {
+      if (parseInt(fr.dataset.idx, 10) === pc) fr.classList.add('hd-active');
+    });
+    const best = bestFret(midi);
+    if (best && typeof findFretEl === 'function') {
+      const el = findFretEl(best.eng, best.fret);
+      if (el) { el.classList.remove('hd-active'); el.classList.add('hd-best'); }
+    }
+  }
+
+  // ── Note display ─────────────────────────────────────────────────────
+  function hdUpdateDisplay(note) {
+    const nameEl = document.getElementById('headNoteName');
+    const intEl  = document.getElementById('headNoteInterval');
+    const typeEl = document.getElementById('headNoteType');
+    const measEl = document.getElementById('headNoteMeasure');
+    if (!nameEl) return;
+    measEl.textContent = `M${note.measureIdx + 1}`;
+    if (note.isRest) {
+      nameEl.textContent = '𝄽';
+      intEl.textContent  = 'rest';
+      typeEl.textContent = '';
+      return;
+    }
+    nameEl.textContent = note.name;
+    typeEl.textContent = `${note.durationBeats.toFixed(1)} beat${note.durationBeats !== 1 ? 's' : ''}`;
+    if (typeof lastBarData !== 'undefined' && lastBarData?.root && typeof NOTE_IDX !== 'undefined') {
+      const ri  = (NOTE_IDX[lastBarData.root] || 0) % 12;
+      const ivl = ((note.pc - ri) + 12) % 12;
+      intEl.textContent = IVL_NAMES[ivl] || '';
+    } else {
+      intEl.textContent = '';
+    }
+  }
+
+  // ── Audio playback ───────────────────────────────────────────────────
+  function hdPlayAudio(note, bpm) {
+    if (note.isRest || typeof audioContext === 'undefined' || !audioContext || !audioReady) return;
+    const freq = 440 * Math.pow(2, (note.midi - 69) / 12);
+    const dur  = Math.max(0.04, (60 / bpm) * note.durationBeats * 0.88);
+    const ctx  = audioContext;
+    const now  = ctx.currentTime;
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.15, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    osc.start(now); osc.stop(now + dur + 0.05);
+  }
+
+  // ── Playback engine ──────────────────────────────────────────────────
+  function hdStop() {
+    hdPlaying = false;
+    clearTimeout(hdTimer);
+    hdClearFb();
+    const nameEl = document.getElementById('headNoteName');
+    if (nameEl) nameEl.textContent = '■';
+    const intEl = document.getElementById('headNoteInterval');
+    if (intEl) intEl.textContent = 'Stopped';
+    const typeEl = document.getElementById('headNoteType');
+    if (typeEl) typeEl.textContent = '';
+    const measEl = document.getElementById('headNoteMeasure');
+    if (measEl) measEl.textContent = '';
+    const fill = document.getElementById('hdProgressFill');
+    if (fill) fill.style.width = '0';
+    const playBtn = document.getElementById('headPlayBtn');
+    if (playBtn) playBtn.textContent = '▶ Play Head';
+  }
+
+  function hdTick() {
+    if (!hdPlaying) return;
+
+    if (hdIdx >= hdNotes.length) {
+      if (hdLoopOn) {
+        hdIdx = hdNotes.findIndex(n => n.measureIdx >= hdLoopStartM - 1);
+        if (hdIdx < 0) hdIdx = 0;
+      } else { hdStop(); return; }
+    }
+
+    const note = hdNotes[hdIdx];
+
+    if (hdLoopOn && note.measureIdx >= hdLoopEndM) {
+      hdIdx = hdNotes.findIndex(n => n.measureIdx >= hdLoopStartM - 1);
+      if (hdIdx < 0) hdIdx = 0;
+      hdTick(); return;
+    }
+
+    const bpm = parseInt(document.getElementById('bpmInput')?.value) || 160;
+
+    hdPlayAudio(note, bpm);
+    hdHighlight(note);
+    hdUpdateDisplay(note);
+
+    const pct = Math.min(100, (hdIdx / Math.max(1, hdNotes.length)) * 100);
+    const fill = document.getElementById('hdProgressFill');
+    if (fill) fill.style.width = pct + '%';
+
+    hdIdx++;
+    hdTimer = setTimeout(hdTick, note.durationBeats * (60000 / bpm));
+  }
+
+  function hdStartPlay() {
+    if (!hdNotes.length) { if (typeof showToast === 'function') showToast('Load a head first', 'warn'); return; }
+    hdPlaying = true;
+    const playBtn = document.getElementById('headPlayBtn');
+    if (playBtn) playBtn.textContent = '■ Pause';
+    if (typeof initAudio === 'function') {
+      initAudio().then(hdTick).catch(hdTick);
+    } else { hdTick(); }
+  }
+
+  function hdTogglePlay() {
+    if (hdPlaying) { hdStop(); } else { hdIdx = 0; hdStartPlay(); }
+  }
+
+  // ── Load parsed data into player ─────────────────────────────────────
+  function hdLoad(data, displayName) {
+    hdStop();
+    hdNotes         = data.notes;
+    hdTotalMeasures = data.totalMeasures;
+
+    const bpm = data.bpm || 160;
+    const bpmEl = document.getElementById('bpmInput');
+    if (bpmEl) { bpmEl.value = bpm; bpmEl.dispatchEvent(new Event('input')); }
+
+    const titleEl = document.getElementById('headMelodyTitle');
+    if (titleEl) titleEl.textContent = `🎵 ${data.title || displayName} — ${hdTotalMeasures} measures`;
+    const bar = document.getElementById('headMelodyBar');
+    if (bar) bar.classList.add('hd-visible');
+
+    const loopEndEl = document.getElementById('hdLoopEnd');
+    if (loopEndEl) loopEndEl.value = Math.min(4, hdTotalMeasures);
+    hdLoopEndM = Math.min(4, hdTotalMeasures);
+
+    const loopInfo = document.getElementById('hdLoopInfo');
+    if (loopInfo) loopInfo.textContent = `(${hdTotalMeasures} total)`;
+
+    const nameEl = document.getElementById('headNoteName');
+    if (nameEl) nameEl.textContent = '▶';
+    const intEl = document.getElementById('headNoteInterval');
+    if (intEl) intEl.textContent = 'Press Play to start';
+    const typeEl = document.getElementById('headNoteType');
+    if (typeEl) typeEl.textContent = '';
+    const measEl = document.getElementById('headNoteMeasure');
+    if (measEl) measEl.textContent = '';
+  }
+
+  // ── Fetch from Omnibook archive + cache ──────────────────────────────
+  async function hdFetch(tune, btn) {
+    if (headCache[tune.file]) {
+      hdLoad(headCache[tune.file], tune.name);
+      if (typeof showToast === 'function') showToast(`${tune.name} — loaded from cache`, 'info');
+      return;
+    }
+    btn.classList.add('hd-loading');
+    btn.textContent = '⏳ ' + tune.name;
+    try {
+      const resp = await fetch(OMNIBOOK_BASE + tune.file);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = extractNotes(await resp.text());
+      headCache[tune.file] = data;
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(headCache)); } catch(e) {}
+      btn.classList.remove('hd-loading');
+      btn.classList.add('hd-loaded');
+      btn.textContent = '✓ ' + tune.name;
+      hdLoad(data, tune.name);
+      if (typeof showToast === 'function')
+        showToast(`${data.title || tune.name} — ${data.notes.length} notes ready`, 'success');
+    } catch(err) {
+      btn.classList.remove('hd-loading');
+      btn.classList.add('hd-error');
+      btn.textContent = '✗ ' + tune.name;
+      if (typeof showToast === 'function')
+        showToast(`Could not load ${tune.name}: ${err.message}`, 'error');
+    }
+  }
+
+  // ── Render button grid ───────────────────────────────────────────────
+  function hdRenderGrid(filter) {
+    const grid    = document.getElementById('headsGrid');
+    const countEl = document.getElementById('headsCount');
+    if (!grid) return;
+    grid.innerHTML = '';
+    const f = (filter || '').toLowerCase();
+    let n = 0;
+    OMNIBOOK_TUNES.forEach(tune => {
+      if (f && !tune.name.toLowerCase().includes(f)) return;
+      n++;
+      const btn = document.createElement('button');
+      btn.className = 'head-btn';
+      btn.setAttribute('aria-label', 'Load head: ' + tune.name);
+      if (headCache[tune.file]) { btn.classList.add('hd-loaded'); btn.textContent = '✓ ' + tune.name; }
+      else btn.textContent = tune.name;
+      btn.addEventListener('click', () => hdFetch(tune, btn));
+      grid.appendChild(btn);
+    });
+    if (countEl) countEl.textContent = n + ' / ' + OMNIBOOK_TUNES.length;
+  }
+
+  // ── Hook the file importer: also extract melody from dropped XMLs ────
+  function attachImportHook() {
+    const fi = document.getElementById('importFileInput');
+    if (!fi) return;
+    fi.addEventListener('change', function() {
+      const file = fi.files[0];
+      if (!file) return;
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!['xml', 'mxl'].includes(ext)) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = extractNotes(ev.target.result);
+          if (!data.notes.length) return;
+          setTimeout(() => {
+            hdLoad(data, file.name.replace(/\.[^.]+$/, ''));
+            const panel = document.getElementById('headsPanel');
+            if (panel) panel.open = true;
+            if (typeof showToast === 'function')
+              showToast('Melody extracted: ' + data.notes.length + ' notes from ' + (data.title || file.name), 'success');
+          }, 400);
+        } catch(e) { /* silently skip non-melodic XMLs */ }
+      };
+      reader.readAsText(file);
+    }, { passive: true });
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────
+  function hdInit() {
+    hdRenderGrid('');
+
+    document.getElementById('headsSearch')?.addEventListener('input', e => {
+      hdRenderGrid(e.target.value);
+    });
+
+    document.getElementById('headPlayBtn')?.addEventListener('click', hdTogglePlay);
+    document.getElementById('headStopBtn')?.addEventListener('click', () => { hdIdx = 0; hdStop(); });
+
+    document.getElementById('headLoopToggle')?.addEventListener('click', function() {
+      hdLoopOn = !hdLoopOn;
+      this.textContent = hdLoopOn ? '⟳ Loop: On' : '⟳ Loop: Off';
+      this.classList.toggle('btn-loop-on', hdLoopOn);
+    });
+
+    document.getElementById('headFbToggle')?.addEventListener('click', function() {
+      hdFbOn = !hdFbOn;
+      this.textContent = hdFbOn ? '🎸 Fretboard: On' : '🎸 Fretboard: Off';
+      if (!hdFbOn) hdClearFb();
+    });
+
+    document.getElementById('hdLoopStart')?.addEventListener('input', e => {
+      hdLoopStartM = Math.max(1, parseInt(e.target.value) || 1);
+    });
+    document.getElementById('hdLoopEnd')?.addEventListener('input', e => {
+      hdLoopEndM = Math.max(1, parseInt(e.target.value) || 1);
+    });
+
+    document.getElementById('tuneSel')?.addEventListener('change', () => {
+      if (hdPlaying) hdStop();
+    }, { passive: true });
+
+    attachImportHook();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', hdInit);
+  } else {
+    hdInit();
+  }
+
+})(); // end headsLibraryModule
 
 </script>
 
