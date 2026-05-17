@@ -132,20 +132,34 @@ padding:8px 4px;background:#1e1e1e;border-radius:6px;position:relative;touch-act
 .fb-section{background:#1a1a1a;border:2px solid var(--accent);border-radius:8px;
 padding:12px;margin-top:10px;}
 .fb-title{text-align:center;color:var(--accent);margin-bottom:8px;font-size:13px;min-height:18px;}
-.fretboard{display:flex;flex-direction:column;gap:2px;background:#2a2a2a;
-padding:8px;border-radius:4px;overflow-x:auto;}
-.string{display:flex;gap:1px;align-items:center;}
-.str-lbl{width:25px;text-align:right;color:#888;font-size:12px;font-weight:bold;flex-shrink:0;}
-.fret{width:40px;height:32px;background:#3a3a3a;border:1px solid #555;
-display:flex;align-items:center;justify-content:center;font-size:9px;
-color:#666;text-align:center;white-space:pre-wrap;transition:.1s;flex-shrink:0;}
-.fret.hl{font-weight:bold;font-size:10px;border:2px solid #fff;}
-.fret.rt{font-size:11px;}
-/* Fret position markers */
-.fret-markers{display:flex;gap:1px;margin-top:3px;padding-left:26px;}
-.fret-dot{width:40px;height:15px;display:flex;align-items:center;justify-content:center;
-font-size:9px;color:#555;flex-shrink:0;}
-.fret-dot.marked{color:var(--accent);font-weight:bold;}
+
+/* ── SVG Fretboard ──────────────────────────────────────────────────────── */
+.fretboard { overflow-x: auto; background: transparent; padding: 0; gap: 0; }
+.fb-svg { display: block; width: 100%; min-width: 340px; }
+.fret circle { transition: fill .12s, stroke .12s, opacity .12s; }
+/* Active highlight states — !important overrides JS setAttribute fill */
+.fret.hl circle { stroke: rgba(255,255,255,0.6); stroke-width: 1.5; }
+.fret.rt circle { stroke: #fff !important; stroke-width: 2.5 !important; }
+.fret.hd-best   circle { fill: #ce93d8 !important; stroke: #fff !important; stroke-width: 2 !important; }
+.fret.hd-active circle { fill: #7b1fa2 !important; opacity: .65; }
+.fret.hd-ghost  circle { fill: #555 !important; opacity: .5; }
+.fret.hd-rest   circle { fill: #333 !important; opacity: .4; }
+.fret.pitch-live circle { fill: #76ff03 !important; stroke: #fff !important; stroke-width: 2 !important; filter: drop-shadow(0 0 5px #76ff0388); }
+.fret.ghost-tone circle { fill: rgba(99,102,241,0.45) !important; stroke: rgba(99,102,241,0.7) !important; stroke-dasharray: 3 2; }
+.fret.ghost-tone .fret-label { fill: #b0b3f7 !important; font-size: 9px !important; }
+.fret.gt-ghost  circle { fill: rgba(80,80,80,0.25) !important; stroke: #555 !important; }
+.fret.lick-step circle { stroke: rgba(255,235,59,0.55) !important; stroke-width: 2 !important; }
+.fret.lick-step-active circle { fill: #ffeb3b !important; stroke: #fff !important; stroke-width: 2 !important; }
+/* Resonance pulse animations on the SVG circle */
+.fret[data-pulse="stable"].hl    circle { animation: resPulseStable    2000ms ease-in-out infinite; }
+.fret[data-pulse="moderate"].hl  circle { animation: resPulseModerate  1400ms ease-in-out infinite; }
+.fret[data-pulse="tense"].hl     circle { animation: resPulseTense      800ms ease-in-out infinite; }
+.fret[data-pulse="very-tense"].hl circle { animation: resPulseVeryTense 500ms ease-in-out infinite; }
+/* Fret markers row — now empty, markers drawn inline in SVG */
+.fret-markers { display: none; }
+/* Remove old print CSS for divs */
+@media (min-width:768px) { .fb-svg { min-width: 480px; } }
+@media (max-width:480px) { .fb-svg { min-width: 300px; } }
 /* Functional harmony legend */
 .func-legend{display:none;flex-wrap:wrap;gap:10px;justify-content:center;
 font-size:11px;margin:6px 0;padding:4px 0;}
@@ -192,17 +206,14 @@ border-radius:12px;width:min(980px,94vw);max-height:80vh;display:flex;flex-direc
 
 @media(min-width:600px){
 h1{font-size:26px;} .chord{font-size:20px;} .bar{min-height:95px;}
-.fret{width:45px;height:34px;font-size:10px;} .fret-dot{width:45px;}
 }
 @media(min-width:800px){
 body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
 .row{min-width:720px;gap:4px;} .bar{min-height:100px;} .chord{font-size:22px;}
-.fret{width:50px;height:35px;font-size:11px;} .fret.hl{font-size:12px;}
-.fret-dot{width:50px;}
 }
 
 @media(max-width:768px){
-body{padding:8px;} 
+body{padding:8px;}
 .card{padding:10px;border-radius:12px;}
 .controls{gap:6px;}
 .controls button,.controls select,.controls input{min-height:44px;font-size:14px;padding:10px;}
@@ -212,8 +223,6 @@ body{padding:8px;}
 .tune-meta{gap:4px;}
 .meta-item{font-size:10px;padding:4px 8px;}
 .lib-grid{grid-template-columns:1fr;}
-.fret{width:42px;height:34px;}
-.fret-dot{width:42px;}
 }
 @media print{body>*{display:none!important;}}
 
@@ -221,57 +230,34 @@ body{padding:8px;}
    RESONANCE ENGINE OVERLAY STYLES
 ===================================================== */
 
-/* Ghost chord tones – dimmed, dashed outline, not highlighted */
-.fret.ghost-tone {
-  outline: 2px dashed rgba(99,102,241,0.55);
-  outline-offset: -2px;
-  background: rgba(99,102,241,0.16) !important;
-  color: #b0b3f7 !important;
-  font-size: 8px !important;
-  opacity: 0.72;
-}
+/* Ghost chord tones – handled via SVG circle CSS above */
+/* All lick step positions – handled via SVG circle CSS above */
 
-/* All lick step positions – subtle border */
-.fret.lick-step {
-  outline: 1px solid rgba(255,235,59,0.45);
-  outline-offset: -1px;
-}
-
-/* Currently active lick step during playback */
+/* Currently active lick step during playback — SVG-compatible */
 .fret.lick-step-active {
-  box-shadow: 0 0 16px 6px rgba(255,235,59,0.85) !important;
-  outline: 2px solid #ffeb3b !important;
-  outline-offset: -2px;
-  transform: scale(1.09);
   z-index: 3;
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.fret.lick-step-active circle {
+  animation: none !important;
 }
 
-/* Resonance pulse animations – applied on top of hl class */
+/* Resonance pulse animations – applied on SVG circle elements */
 @keyframes resPulseStable {
-  0%,100% { box-shadow: inset 0 0 0 0 rgba(76,175,80,0); }
-  50%      { box-shadow: inset 0 0 5px 1px rgba(76,175,80,0.28); }
+  0%,100% { filter: drop-shadow(0 0 0px rgba(76,175,80,0)); }
+  50%      { filter: drop-shadow(0 0 4px rgba(76,175,80,0.55)); }
 }
 @keyframes resPulseModerate {
-  0%,100% { box-shadow: inset 0 0 0 0 rgba(66,165,245,0); }
-  50%      { box-shadow: inset 0 0 6px 2px rgba(66,165,245,0.35); }
+  0%,100% { filter: drop-shadow(0 0 0px rgba(66,165,245,0)); }
+  50%      { filter: drop-shadow(0 0 5px rgba(66,165,245,0.65)); }
 }
 @keyframes resPulseTense {
-  0%,100% { box-shadow: inset 0 0 0 0 rgba(239,83,80,0); }
-  50%      { box-shadow: inset 0 0 9px 3px rgba(239,83,80,0.70); }
+  0%,100% { filter: drop-shadow(0 0 0px rgba(239,83,80,0)); }
+  50%      { filter: drop-shadow(0 0 7px rgba(239,83,80,0.85)); }
 }
 @keyframes resPulseVeryTense {
-  0%,100% { box-shadow: inset 0 0 0 0 rgba(239,83,80,0); }
-  50%      { box-shadow: inset 0 0 14px 6px rgba(239,83,80,0.95); }
+  0%,100% { filter: drop-shadow(0 0 0px rgba(239,83,80,0)); }
+  50%      { filter: drop-shadow(0 0 10px rgba(239,83,80,1)); }
 }
-
-.fret[data-pulse="stable"].hl    { animation: resPulseStable    2000ms ease-in-out infinite; }
-.fret[data-pulse="moderate"].hl  { animation: resPulseModerate  1400ms ease-in-out infinite; }
-.fret[data-pulse="tense"].hl     { animation: resPulseTense      800ms ease-in-out infinite; }
-.fret[data-pulse="very-tense"].hl{ animation: resPulseVeryTense  500ms ease-in-out infinite; }
-
-/* Active lick step overrides any pulse animation */
-.fret.lick-step-active { animation: none !important; }
 
 /* Resonance Engine panel */
 .resonance-panel {
@@ -551,15 +537,7 @@ body{padding:8px;}
 .gt-seventh { color: #26c6da; font-weight: bold; }
 .gt-root-ref{ color: #ff9800; font-weight: bold; opacity: 0.65; }
 
-/* Ghost fret: previous chord's guide tone position */
-.fret.gt-ghost {
-  outline: 1px dashed rgba(255,255,255,0.22);
-  outline-offset: -1px;
-  background: rgba(255,255,255,0.05) !important;
-  color: #666 !important;
-  font-size: 8px !important;
-  opacity: 0.55;
-}
+/* Ghost fret: previous chord's guide tone position — handled via SVG circle CSS */
 
 /* Voice Leading Panel */
 .voice-lead-panel {
@@ -869,12 +847,7 @@ details.panel.heads-panel summary { color: #ce93d8; }
 }
 .at-main-overlay.at-hidden { display:none; }
 
-/* ── Pitch detector fretboard highlight ─────────────────────────────────── */
-.fret.pitch-live {
-  background:#1a3a00 !important; border:2px solid #76ff03 !important;
-  color:#ccff90 !important; font-weight:700;
-  box-shadow:0 0 8px #76ff0388;
-}
+/* ── Pitch detector fretboard highlight — handled via SVG circle CSS above ─ */
 
 /* ── Pitch display panel ─────────────────────────────────────────────────── */
 .pitch-display {
@@ -2369,11 +2342,7 @@ function mapAppScaleToResonanceScale(appScaleName) {
 // Find a .fret DOM element by engine string number (1=low E … 6=high E) + fret number
 function findFretEl(engineString, fretNum) {
   if (fretNum < 0 || fretNum > 12) return null;
-  const rowIdx = 6 - engineString; // engine 1→row5 (low E), engine 6→row0 (high E)
-  const rows   = document.querySelectorAll('#fretboard .string');
-  if (rowIdx < 0 || rowIdx >= rows.length) return null;
-  const frets  = rows[rowIdx].querySelectorAll('.fret');
-  return frets[fretNum] || null;
+  return _fretGrid.get(`${engineString}_${fretNum}`) || null;
 }
 
 function setResonanceStatus(msg) {
@@ -3088,40 +3057,181 @@ function initFretboardResizeObserver() {
   fretboardResizeObserver.observe(wrap);
 }
 
+const SVG_NS   = 'http://www.w3.org/2000/svg';
+const _fretGrid = new Map(); // "engineString_fretNum" → <g.fret> element
+
 function buildFretboard() {
-  const fb = document.getElementById('fretboard');
-  fb.innerHTML = '';
-  STRING_NOTES.forEach(s => {
-    const row = document.createElement('div'); row.className = 'string';
-    const lbl = document.createElement('div'); lbl.className = 'str-lbl'; lbl.textContent = s;
-    row.appendChild(lbl);
-    for (let f = 0; f <= 12; f++) {
-      const fr = document.createElement('div'); fr.className = 'fret';
-      const idx = (NOTE_IDX[s] + f) % 12;
-      fr.dataset.idx  = idx;
-      fr.dataset.fp   = f;
-      fr.dataset.nf   = noteName(idx, true);
-      fr.dataset.ns   = noteName(idx, false);
-      fr.dataset.open = f === 0 ? s : '';
-      if (f === 0) fr.textContent = s;
-      row.appendChild(fr);
-    }
-    fb.appendChild(row);
+  const container = document.getElementById('fretboard');
+  container.innerHTML = '';
+  _fretGrid.clear();
+
+  const FRETS      = 13;   // frets 0 (open) through 12
+  const STRINGS    = 6;
+  const STR_SPC    = 30;   // px between strings
+  const FRET_SPC   = 58;   // px between fret lines
+  const OPEN_SPC   = 38;   // px from left margin to nut (space for open strings)
+  const ML = 42, MT = 22, MB = 38, MR = 16;
+  const boardW = OPEN_SPC + FRET_SPC * FRETS;
+  const W = ML + boardW + MR;
+  const H = MT + STR_SPC * (STRINGS - 1) + MB;
+
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width',  '100%');
+  svg.setAttribute('height', 'auto');
+  svg.setAttribute('class',  'fb-svg');
+  svg.setAttribute('role',   'img');
+  svg.setAttribute('aria-label', 'Guitar fretboard');
+  svg.style.display = 'block';
+
+  // ── Background ──────────────────────────────────────────────────────────
+  const _bgDef = document.createElementNS(SVG_NS, 'defs');
+  const _grad  = document.createElementNS(SVG_NS, 'linearGradient');
+  _grad.setAttribute('id', 'fbWood'); _grad.setAttribute('x1','0%'); _grad.setAttribute('x2','100%');
+  [['0%','#6b4423'],['40%','#5c3d1e'],['100%','#4a2e14']].forEach(([off,col]) => {
+    const s = document.createElementNS(SVG_NS, 'stop');
+    s.setAttribute('offset', off); s.setAttribute('stop-color', col); _grad.appendChild(s);
   });
-  buildFretMarkers();
+  _bgDef.appendChild(_grad); svg.appendChild(_bgDef);
+  const bg = document.createElementNS(SVG_NS, 'rect');
+  bg.setAttribute('x','0'); bg.setAttribute('y','0');
+  bg.setAttribute('width', W); bg.setAttribute('height', H);
+  bg.setAttribute('fill', 'url(#fbWood)'); bg.setAttribute('rx','8');
+  svg.appendChild(bg);
+
+  // ── Nut ─────────────────────────────────────────────────────────────────
+  const nutX = ML + OPEN_SPC;
+  const nut = document.createElementNS(SVG_NS, 'rect');
+  nut.setAttribute('x', nutX - 3); nut.setAttribute('y', MT);
+  nut.setAttribute('width', 5); nut.setAttribute('height', STR_SPC * (STRINGS - 1));
+  nut.setAttribute('fill', '#d4c8a0'); nut.setAttribute('rx', '1');
+  svg.appendChild(nut);
+
+  // ── Fret lines (1–12) ───────────────────────────────────────────────────
+  for (let f = 1; f <= FRETS; f++) {
+    const x = nutX + f * FRET_SPC;
+    const fl = document.createElementNS(SVG_NS, 'rect');
+    fl.setAttribute('x', x - 1); fl.setAttribute('y', MT);
+    fl.setAttribute('width', 2); fl.setAttribute('height', STR_SPC * (STRINGS - 1));
+    fl.setAttribute('fill', '#a08860'); fl.setAttribute('rx','1');
+    svg.appendChild(fl);
+  }
+
+  // ── String lines ────────────────────────────────────────────────────────
+  // STRING_NOTES[0]=high E (display row 0, top), STRING_NOTES[5]=low E (display row 5, bottom)
+  const strokeW = [1.1, 1.4, 1.8, 2.2, 2.6, 3.1];
+  STRING_NOTES.forEach((strNote, si) => {
+    const y = MT + si * STR_SPC;
+    const sl = document.createElementNS(SVG_NS, 'line');
+    sl.setAttribute('x1', ML); sl.setAttribute('y1', y);
+    sl.setAttribute('x2', ML + boardW); sl.setAttribute('y2', y);
+    sl.setAttribute('stroke', '#c4a870'); sl.setAttribute('stroke-width', strokeW[si]);
+    svg.appendChild(sl);
+    // String name label at left
+    const lbl = document.createElementNS(SVG_NS, 'text');
+    lbl.setAttribute('x', ML - 6); lbl.setAttribute('y', y + 4);
+    lbl.setAttribute('text-anchor', 'end'); lbl.setAttribute('fill', '#8a7060');
+    lbl.setAttribute('font-size', '11'); lbl.setAttribute('font-weight', 'bold');
+    lbl.setAttribute('font-family', 'sans-serif'); lbl.textContent = strNote;
+    svg.appendChild(lbl);
+  });
+
+  // ── Position markers (dots below strings) ───────────────────────────────
+  const dotY = MT + STR_SPC * (STRINGS - 1) + 14;
+  [3, 5, 7, 9].forEach(f => {
+    const cx = nutX + f * FRET_SPC - FRET_SPC / 2;
+    const dot = document.createElementNS(SVG_NS, 'circle');
+    dot.setAttribute('cx', cx); dot.setAttribute('cy', dotY);
+    dot.setAttribute('r', '5'); dot.setAttribute('fill', '#7c5030');
+    svg.appendChild(dot);
+    const fn = document.createElementNS(SVG_NS, 'text');
+    fn.setAttribute('x', cx); fn.setAttribute('y', dotY + 14);
+    fn.setAttribute('text-anchor', 'middle'); fn.setAttribute('fill', '#6a5040');
+    fn.setAttribute('font-size', '9'); fn.setAttribute('font-family', 'sans-serif');
+    fn.textContent = f; svg.appendChild(fn);
+  });
+  // Double dot at fret 12
+  const cx12 = nutX + 12 * FRET_SPC - FRET_SPC / 2;
+  [-7, 7].forEach(dx => {
+    const dot = document.createElementNS(SVG_NS, 'circle');
+    dot.setAttribute('cx', cx12 + dx); dot.setAttribute('cy', dotY);
+    dot.setAttribute('r', '4'); dot.setAttribute('fill', '#7c5030');
+    svg.appendChild(dot);
+  });
+  const fn12 = document.createElementNS(SVG_NS, 'text');
+  fn12.setAttribute('x', cx12); fn12.setAttribute('y', dotY + 14);
+  fn12.setAttribute('text-anchor', 'middle'); fn12.setAttribute('fill', '#6a5040');
+  fn12.setAttribute('font-size', '9'); fn12.setAttribute('font-family', 'sans-serif');
+  fn12.textContent = '12'; svg.appendChild(fn12);
+
+  // ── Fret cell groups ────────────────────────────────────────────────────
+  // STRING_NOTES[si] is display row si; engine string = 6 - si
+  STRING_NOTES.forEach((strNote, si) => {
+    const engineString = 6 - si;
+    const cy = MT + si * STR_SPC;
+
+    for (let f = 0; f <= 12; f++) {
+      const idx = (NOTE_IDX[strNote] + f) % 12;
+      // Open strings: circle left of nut; fretted: between fret lines
+      const cx = f === 0
+        ? ML + OPEN_SPC / 2
+        : nutX + f * FRET_SPC - FRET_SPC / 2;
+
+      const g = document.createElementNS(SVG_NS, 'g');
+      g.setAttribute('class', 'fret');
+      g.dataset.idx  = idx;
+      g.dataset.fp   = f;
+      g.dataset.nf   = noteName(idx, true);
+      g.dataset.ns   = noteName(idx, false);
+      g.dataset.open = f === 0 ? strNote : '';
+
+      const circle = document.createElementNS(SVG_NS, 'circle');
+      circle.setAttribute('cx', cx); circle.setAttribute('cy', cy);
+      circle.setAttribute('r', '13');
+      circle.setAttribute('fill', 'transparent'); circle.setAttribute('stroke', 'none');
+      g._circle = circle;
+
+      const label = document.createElementNS(SVG_NS, 'text');
+      label.setAttribute('x', cx); label.setAttribute('y', cy + 4);
+      label.setAttribute('text-anchor', 'middle'); label.setAttribute('fill', '#fff');
+      label.setAttribute('font-size', '10'); label.setAttribute('font-weight', 'bold');
+      label.setAttribute('font-family', 'sans-serif');
+      label.setAttribute('pointer-events', 'none');
+      label.setAttribute('class', 'fret-label');
+      // Open string: show note name as a dim indicator
+      if (f === 0) { label.textContent = strNote; label.setAttribute('fill', '#6a5040'); }
+      g._label = label;
+
+      // Route g.textContent through the SVG text element.
+      // The existing code uses "noteName\nlabel" two-line strings:
+      // show only the interval label (second line) in the circle for clean visuals.
+      Object.defineProperty(g, 'textContent', {
+        get() { return label.textContent; },
+        set(v) {
+          label.textContent = '';
+          const parts = String(v || '').split('\n').filter(p => p.trim());
+          // Show interval label (2nd part if present, otherwise 1st)
+          const display = parts.length >= 2 ? parts[1] : (parts[0] || '');
+          label.textContent = display;
+        },
+        configurable: true
+      });
+
+      g.appendChild(circle); g.appendChild(label);
+      svg.appendChild(g);
+
+      // Register in O(1) lookup grid
+      _fretGrid.set(`${engineString}_${f}`, g);
+    }
+  });
+
+  container.appendChild(svg);
+  // buildFretMarkers() is now a no-op (markers drawn inline above)
 }
 
-// LAYER 3 — Fret position markers (3, 5, 7, 9, 12)
+// LAYER 3 — Fret position markers (now drawn inline in SVG by buildFretboard)
 function buildFretMarkers() {
-  const el = document.getElementById('fretMarkers');
-  el.innerHTML = '';
-  for (let f = 0; f <= 12; f++) {
-    const d = document.createElement('div');
-    const isMarked = [3,5,7,9,12].includes(f);
-    d.className = 'fret-dot' + (isMarked ? ' marked' : '');
-    d.textContent = isMarked ? f : '';
-    el.appendChild(d);
-  }
+  // no-op: markers are rendered directly inside the SVG fretboard
 }
 
 function clearFretboard() {
@@ -3129,8 +3239,17 @@ function clearFretboard() {
   clearLickStepHighlights();
   resonanceLickFretEls = [];
   document.querySelectorAll('.fret').forEach(fr => {
-    fr.className = 'fret'; fr.style.background = ''; fr.style.color = ''; fr.style.opacity = '';
+    fr.setAttribute('class', 'fret');
+    if (fr._circle) {
+      fr._circle.setAttribute('fill', 'transparent');
+      fr._circle.setAttribute('stroke', 'none');
+      fr._circle.setAttribute('opacity', '1');
+    }
+    if (fr._label) {
+      fr._label.setAttribute('fill', fr.dataset.fp === '0' ? '#6a5040' : '#fff');
+    }
     fr.textContent = fr.dataset.fp === '0' ? fr.dataset.open : '';
+    fr.removeAttribute('data-res-degree');
     fr.removeAttribute('data-pulse');
     delete fr.dataset.resDegree;
     delete fr.dataset.resGhost;
@@ -3194,31 +3313,31 @@ function showFretboard(root, scaleName, chordSym) {
 
     if (fbMode === 'guide-tones') {
       if (iv === _gtThird) {
-        fr.style.background = '#3d006e';
-        fr.style.color      = '#e040fb';
+        if (fr._circle) fr._circle.setAttribute('fill', '#3d006e');
+        if (fr._label)  fr._label.setAttribute('fill', '#e040fb');
         fr.textContent      = noteTxt + '\n3';
       } else if (iv === _gtSeventh) {
-        fr.style.background = '#00363a';
-        fr.style.color      = '#26c6da';
+        if (fr._circle) fr._circle.setAttribute('fill', '#00363a');
+        if (fr._label)  fr._label.setAttribute('fill', '#26c6da');
         fr.textContent      = noteTxt + '\n7';
       } else { // root — ghost reference
-        fr.style.background = 'rgba(255,152,0,0.18)';
-        fr.style.color      = '#ff9800';
+        if (fr._circle) fr._circle.setAttribute('fill', 'rgba(255,152,0,0.35)');
+        if (fr._label)  fr._label.setAttribute('fill', '#ff9800');
         fr.textContent      = noteTxt + '\nR';
       }
       if (iv === 0) fr.classList.add('rt');
     } else if (fbMode === 'function') {
       const fc = FUNC_CLASS[iv] || 'other';
-      fr.textContent      = noteTxt + '\n' + FUNC_LABEL[iv];
-      fr.style.background = FUNC_COLORS[fc];
-      fr.style.color      = '#000';
+      fr.textContent = noteTxt + '\n' + FUNC_LABEL[iv];
+      if (fr._circle) fr._circle.setAttribute('fill', FUNC_COLORS[fc]);
+      if (fr._label)  fr._label.setAttribute('fill', '#000');
       if (iv === 0) fr.classList.add('rt');
     } else {
       const iNm    = INT_NAMES[iv];
       const degree = intervalDegree(iv);
-      fr.textContent      = noteTxt + '\n' + `${degree} (${INT_NUMERIC[iv] || degree})`;
-      fr.style.background = INT_COLORS[iNm] || '#4caf50';
-      fr.style.color      = '#000';
+      fr.textContent = noteTxt + '\n' + `${degree} (${INT_NUMERIC[iv] || degree})`;
+      if (fr._circle) fr._circle.setAttribute('fill', INT_COLORS[iNm] || '#4caf50');
+      if (fr._label)  fr._label.setAttribute('fill', '#000');
       if (iv === 0) fr.classList.add('rt');
     }
   });
@@ -3260,9 +3379,9 @@ function showLibraryScale(scaleName, noteNames, rootName) {
     const fc = FUNC_CLASS[iv] || 'other';
     fr.classList.add('hl');
     const degree = intervalDegree(iv);
-    fr.textContent      = fr.dataset.ns + '\n' + `${degree} (${INT_NUMERIC[iv] || degree})`; // sharps for C reference
-    fr.style.background = FUNC_COLORS[fc];
-    fr.style.color      = '#000';
+    fr.textContent = fr.dataset.ns + '\n' + `${degree} (${INT_NUMERIC[iv] || degree})`; // sharps for C reference
+    if (fr._circle) fr._circle.setAttribute('fill', FUNC_COLORS[fc]);
+    if (fr._label)  fr._label.setAttribute('fill', '#000');
     if (iv === 0) fr.classList.add('rt');
   });
 }
