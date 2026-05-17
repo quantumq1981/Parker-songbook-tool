@@ -869,6 +869,28 @@ details.panel.heads-panel summary { color: #ce93d8; }
 }
 .at-main-overlay.at-hidden { display:none; }
 
+/* ── Practice Journal ────────────────────────────────────────────────────── */
+.pj-active {
+  font-size:12px; color:#81c784; padding:5px 10px; margin-bottom:8px;
+  background:#0a2a0a; border-radius:4px; border-left:3px solid #4caf50; display:none;
+}
+.pj-stats {
+  display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+  font-size:12px; margin-bottom:10px;
+}
+.pj-stat { color:var(--ink-dim); }
+.pj-stat strong { color:var(--ink); font-size:14px; }
+.pj-streak { color:#ce93d8; font-weight:700; }
+.pj-table { width:100%; border-collapse:collapse; font-size:12px; }
+.pj-table th {
+  padding:5px 8px; border-bottom:1px solid #2a2a3e;
+  color:var(--ink-dim); font-weight:600; text-align:left; white-space:nowrap;
+}
+.pj-table td { padding:5px 8px; border-bottom:1px solid #1a1a2e; }
+.pj-table tr:last-child td { border-bottom:none; }
+.pj-table tbody tr:hover td { background:#1a0d2e; }
+.pj-empty { text-align:center; color:var(--ink-dim); padding:20px !important; font-style:italic; }
+
 /* ── Offline banner ───────────────────────────────────────────────────────── */
 #offlineBanner {
   display:none; position:fixed; top:0; left:0; right:0; z-index:9999;
@@ -929,6 +951,28 @@ details.panel.heads-panel summary { color: #ce93d8; }
     </div>
     <div id="importStatus" class="import-status" aria-live="polite" role="status"></div>
     <div id="importedList" class="imported-list" aria-label="Imported tunes"></div>
+  </details>
+
+  <details class="panel" id="practicePanel">
+    <summary>📊 Practice Journal</summary>
+    <div class="pj-active" id="pjActive">
+      ▶ Practicing: <strong id="pjActiveTune">—</strong> &nbsp;·&nbsp; <span id="pjTimer">0:00</span>
+    </div>
+    <div class="pj-stats">
+      <span class="pj-stat"><strong id="pjTotalSessions">0</strong> sessions</span>
+      <span class="pj-stat"><strong id="pjTotalTime">0h 0m</strong> total</span>
+      <span class="pj-streak" id="pjStreak"></span>
+      <button class="controls btn-sec" id="pjExportBtn"
+              style="margin-left:auto;font-size:11px;padding:3px 10px;">⬇ Export CSV</button>
+    </div>
+    <table class="pj-table">
+      <thead><tr>
+        <th>Date</th><th>Tune</th><th>Key</th><th>BPM</th><th>Time</th>
+      </tr></thead>
+      <tbody id="pjTableBody">
+        <tr><td colspan="5" class="pj-empty">No sessions yet — generate a lead sheet to begin tracking</td></tr>
+      </tbody>
+    </table>
   </details>
 
   <details class="panel heads-panel" id="headsPanel">
@@ -6056,6 +6100,236 @@ async function suggestNext() {
     atNotInit();
   }
 })(); // end alphaTabNotationModule
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRACTICE SESSION TRACKER
+// Logs tune / key / BPM / duration per practice session via IndexedDB.
+// Drives the Practice Journal panel, streak counter, dropdown annotations,
+// CSV export, and weighted-random tune selection (under-practiced tunes get
+// up to 4× the probability of well-practised ones).
+// ═══════════════════════════════════════════════════════════════════════════
+(function practiceModule() {
+  'use strict';
+
+  // ── Thin IndexedDB wrapper ─────────────────────────────────────────────
+  const DB_NAME = 'cp_practice_db', DB_VER = 1, STORE = 'sessions';
+  let _db = null;
+
+  function dbOpen() {
+    if (_db) return Promise.resolve(_db);
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VER);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE)) {
+          const s = db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+          s.createIndex('by_tune', 'tune');
+          s.createIndex('by_date', 'date');
+        }
+      };
+      req.onsuccess = e => { _db = e.target.result; resolve(_db); };
+      req.onerror   = e => reject(e.target.error);
+    });
+  }
+
+  function dbAdd(rec) {
+    return dbOpen().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).add(rec).onsuccess = e => resolve(e.target.result);
+      tx.onerror = e => reject(e.target.error);
+    }));
+  }
+
+  function dbGetAll() {
+    return dbOpen().then(db => new Promise((resolve, reject) => {
+      const req = db.transaction(STORE, 'readonly').objectStore(STORE).getAll();
+      req.onsuccess = e => resolve(e.target.result || []);
+      req.onerror   = e => reject(e.target.error);
+    }));
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+  function fmtDuration(secs) {
+    return Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
+  }
+
+  function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+  function calcStreak(sessions) {
+    const dateSet = new Set(sessions.map(r => r.date).filter(Boolean));
+    if (!dateSet.size) return 0;
+    let streak = 0;
+    const d = new Date();
+    if (!dateSet.has(todayStr())) d.setDate(d.getDate() - 1); // allow gap for today
+    while (dateSet.has(d.toISOString().slice(0, 10))) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    }
+    return streak;
+  }
+
+  // ── Session state ──────────────────────────────────────────────────────
+  const MIN_SECS = 30;
+  let _tune = null, _key = null, _bpm = null, _start = null, _ticker = null;
+  let _sessionCounts = {}; // { tuneName: count } — refreshed after each dbGetAll()
+
+  function sessionStart(tune, key, bpm) {
+    sessionEnd(); // save any in-flight session first
+    _tune = tune; _key = key; _bpm = bpm; _start = Date.now();
+    const activeEl = document.getElementById('pjActive');
+    const tuneEl   = document.getElementById('pjActiveTune');
+    const timerEl  = document.getElementById('pjTimer');
+    if (activeEl) activeEl.style.display = '';
+    if (tuneEl)   tuneEl.textContent = tune;
+    if (timerEl)  timerEl.textContent = '0:00';
+    clearInterval(_ticker);
+    _ticker = setInterval(() => {
+      if (timerEl && _start) timerEl.textContent = fmtDuration(Math.floor((Date.now() - _start) / 1000));
+    }, 1000);
+  }
+
+  function sessionEnd() {
+    if (!_start) return;
+    clearInterval(_ticker);
+    const secs = Math.floor((Date.now() - _start) / 1000);
+    const rec = { tune: _tune, key: _key, bpm: _bpm, duration: secs, date: todayStr(), ts: Date.now() };
+    _start = null; _tune = null;
+    const activeEl = document.getElementById('pjActive');
+    if (activeEl) activeEl.style.display = 'none';
+    if (secs < MIN_SECS) return; // ignore accidental tune clicks
+    dbAdd(rec).then(() => refreshJournal()).catch(() => {});
+  }
+
+  // ── Journal rendering ──────────────────────────────────────────────────
+  function refreshJournal() {
+    dbGetAll().then(sessions => {
+      sessions.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+      const totalSecs = sessions.reduce((s, r) => s + (r.duration || 0), 0);
+      const h = Math.floor(totalSecs / 3600);
+      const m = Math.floor((totalSecs % 3600) / 60);
+
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('pjTotalSessions', sessions.length);
+      set('pjTotalTime', h + 'h ' + m + 'm');
+      const streak = calcStreak(sessions);
+      set('pjStreak', streak > 0 ? streak + ' day streak 🔥' : '');
+
+      const tbody = document.getElementById('pjTableBody');
+      if (tbody) {
+        tbody.innerHTML = sessions.length
+          ? sessions.slice(0, 10).map(r =>
+              `<tr><td>${(r.date || '').slice(5).replace('-', '/')}</td>` +
+              `<td title="${r.tune || ''}">${(r.tune || '—').slice(0, 22)}</td>` +
+              `<td>${r.key || '—'}</td><td>${r.bpm || '—'}</td>` +
+              `<td>${fmtDuration(r.duration || 0)}</td></tr>`
+            ).join('')
+          : '<tr><td colspan="5" class="pj-empty">No sessions yet — generate a lead sheet to begin tracking</td></tr>';
+      }
+
+      // Build count map then annotate the tune dropdown
+      _sessionCounts = {};
+      sessions.forEach(r => { if (r.tune) _sessionCounts[r.tune] = (_sessionCounts[r.tune] || 0) + 1; });
+      annotateDropdown();
+    }).catch(() => {});
+  }
+
+  // Append session count to each dropdown option.
+  // Uses dataset.baseName so re-annotation is idempotent after dropdown rebuilds.
+  function annotateDropdown() {
+    const sel = document.getElementById('tuneSel');
+    if (!sel) return;
+    Array.from(sel.options).forEach(opt => {
+      if (!opt.dataset.baseName) opt.dataset.baseName = opt.textContent;
+      const n = _sessionCounts[opt.value] || 0;
+      opt.textContent = n > 0 ? opt.dataset.baseName + '  ×' + n : opt.dataset.baseName;
+    });
+  }
+
+  // ── CSV export ─────────────────────────────────────────────────────────
+  function exportCSV(sessions) {
+    const rows = [['Date', 'Tune', 'Key', 'BPM', 'Duration (s)']];
+    sessions.sort((a, b) => (b.ts || 0) - (a.ts || 0))
+      .forEach(r => rows.push([r.date, r.tune, r.key, r.bpm, r.duration]));
+    const csv  = rows.map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'cp_practice_log.csv';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+
+  // ── Weighted random pick ───────────────────────────────────────────────
+  // Under-practiced tunes (0 sessions) get 4× the weight of well-practised ones (6+).
+  function weightedPick(entries) {
+    const pool = [];
+    entries.forEach(pair => {
+      const n = _sessionCounts[pair[0]] || 0;
+      const w = n === 0 ? 4 : n <= 2 ? 3 : n <= 5 ? 2 : 1;
+      for (let i = 0; i < w; i++) pool.push(pair);
+    });
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // ── Wire up all controls ───────────────────────────────────────────────
+  function init() {
+    refreshJournal();
+
+    // CSV export
+    document.getElementById('pjExportBtn')?.addEventListener('click', () => {
+      dbGetAll().then(exportCSV).catch(() => {});
+    });
+
+    // Start a session on Generate (fires after the existing render listener)
+    document.getElementById('generateBtn')?.addEventListener('click', () => {
+      const tune = document.getElementById('tuneSel')?.value;
+      const key  = document.getElementById('keySel')?.value;
+      const bpm  = parseInt(document.getElementById('bpmInput')?.value || '120', 10);
+      if (tune) sessionStart(tune, key, bpm);
+    }, { passive: true });
+
+    // End session when the tune selector changes (user switched tunes)
+    document.getElementById('tuneSel')?.addEventListener('change', sessionEnd, { passive: true });
+
+    // Weighted random — capture phase fires BEFORE the original bubble listener.
+    // Only intercepts when we have enough session data to apply weights meaningfully.
+    document.getElementById('randomTune')?.addEventListener('click', function(e) {
+      if (!Object.keys(_sessionCounts).length) return; // no data yet — fall through to original
+      e.stopImmediatePropagation();
+      const entries = typeof getFilteredTunes === 'function' ? getFilteredTunes() : [];
+      if (!entries.length) return;
+      const [name, t] = weightedPick(entries);
+      const tuneSel = document.getElementById('tuneSel');
+      const keySel  = document.getElementById('keySel');
+      const bpm     = parseInt(document.getElementById('bpmInput')?.value || '120', 10);
+      if (tuneSel) tuneSel.value = name;
+      if (keySel)  keySel.value  = t.key;
+      if (typeof buildFretboard        === 'function') buildFretboard();
+      if (typeof renderLeadSheet       === 'function') renderLeadSheet(name, t.key);
+      if (typeof updateSectionDropdown === 'function') updateSectionDropdown();
+      if (typeof updateGpBadge         === 'function') updateGpBadge();
+      if (typeof showToast             === 'function') showToast('🎲 ' + name + ' (weighted random)', 'info');
+      sessionStart(name, t.key, bpm);
+    }, true); // capture: true — fires before the original listener
+
+    // MutationObserver: re-annotate the dropdown whenever it's rebuilt by
+    // populateTuneDropdown() (e.g. after filter apply, search, or import).
+    const sel = document.getElementById('tuneSel');
+    if (sel) {
+      new MutationObserver(() => annotateDropdown()).observe(sel, { childList: true });
+    }
+
+    // End the session cleanly on page unload
+    window.addEventListener('pagehide', sessionEnd, { passive: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})(); // end practiceModule
 
 // ── Progressive Web App: service worker registration + offline indicator ───
 (function pwaInit() {
