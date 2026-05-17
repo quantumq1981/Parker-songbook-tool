@@ -869,6 +869,39 @@ details.panel.heads-panel summary { color: #ce93d8; }
 }
 .at-main-overlay.at-hidden { display:none; }
 
+/* ── Pitch detector fretboard highlight ─────────────────────────────────── */
+.fret.pitch-live {
+  background:#1a3a00 !important; border:2px solid #76ff03 !important;
+  color:#ccff90 !important; font-weight:700;
+  box-shadow:0 0 8px #76ff0388;
+}
+
+/* ── Pitch display panel ─────────────────────────────────────────────────── */
+.pitch-display {
+  display:none; margin:6px 0 4px;
+  background:#0a1a00; border:1px solid #4caf50; border-radius:6px;
+  padding:8px 12px; font-size:12px;
+}
+.pitch-display.pd-active { display:block; }
+.pitch-note {
+  font-size:36px; font-weight:900; color:#76ff03;
+  line-height:1; display:inline-block; min-width:50px; text-align:center;
+  font-family:Georgia,serif;
+}
+.pitch-meta { display:inline-flex; gap:10px; align-items:center; margin-left:12px; vertical-align:middle; }
+.pitch-cents { color:#aaa; font-size:11px; min-width:40px; }
+.pitch-inscale { font-size:12px; font-weight:700; padding:2px 8px; border-radius:10px; }
+.pitch-inscale.in  { background:#0a3a00; color:#76ff03; border:1px solid #4caf50; }
+.pitch-inscale.out { background:#3a0000; color:#ff5252; border:1px solid #d32f2f; }
+.pitch-meter-wrap { display:flex; align-items:center; gap:8px; margin-top:6px; }
+.pitch-meter-bar {
+  height:6px; border-radius:3px; background:#4caf50;
+  width:0; transition:width .1s, background .1s; min-width:0; max-width:100%;
+}
+.pitch-score { font-size:11px; color:var(--ink-dim); white-space:nowrap; }
+.pitch-privacy { font-size:10px; color:#555; margin-top:4px; }
+.btn-pitch-on { background:#1a3a00 !important; border-color:#4caf50 !important; color:#76ff03 !important; }
+
 /* ── Practice Journal ────────────────────────────────────────────────────── */
 .pj-active {
   font-size:12px; color:#81c784; padding:5px 10px; margin-bottom:8px;
@@ -1156,6 +1189,20 @@ details.panel.heads-panel summary { color: #ce93d8; }
       <button id="toggleMode" class="btn-sec">Mode: Chord Tones</button>
       <button id="toggleAudio" class="btn-sec">🎵 Audio: Chord</button>
       <button id="toggleResonance" class="btn-sec">🎸 Resonance: OFF</button>
+      <button id="togglePitch" class="btn-sec" title="Real-time pitch detection via microphone — audio stays on your device">🎤 Pitch: OFF</button>
+    </div>
+    <!-- Real-time pitch display (shown when mic is active) -->
+    <div class="pitch-display" id="pitchDisplay">
+      <div class="pitch-note" id="pitchNote">—</div>
+      <div class="pitch-meta">
+        <span class="pitch-cents" id="pitchCents">±0¢</span>
+        <span class="pitch-inscale" id="pitchInScale"></span>
+      </div>
+      <div class="pitch-meter-wrap">
+        <div class="pitch-meter-bar" id="pitchMeterBar"></div>
+        <div class="pitch-score" id="pitchScore"></div>
+      </div>
+      <div class="pitch-privacy">🔒 Audio processed locally — never leaves your device</div>
     </div>
     <div class="func-legend" id="funcLegend">
       <span class="fl-root">● Root (I)</span>
@@ -6100,6 +6147,207 @@ async function suggestNext() {
     atNotInit();
   }
 })(); // end alphaTabNotationModule
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REAL-TIME PITCH DETECTOR
+// Uses getUserMedia + AudioWorklet (js/pitch-processor.js, YIN algorithm)
+// to detect the fundamental frequency of the user's instrument in real time.
+// Highlights the detected note on the fretboard, shows name + cents deviation,
+// indicates whether the note is in the current bar's scale, and tracks an
+// in-scale percentage across the session.
+// Audio is processed entirely on-device — nothing leaves the browser.
+// ═══════════════════════════════════════════════════════════════════════════
+(function pitchModule() {
+  'use strict';
+
+  let pitchCtx   = null;  // dedicated AudioContext for pitch detection
+  let micStream  = null;  // MediaStream from getUserMedia
+  let workletNode = null; // AudioWorkletNode running the YIN processor
+  let isListening = false;
+
+  // In-scale tracking
+  let _inCount  = 0;  // detected notes that landed in the current bar's scale
+  let _totCount = 0;  // total detected notes this session
+
+  // ── Frequency → note conversion ───────────────────────────────────────
+  const NOTE_NAMES_SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const NOTE_NAMES_FLAT  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+
+  function freqToNote(freq) {
+    if (freq <= 0) return null;
+    // Equal-tempered: A4 = 440 Hz = MIDI 69
+    const raw    = 12 * Math.log2(freq / 440) + 69;
+    const midi   = Math.round(raw);
+    const cents  = Math.round((raw - midi) * 100);
+    const pc     = ((midi % 12) + 12) % 12;
+    return { pc, midi, cents, name: NOTE_NAMES_SHARP[pc], nameFlat: NOTE_NAMES_FLAT[pc] };
+  }
+
+  // ── In-scale check using lastBarData + SCALE_IVS ─────────────────────
+  function getScalePcs() {
+    if (typeof lastBarData === 'undefined' || !lastBarData) return null;
+    const { root, scale } = lastBarData;
+    if (!root || !scale) return null;
+    const sk   = scale.split('/')[0].trim();
+    const ivs  = (typeof SCALE_IVS !== 'undefined' && SCALE_IVS[sk]) || [0,2,4,5,7,9,11];
+    const ri   = (typeof NOTE_IDX !== 'undefined' && NOTE_IDX[root]) ?? 0;
+    return new Set(ivs.map(i => (ri + i) % 12));
+  }
+
+  // ── Fretboard: highlight detected pitch class ─────────────────────────
+  function highlightPc(pc) {
+    document.querySelectorAll('.fret').forEach(fr => {
+      if (parseInt(fr.dataset.idx, 10) === pc) {
+        fr.classList.add('pitch-live');
+      } else {
+        fr.classList.remove('pitch-live');
+      }
+    });
+  }
+
+  function clearHighlight() {
+    document.querySelectorAll('.fret.pitch-live').forEach(fr => fr.classList.remove('pitch-live'));
+  }
+
+  // ── UI update (called on each detected frequency) ─────────────────────
+  function onFrequency(freq) {
+    const noteEl    = document.getElementById('pitchNote');
+    const centsEl   = document.getElementById('pitchCents');
+    const inScaleEl = document.getElementById('pitchInScale');
+    const meterEl   = document.getElementById('pitchMeterBar');
+    const scoreEl   = document.getElementById('pitchScore');
+
+    if (freq < 0) {
+      // Silence / no pitch detected
+      if (noteEl)  noteEl.textContent = '—';
+      if (centsEl) centsEl.textContent = '±0¢';
+      if (inScaleEl) { inScaleEl.textContent = ''; inScaleEl.className = 'pitch-inscale'; }
+      clearHighlight();
+      return;
+    }
+
+    const note = freqToNote(freq);
+    if (!note) return;
+
+    // Note name
+    if (noteEl) noteEl.textContent = note.name;
+
+    // Cents deviation with sign
+    const sign = note.cents >= 0 ? '+' : '';
+    if (centsEl) centsEl.textContent = sign + note.cents + '¢';
+
+    // In-scale check
+    const scalePcs = getScalePcs();
+    if (scalePcs) {
+      const inScale = scalePcs.has(note.pc);
+      _totCount++;
+      if (inScale) _inCount++;
+      if (inScaleEl) {
+        inScaleEl.textContent = inScale ? '✓ in scale' : '○ out of scale';
+        inScaleEl.className   = 'pitch-inscale ' + (inScale ? 'in' : 'out');
+      }
+      // Running in-scale % meter
+      const pct = _totCount > 0 ? Math.round((_inCount / _totCount) * 100) : 0;
+      if (meterEl) {
+        meterEl.style.width      = pct + '%';
+        meterEl.style.background = pct >= 80 ? '#76ff03' : pct >= 60 ? '#ffeb3b' : '#ff5722';
+      }
+      if (scoreEl) scoreEl.textContent = pct + '% in-scale (' + _totCount + ' notes)';
+    } else {
+      if (inScaleEl) { inScaleEl.textContent = ''; inScaleEl.className = 'pitch-inscale'; }
+    }
+
+    // Fretboard highlight
+    highlightPc(note.pc);
+  }
+
+  // ── Start microphone + AudioWorklet ───────────────────────────────────
+  async function startListening() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      if (typeof showToast === 'function') showToast('Microphone API not supported in this browser', 'error');
+      return;
+    }
+    if (!window.AudioWorklet) {
+      if (typeof showToast === 'function') showToast('AudioWorklet not supported — try Chrome or Firefox', 'error');
+      return;
+    }
+
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      });
+    } catch (err) {
+      const msg = err.name === 'NotAllowedError' ? 'Microphone access denied' : 'Could not access microphone: ' + err.message;
+      if (typeof showToast === 'function') showToast(msg, 'error');
+      return;
+    }
+
+    try {
+      pitchCtx = new AudioContext({ latencyHint: 'interactive' });
+      // Resolve the worklet path relative to the page URL so it works in both
+      // GitHub Pages subdirectory and local-server setups.
+      const workerUrl = new URL('./js/pitch-processor.js', document.baseURI).href;
+      await pitchCtx.audioWorklet.addModule(workerUrl);
+      const src = pitchCtx.createMediaStreamSource(micStream);
+      workletNode = new AudioWorkletNode(pitchCtx, 'pitch-processor');
+      workletNode.port.onmessage = e => onFrequency(e.data);
+      src.connect(workletNode);
+      // workletNode intentionally NOT connected to destination (silent monitoring)
+      isListening = true;
+    } catch (err) {
+      stopListening();
+      if (typeof showToast === 'function') showToast('Pitch detector init failed: ' + err.message, 'error');
+    }
+  }
+
+  // ── Stop and clean up ─────────────────────────────────────────────────
+  function stopListening() {
+    isListening = false;
+    if (workletNode) { try { workletNode.disconnect(); } catch(e) {} workletNode = null; }
+    if (pitchCtx)    { try { pitchCtx.close(); }         catch(e) {} pitchCtx    = null; }
+    if (micStream)   { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    clearHighlight();
+    _inCount = 0; _totCount = 0;
+    const display = document.getElementById('pitchDisplay');
+    if (display) display.classList.remove('pd-active');
+  }
+
+  // ── Toggle button ─────────────────────────────────────────────────────
+  function init() {
+    const btn = document.getElementById('togglePitch');
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+      if (isListening) {
+        stopListening();
+        btn.textContent = '🎤 Pitch: OFF';
+        btn.classList.remove('btn-pitch-on');
+      } else {
+        btn.textContent = '⏳ Starting…';
+        btn.disabled = true;
+        await startListening();
+        btn.disabled = false;
+        if (isListening) {
+          btn.textContent = '🎤 Pitch: ON';
+          btn.classList.add('btn-pitch-on');
+          const display = document.getElementById('pitchDisplay');
+          if (display) display.classList.add('pd-active');
+        } else {
+          btn.textContent = '🎤 Pitch: OFF';
+        }
+      }
+    });
+
+    // Stop on page unload
+    window.addEventListener('pagehide', stopListening, { passive: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})(); // end pitchModule
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PRACTICE SESSION TRACKER

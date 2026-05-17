@@ -1,7 +1,7 @@
 'use strict';
 
 // Bump this string whenever the app shell changes to force cache refresh.
-const CACHE = 'cp-songbook-v1';
+const CACHE = 'cp-songbook-v2';
 
 // Core app shell — pre-cached at install so the page works offline from the
 // very first load after the SW is installed.
@@ -18,6 +18,7 @@ const SHELL = [
   './js/jazzChordDatabase.js',
   './js/resonanceEngine.js',
   './js/svguitar.umd.js',
+  './js/pitch-processor.js',
 ];
 
 // CDN hostnames whose responses should be cached on first use.
