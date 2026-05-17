@@ -2613,6 +2613,13 @@ function getSectionsForSong(tune) {
   if (tune && tune.sections) return tune.sections;
   const form = (tune && tune.form) || 'AABA';
   const bars = (tune && tune.bars) || 32;
+  if (form === 'Blues') {
+    return [
+      { name: 'Phrase 1', startBar: 1,  endBar: 4 },
+      { name: 'Phrase 2', startBar: 5,  endBar: 8 },
+      { name: 'Phrase 3', startBar: 9,  endBar: bars }
+    ];
+  }
   const sectionLen = bars / form.length;
   const seen = {};
   return [...form].map(function(letter, i) {
@@ -3490,8 +3497,9 @@ function resolveLoopRange(bars) {
   }
   if (mode === 'sectionA') {
     const idx = bars.findIndex(b => (b.dataset.section || '').startsWith('§ A'));
+    if (idx === -1) return { start: 0, end: bars.length - 1 };
     const end = bars.findIndex((b,i) => i > idx && !(b.dataset.section || '').startsWith('§ A'));
-    return { start: Math.max(0, idx), end: (end === -1 ? bars.length : end) - 1 };
+    return { start: idx, end: (end === -1 ? bars.length : end) - 1 };
   }
   if (mode === 'sectionB') {
     const idx = bars.findIndex(b => /B|Bridge/.test(b.dataset.section || ''));
