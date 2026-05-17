@@ -3978,6 +3978,7 @@ document.getElementById('printBtn').addEventListener('click', printLeadSheet);
 tuneSel.value = 'Anthropology'; keySel.value = 'Bb';
 renderLeadSheet('Anthropology','Bb');
 updateSectionDropdown();
+updateGpBadge();
 document.getElementById('loopTargetSel').dispatchEvent(new Event('change'));
 
 /* ============================================================
@@ -4048,6 +4049,7 @@ function _loadAndApplyPrefs() {
     buildFretboard();
     renderLeadSheet(savedTune, savedKey);
     updateSectionDropdown();
+    updateGpBadge();
   }
 }
 
@@ -5709,15 +5711,16 @@ async function suggestNext() {
   // ── Helpers ────────────────────────────────────────────────────────────
 
   // Semitone delta from originalKey → targetKey, mapped to [-5, +6]
+  // NOTE_IDX is a const in the outer script scope — accessible directly, not via window.*
   function getSemitones(originalKey, targetKey) {
-    if (!window.NOTE_IDX || !originalKey || !targetKey) return 0;
+    if (!originalKey || !targetKey) return 0;
     const iv = ((NOTE_IDX[targetKey] - NOTE_IDX[originalKey]) % 12 + 12) % 12;
     return iv > 6 ? iv - 12 : iv;
   }
 
   // Look up the composed key for a tune from the global SONGS object
+  // SONGS is a const in the outer script scope — accessible directly, not via window.*
   function getTuneOriginalKey(tuneName) {
-    if (!window.SONGS) return null;
     const name = typeof canonicalTuneTitle === 'function'
       ? canonicalTuneTitle(tuneName) : tuneName;
     return (SONGS[name] || SONGS[tuneName])?.key || null;
