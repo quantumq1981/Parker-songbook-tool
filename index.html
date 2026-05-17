@@ -5,6 +5,10 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Charlie Parker Songbook Trainer v7.0</title>
+<meta name="theme-color" content="#1a0d2e"/>
+<meta name="description" content="Interactive bebop practice tool — 46 Charlie Parker tunes, AI resonance engine, guitar fretboard, AlphaTab notation"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icons/icon.svg"/>
 <script src="https://unpkg.com/svguitar@1.7.1/dist/svguitar.umd.js" data-svguitar-lib="cdn"></script>
 <script src="./js/svguitar.umd.js" data-svguitar-lib="local" onerror="console.warn('Local SVGuitar fallback failed to load')"></script>
 <style>
@@ -864,11 +868,22 @@ details.panel.heads-panel summary { color: #ce93d8; }
   background:rgba(10,5,20,0.88); z-index:10;
 }
 .at-main-overlay.at-hidden { display:none; }
+
+/* ── Offline banner ───────────────────────────────────────────────────────── */
+#offlineBanner {
+  display:none; position:fixed; top:0; left:0; right:0; z-index:9999;
+  background:#7b1fa2; color:#fff; text-align:center;
+  padding:6px 12px; font-size:12px; font-weight:600; letter-spacing:.04em;
+}
+#offlineBanner.offline-visible { display:block; }
 </style>
 
 
 </head>
 <body>
+<div id="offlineBanner" role="status" aria-live="polite">
+  📵 You are offline — serving cached version
+</div>
 <a class="skip-link" href="#sheet">Skip to lead sheet</a>
 <h1>🎷 Charlie Parker Songbook Trainer</h1>
 <p class="app-tagline" aria-hidden="true">Interactive Bebop Practice Tool · AI Resonance Engine · Guitar Fretboard Visualizer</p>
@@ -6041,6 +6056,27 @@ async function suggestNext() {
     atNotInit();
   }
 })(); // end alphaTabNotationModule
+
+// ── Progressive Web App: service worker registration + offline indicator ───
+(function pwaInit() {
+  // Service worker — only available over HTTPS (or localhost)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js')
+        .catch(err => console.warn('SW registration failed:', err));
+    });
+  }
+
+  // Offline / online banner
+  const banner = document.getElementById('offlineBanner');
+  function updateOnlineStatus() {
+    if (!banner) return;
+    banner.classList.toggle('offline-visible', !navigator.onLine);
+  }
+  window.addEventListener('online',  updateOnlineStatus, { passive: true });
+  window.addEventListener('offline', updateOnlineStatus, { passive: true });
+  updateOnlineStatus(); // set correct state on initial load
+})();
 
 </script>
 

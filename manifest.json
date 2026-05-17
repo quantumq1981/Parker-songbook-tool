@@ -1,0 +1,20 @@
+{
+  "name": "Charlie Parker Songbook Trainer",
+  "short_name": "CP Songbook",
+  "description": "Interactive bebop practice tool — 46 tunes, AI resonance engine, guitar fretboard, AlphaTab notation",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#1a0d2e",
+  "background_color": "#0a0515",
+  "categories": ["music", "education"],
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
