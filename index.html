@@ -5344,24 +5344,61 @@ async function suggestNext() {
 (function alphaTabHeadsModule() {
   'use strict';
 
-  // GuitarPro files served via GitHub Pages from /docs/ — alphaTab auto-detects
-  // format from binary headers; no AlphaTex conversion required.
+  // Notation files served via GitHub Pages from /docs/.
+  // GP files: full transcriptions. XML files: omnibook_xml/ subdir (MusicXML).
+  // alphaTab auto-detects format from headers / file extension.
   const OMNIBOOK_BASE = 'https://quantumq1981.github.io/Parker-songbook-tool/docs/';
   const OMNIBOOK_TUNES = [
-    { name: 'Anthropology',        file: 'Charlie Parker - Anthropology.gp5' },
-    { name: 'Au Privave',          file: 'Charlie Parker - Au Privave.gp5' },
-    { name: "Billie's Bounce",     file: 'Charlie Parker - Billies Bounce.gp4' },
-    { name: 'Bloomdido',           file: 'Charlie Parker - Bloomdido.gp' },
-    { name: 'Blues for Alice',     file: 'Charlie Parker - Blues For Alice (ver 2).gp5' },
-    { name: 'Confirmation',        file: 'Charlie Parker - Confirmation.gp' },
-    { name: 'Donna Lee',           file: 'Charlie Parker - Donna Lee.gp3' },
-    { name: 'Loverman',            file: 'Charlie Parker - Loverman.gp5' },
-    { name: 'Moose the Mooche',    file: 'Charlie Parker - Moose The Mooche.gpx' },
-    { name: "Now's the Time",      file: 'Charlie Parker - Nows The Time.gp5' },
-    { name: 'Ornithology',         file: 'Charlie Parker - Ornithology.gp3' },
-    { name: "Parker's Mood",       file: 'Charlie Parker - Parkers Mood.gp4' },
-    { name: 'Yardbird Suite',      file: 'Charlie Parker - Yardbird Suite.gpx' },
-    { name: 'Cheryl',              file: 'parker_charlie-cheryl.gp4' },
+    // ── GP transcriptions (full notation + tablature) ──────────────────
+    { name: 'Anthropology',           file: 'Charlie Parker - Anthropology.gp5' },
+    { name: 'Au Privave',             file: 'Charlie Parker - Au Privave.gp5' },
+    { name: "Billie's Bounce",        file: 'Charlie Parker - Billies Bounce.gp4' },
+    { name: 'Bloomdido',              file: 'Charlie Parker - Bloomdido.gp' },
+    { name: 'Blues for Alice',        file: 'Charlie Parker - Blues For Alice (ver 2).gp5' },
+    { name: 'Cheryl',                 file: 'parker_charlie-cheryl.gp4' },
+    { name: 'Confirmation',           file: 'Charlie Parker - Confirmation.gp' },
+    { name: 'Donna Lee',              file: 'Charlie Parker - Donna Lee.gp3' },
+    { name: 'Lover Man',              file: 'Charlie Parker - Loverman.gp5' },
+    { name: 'Moose the Mooche',       file: 'Charlie Parker - Moose The Mooche.gpx' },
+    { name: "Now's the Time",         file: 'Charlie Parker - Nows The Time.gp5' },
+    { name: 'Ornithology',            file: 'Charlie Parker - Ornithology.gp3' },
+    { name: "Parker's Mood",          file: 'Charlie Parker - Parkers Mood.gp4' },
+    { name: 'Yardbird Suite',         file: 'Charlie Parker - Yardbird Suite.gpx' },
+    // ── MusicXML transcriptions (AutoImprov Omnibook collection) ───────
+    { name: 'An Oscar for Treadwell', file: 'omnibook_xml/An_Oscar_For_Treadwell.xml' },
+    { name: 'Another Hairdo',         file: 'omnibook_xml/Another_Hairdo.xml' },
+    { name: 'Back Home Blues',        file: 'omnibook_xml/Back_Home_Blues.xml' },
+    { name: 'Barbados',               file: 'omnibook_xml/Barbados.xml' },
+    { name: 'Bird Gets the Worm',     file: "omnibook_xml/Bird_Gets_The_Worm.xml" },
+    { name: 'Blue Bird',              file: 'omnibook_xml/Blue_Bird.xml' },
+    { name: 'Buzzy',                  file: 'omnibook_xml/Buzzy.xml' },
+    { name: 'Card Board',             file: 'omnibook_xml/Card_Board.xml' },
+    { name: 'Celerity',               file: 'omnibook_xml/Celerity.xml' },
+    { name: 'Chasing the Bird',       file: 'omnibook_xml/Chasing_The_Bird.xml' },
+    { name: 'Chi Chi',                file: 'omnibook_xml/Chi_Chi.xml' },
+    { name: 'Cosmic Rays',            file: 'omnibook_xml/Cosmic_Rays.xml' },
+    { name: 'Dewey Square',           file: 'omnibook_xml/Dewey_Square.xml' },
+    { name: 'Diverse',                file: 'omnibook_xml/Diverse.xml' },
+    { name: 'KC Blues',               file: 'omnibook_xml/KC_Blues.xml' },
+    { name: 'Kim',                    file: 'omnibook_xml/Kim_1.xml' },
+    { name: 'Ko-Ko',                  file: 'omnibook_xml/Ko_Ko.xml' },
+    { name: 'Laird Baird',            file: 'omnibook_xml/Laird_Baird.xml' },
+    { name: 'Marmaduke',              file: 'omnibook_xml/Marmaduke.xml' },
+    { name: 'Mohawk',                 file: 'omnibook_xml/Mohawk_1.xml' },
+    { name: 'My Little Suede Shoes',  file: 'omnibook_xml/My_Little_Suede_Shoes.xml' },
+    { name: 'Passport',               file: 'omnibook_xml/Passport.xml' },
+    { name: 'Perhaps',                file: 'omnibook_xml/Perhaps.xml' },
+    { name: 'Red Cross',              file: 'omnibook_xml/Red_Cross.xml' },
+    { name: 'Relaxing With Lee',      file: 'omnibook_xml/Relaxing_With_Lee.xml' },
+    { name: 'Scrapple from the Apple',file: 'omnibook_xml/Scrapple_From_The_Apple.xml' },
+    { name: 'Segment',                file: 'omnibook_xml/Segment.xml' },
+    { name: 'Shawnuff',               file: 'omnibook_xml/Shawnuff.xml' },
+    { name: 'Si Si',                  file: 'omnibook_xml/Si_Si.xml' },
+    { name: 'Steeplechase',           file: 'omnibook_xml/Steeplechase.xml' },
+    { name: 'The Bird',               file: 'omnibook_xml/The_Bird.xml' },
+    { name: 'Thriving From a Riff',   file: 'omnibook_xml/Thriving_From_A_Riff.xml' },
+    { name: 'Visa',                   file: 'omnibook_xml/Visa.xml' },
+    { name: 'Warming Up a Riff',      file: 'omnibook_xml/Warming_Up_A_Riff.xml' },
   ];
 
   // ── alphaTab state ────────────────────────────────────────────────────
@@ -6041,23 +6078,60 @@ async function suggestNext() {
 (function alphaTabNotationModule() {
   'use strict';
 
-  // Same GuitarPro catalog as the Heads Library panel
+  // Full catalog — GP files (preferred) + MusicXML for remaining tunes.
+  // Mirrors the Heads Library panel catalog exactly.
   const OMNIBOOK_BASE = 'https://quantumq1981.github.io/Parker-songbook-tool/docs/';
   const OMNIBOOK_TUNES = [
-    { name: 'Anthropology',        file: 'Charlie Parker - Anthropology.gp5' },
-    { name: 'Au Privave',          file: 'Charlie Parker - Au Privave.gp5' },
-    { name: "Billie's Bounce",     file: 'Charlie Parker - Billies Bounce.gp4' },
-    { name: 'Bloomdido',           file: 'Charlie Parker - Bloomdido.gp' },
-    { name: 'Blues for Alice',     file: 'Charlie Parker - Blues For Alice (ver 2).gp5' },
-    { name: 'Confirmation',        file: 'Charlie Parker - Confirmation.gp' },
-    { name: 'Donna Lee',           file: 'Charlie Parker - Donna Lee.gp3' },
-    { name: 'Loverman',            file: 'Charlie Parker - Loverman.gp5' },
-    { name: 'Moose the Mooche',    file: 'Charlie Parker - Moose The Mooche.gpx' },
-    { name: "Now's the Time",      file: 'Charlie Parker - Nows The Time.gp5' },
-    { name: 'Ornithology',         file: 'Charlie Parker - Ornithology.gp3' },
-    { name: "Parker's Mood",       file: 'Charlie Parker - Parkers Mood.gp4' },
-    { name: 'Yardbird Suite',      file: 'Charlie Parker - Yardbird Suite.gpx' },
-    { name: 'Cheryl',              file: 'parker_charlie-cheryl.gp4' },
+    // ── GP transcriptions ──────────────────────────────────────────────
+    { name: 'Anthropology',           file: 'Charlie Parker - Anthropology.gp5' },
+    { name: 'Au Privave',             file: 'Charlie Parker - Au Privave.gp5' },
+    { name: "Billie's Bounce",        file: 'Charlie Parker - Billies Bounce.gp4' },
+    { name: 'Bloomdido',              file: 'Charlie Parker - Bloomdido.gp' },
+    { name: 'Blues for Alice',        file: 'Charlie Parker - Blues For Alice (ver 2).gp5' },
+    { name: 'Cheryl',                 file: 'parker_charlie-cheryl.gp4' },
+    { name: 'Confirmation',           file: 'Charlie Parker - Confirmation.gp' },
+    { name: 'Donna Lee',              file: 'Charlie Parker - Donna Lee.gp3' },
+    { name: 'Lover Man',              file: 'Charlie Parker - Loverman.gp5' },
+    { name: 'Moose the Mooche',       file: 'Charlie Parker - Moose The Mooche.gpx' },
+    { name: "Now's the Time",         file: 'Charlie Parker - Nows The Time.gp5' },
+    { name: 'Ornithology',            file: 'Charlie Parker - Ornithology.gp3' },
+    { name: "Parker's Mood",          file: 'Charlie Parker - Parkers Mood.gp4' },
+    { name: 'Yardbird Suite',         file: 'Charlie Parker - Yardbird Suite.gpx' },
+    // ── MusicXML transcriptions (AutoImprov Omnibook collection) ───────
+    { name: 'An Oscar for Treadwell', file: 'omnibook_xml/An_Oscar_For_Treadwell.xml' },
+    { name: 'Another Hairdo',         file: 'omnibook_xml/Another_Hairdo.xml' },
+    { name: 'Back Home Blues',        file: 'omnibook_xml/Back_Home_Blues.xml' },
+    { name: 'Barbados',               file: 'omnibook_xml/Barbados.xml' },
+    { name: 'Bird Gets the Worm',     file: 'omnibook_xml/Bird_Gets_The_Worm.xml' },
+    { name: 'Blue Bird',              file: 'omnibook_xml/Blue_Bird.xml' },
+    { name: 'Buzzy',                  file: 'omnibook_xml/Buzzy.xml' },
+    { name: 'Card Board',             file: 'omnibook_xml/Card_Board.xml' },
+    { name: 'Celerity',               file: 'omnibook_xml/Celerity.xml' },
+    { name: 'Chasing the Bird',       file: 'omnibook_xml/Chasing_The_Bird.xml' },
+    { name: 'Chi Chi',                file: 'omnibook_xml/Chi_Chi.xml' },
+    { name: 'Cosmic Rays',            file: 'omnibook_xml/Cosmic_Rays.xml' },
+    { name: 'Dewey Square',           file: 'omnibook_xml/Dewey_Square.xml' },
+    { name: 'Diverse',                file: 'omnibook_xml/Diverse.xml' },
+    { name: 'KC Blues',               file: 'omnibook_xml/KC_Blues.xml' },
+    { name: 'Kim',                    file: 'omnibook_xml/Kim_1.xml' },
+    { name: 'Ko-Ko',                  file: 'omnibook_xml/Ko_Ko.xml' },
+    { name: 'Laird Baird',            file: 'omnibook_xml/Laird_Baird.xml' },
+    { name: 'Marmaduke',              file: 'omnibook_xml/Marmaduke.xml' },
+    { name: 'Mohawk',                 file: 'omnibook_xml/Mohawk_1.xml' },
+    { name: 'My Little Suede Shoes',  file: 'omnibook_xml/My_Little_Suede_Shoes.xml' },
+    { name: 'Passport',               file: 'omnibook_xml/Passport.xml' },
+    { name: 'Perhaps',                file: 'omnibook_xml/Perhaps.xml' },
+    { name: 'Red Cross',              file: 'omnibook_xml/Red_Cross.xml' },
+    { name: 'Relaxing With Lee',      file: 'omnibook_xml/Relaxing_With_Lee.xml' },
+    { name: 'Scrapple from the Apple',file: 'omnibook_xml/Scrapple_From_The_Apple.xml' },
+    { name: 'Segment',                file: 'omnibook_xml/Segment.xml' },
+    { name: 'Shawnuff',               file: 'omnibook_xml/Shawnuff.xml' },
+    { name: 'Si Si',                  file: 'omnibook_xml/Si_Si.xml' },
+    { name: 'Steeplechase',           file: 'omnibook_xml/Steeplechase.xml' },
+    { name: 'The Bird',               file: 'omnibook_xml/The_Bird.xml' },
+    { name: 'Thriving From a Riff',   file: 'omnibook_xml/Thriving_From_A_Riff.xml' },
+    { name: 'Visa',                   file: 'omnibook_xml/Visa.xml' },
+    { name: 'Warming Up a Riff',      file: 'omnibook_xml/Warming_Up_A_Riff.xml' },
   ];
 
   // Resolve AlphaTab enum values at runtime so the code is safe across builds.
