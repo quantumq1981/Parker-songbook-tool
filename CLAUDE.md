@@ -1,234 +1,180 @@
-# CLAUDE.md — Parker Songbook Tool: Redesign & Enhancement Log
+# CLAUDE.md — Parker Songbook Tool: Complete Development Log
 
 ## Project Overview
 
 **Application:** Charlie Parker Songbook Trainer  
-**Version:** 7.0 → 7.1 (Enhanced Edition)  
+**Version:** 7.0 → 7.2 (Enhanced Edition)  
 **Tech Stack:** Vanilla JavaScript SPA, pure CSS, no build system  
-**Entry Point:** `index.html` (single file, ~3,400 lines)  
-**Branch:** `claude/redesign-songbook-tool-0vLDm`
+**Entry Point:** `index.html` (single file, ~6,500+ lines)  
+**Active Branch:** `claude/alphatab-notation-integration-QkYOX`
 
 ---
 
-## Codebase Analysis Summary
+## Codebase Architecture
 
-### Architecture
 - Single HTML file SPA with inline CSS, HTML, and JavaScript
-- 8 external JavaScript modules in `/js/`
-- Advanced Resonance Engine in `/src/features/resonance-engine/`
+- 9 external JavaScript modules in `/js/` (including `pitch-processor.js`)
+- Resonance Engine in `/src/features/resonance-engine/`
 - Pure CSS design system with CSS custom properties
 - No framework (no React/Vue/Svelte), no build tool, no package manager
-- CDN dependencies: SVGuitar 1.7.1, JSZip 3.10.1
-- Web Audio API for synthesis (oscillators, gain nodes)
-- 46 total songs (18 core Parker + 28 Omnibook additions)
+- CDN dependencies: AlphaTab `@coderline/alphatab@latest`, SVGuitar 1.7.1, JSZip 3.10.1
+- Web Audio API for synthesis + AudioWorklet for real-time pitch detection
+- IndexedDB for practice session storage
+- Service Worker for offline/PWA support
+- **66 total songs** (22 core SONGS object + 44 OMNIBOOK_ADDITIONS)
 
-### Features Preserved (All Intact)
-- Song selection dropdown (46 tunes) with random selection
-- Key transposition (all 12 keys)
-- Lead sheet generation (fake-book style with Roman numerals)
-- Chord voicing modal (SVGuitar diagrams, multiple voicings)
-- Interactive fretboard visualizer (3 modes: Chord Tones, Full Scale, Functional Harmony)
-- Playback engine with BPM control, loop modes, count-in, metronome, tempo trainer
-- Bebop backing track (ride cymbal, hi-hat, walking bass, shell comping)
-- Scale library (27 scales across 4 categories)
-- Chord-scale analysis panel (compatible scales, tensions, resolutions)
-- Pattern detection (ii-V-I, turnarounds, tritone substitutions)
-- Resonance Engine (gravity-based AI lick generator with fretboard overlay)
-- Section Lick Generator with multi-format export (ASCII TAB, AlphaTex, MusicXML, MIDI, ZIP)
-- Print functionality (opens popup with professional fake-book layout)
-- Filter panel (by form, difficulty, style)
+---
+
+## Song Library (66 Total)
+
+### Core SONGS (22)
+Anthropology, Au Privave, Barbados, Billie's Bounce, Bloomdido, Blues for Alice, Cheryl, Chi Chi, Confirmation, Dewey Square, Donna Lee, Ko-Ko, Moose the Mooche, Now's the Time, Ornithology, Relaxin' at Camarillo, Scrapple from the Apple, Yardbird Suite, Parker's Mood, Embraceable You, Oh, Lady Be Good, Crazeology
+
+### Omnibook Additions (44)
+An Oscar for Treadwell, Another Hairdo, Back Home Blues, Bird Gets the Worm, Blue Bird, Buzzy, Card Board, Celerity, Chasing the Bird, Cosmic Rays, Diverse, KC Blues, Kim, Laird Baird, Marmaduke, Mohawk, My Little Suede Shoes, Passport, Perhaps, Red Cross, Relaxing With Lee, Segment, Shawnuff, Si Si, Steeplechase, The Bird, Thriving From a Riff, Visa, Warming Up a Riff, Ah-Leu-Cha, Cool Blues, Constellation, Celebrity, Drifting on a Reed, Leap Frog, Little Willie Leaps, The Hymn, Stupendous, Bongo Bop, Lover Man, Quasimodo, Salt Peanuts, Tiny's Tempo, Meandering
+
+### Source / Deduplication
+- 46 unique tunes sourced from `docs/omnibook_xml (1).zip` (AutoImprov MusicXML collection) — all are present  
+- Duplicates consolidated: Au Private 1+2 → Au Privave; Kim 1+2 → Kim; Mohawk 1+2 → Mohawk; Now's The Time 1+2 → Now's the Time; Ko Ko → Ko-Ko  
+- 15 additional Parker heads added manually (session 2026-05-19): Ah-Leu-Cha, Cool Blues, Constellation, Celebrity, Drifting on a Reed, Leap Frog, Little Willie Leaps, The Hymn, Stupendous, Bongo Bop, Lover Man, Quasimodo, Salt Peanuts, Tiny's Tempo, Meandering
 
 ---
 
 ## Bugs Found & Fixed
 
 ### 1. Missing CSS Variables (`--border`, `--card`)
-**Location:** `index.html` lines 680, 687 (inline styles on `#sectionSelect` and `#sectionTabDisplay`)  
-**Issue:** The Section Lick Generator panel used `var(--border)` and `var(--card)` CSS custom properties that were never defined in `:root`. This caused these elements to render with no border color and a transparent background.  
-**Fix:** Added `--border: var(--barline)` and `--card: var(--panel)` as aliases in the `:root` block, along with new design tokens `--radius`, `--transition`, `--shadow-md`, `--focus-ring`.
+**Location:** `index.html` (inline styles on `#sectionSelect` and `#sectionTabDisplay`)  
+**Fix:** Added `--border: var(--barline)` and `--card: var(--panel)` as aliases in `:root`, plus new design tokens `--radius`, `--transition`, `--shadow-md`, `--focus-ring`.
 
 ### 2. JSZip CDN Failure — No Error Handling
-**Location:** `<script src="jszip...">` tag  
-**Issue:** If the JSZip CDN failed to load, the script tag had no `onerror` handler, so the failure was silent.  
-**Fix:** Added `onerror="console.warn('JSZip CDN failed to load — ZIP export unavailable')"` to the script tag. Additionally, the `exportSectionZip` function is now wrapped to show a toast notification instead of a bare `alert()` when JSZip is unavailable.
+**Fix:** Added `onerror` handler to JSZip `<script>` tag. `exportSectionZip` wrapped to show a toast instead of bare `alert()` when JSZip is unavailable.
 
 ### 3. Missing ARIA Live Regions
-**Location:** Multiple status elements throughout the page  
-**Issue:** Dynamic status updates (playback status, audio status, resonance status, analysis panel) were not announced to screen readers.  
-**Fix:** Added `aria-live="polite"` and `role="status"` to:
-- `#playStatus` — playback progress messages
-- `#audioStatus` — audio enable/ready messages  
-- `#resonanceStatus` — resonance engine status
-- `#analysisChord` — chord-scale analysis text
-- `#statsBar` — songbook statistics
+**Fix:** Added `aria-live="polite"` and `role="status"` to `#playStatus`, `#audioStatus`, `#resonanceStatus`, `#analysisChord`, `#statsBar`.
 
 ### 4. Misleading H2 Text
-**Location:** `index.html` line 313  
-**Issue:** H2 said "18 Bebop Classics — PRO Edition" but the app contains 46 tunes.  
-**Fix:** Updated to "Complete Bebop Songbook" (accurate description).
+**Fix:** Updated from "18 Bebop Classics — PRO Edition" to "Complete Bebop Songbook".
 
 ### 5. Missing Semantic HTML Landmarks
-**Location:** Body structure  
-**Issue:** The main content area was an unstyled `<div class="card">` with no landmark role. No skip navigation link existed. Screen reader users had to tab through all navigation to reach content.  
-**Fix:** Changed `<div class="card">` to `<main class="card" role="main">`. Added `<a class="skip-link" href="#sheet">` for keyboard/screen reader access.
+**Fix:** Changed `<div class="card">` to `<main class="card" role="main">`. Added `<a class="skip-link" href="#sheet">`.
+
+### 6. AlphaTab Transposition — `window.*` False Guards
+**Location:** `alphaTabNotationModule` — `getSemitones()` and `getTuneOriginalKey()`  
+**Issue:** Guards used `window.NOTE_IDX` and `window.SONGS` which are `const` top-level declarations and therefore NOT properties of `window`. Guards always evaluated false; transposition always returned 0; original key always returned null.  
+**Fix:** Removed `window.*` guards; access `NOTE_IDX`/`SONGS` directly from enclosing scope.
+
+### 7. GP Badge Not Appearing on Load
+**Issue:** `updateGpBadge()` was never called at startup or on preference restore, so the AlphaTab notation badge only appeared after user interaction.  
+**Fix:** Added `updateGpBadge()` call after `renderLeadSheet()` in both the startup sequence and `_loadAndApplyPrefs()`.
 
 ---
 
-## Design & Accessibility Improvements
+## Features Added
 
-### Accessibility (WCAG Compliance)
+### 1. AlphaTab Notation Integration
+- AlphaTab CDN library `@coderline/alphatab@latest` loaded with AudioWorklet SoundFont
+- GP file loading from `/docs/` directory (13 GP/GPX files bundled)
+- Notation tab inside the lead sheet panel; renders standard notation + tablature
+- Transposition via `getSemitones()` + AlphaTab `settings.display.transpositionPitches`
+- GP badge indicator on song name when a GP file is available
+- AlphaTex export from Section Lick Generator
 
-| Improvement | WCAG Criteria | Implementation |
-|-------------|--------------|----------------|
-| Skip navigation link | 2.4.1 Bypass Blocks | `.skip-link` element, focus-reveal via CSS |
-| ARIA live regions | 4.1.3 Status Messages | `aria-live="polite"` on all dynamic status elements |
-| Semantic landmarks | 1.3.1 Info & Relationships | `<main role="main">`, `role="search"`, `role="status"` |
-| Focus ring visibility | 2.4.7 Focus Visible | `*:focus-visible` global ring + component-level `box-shadow` |
-| Keyboard shortcuts | 2.1.1 Keyboard | Space=Play/Stop, R=Random, G=Generate, Esc=Stop |
-| Search role | 1.3.1 Info & Relationships | `role="search"` on quick search container |
-| ARIA labels | 1.3.1 Info & Relationships | Added `aria-label` to stats bar, main landmark, search |
+### 2. Progressive Web App (PWA)
+- `service-worker.js`: cache-first strategy for all app shell assets and CDN resources
+- `manifest.json`: standalone display, theme color, maskable SVG icon
+- `icons/icon.svg`: treble clef on dark purple background
+- Offline banner (`#offlineBanner`) shown when `navigator.onLine` is false
+- Cache version: `cp-songbook-v2`; bump on any shell change
 
-### New Features Added
+### 3. Practice Session Tracker
+- IndexedDB database `cp_practice_db` v1, store `sessions` with `by_tune` + `by_date` indexes
+- Auto-start session when tune is selected/changed; auto-stop on app close
+- `#practicePanel` (`<details>`) collapsible panel: active session timer, stats (total sessions, total time, streak), last-10 sessions table
+- CSV export via `pjExportBtn`
+- Weighted random tune selection: capture-phase listener on `#randomTune` button uses `stopImmediatePropagation()` to intercept before original handler; skews toward under-practiced tunes
+- `MutationObserver` on `#tuneSel` re-annotates dropdown options after every `populateTuneDropdown()` rebuild
 
-#### 1. Quick Tune Search (Always-Visible)
-- Text input above the filter panel, always accessible
-- Searches tune name, style, form, and key in real-time
-- Shows live count: "12 / 46"
-- Clears automatically when a tune is selected from the dropdown
-- Clears when advanced filters are applied/cleared
-- Integrated with existing `populateTuneDropdown()` — no duplicate code
+### 4. Real-Time Pitch Detection
+- `js/pitch-processor.js`: `AudioWorkletProcessor` implementing YIN pitch detection algorithm  
+  - 2048-sample window, 512-sample hop size, 0.10 CMNDF threshold  
+  - RMS silence gate (threshold 0.008)  
+  - Parabolic interpolation for sub-sample accuracy  
+- `pitchModule` IIFE in `index.html`: `getUserMedia` → `AudioContext` → `AudioWorkletNode`  
+  - Audio processed entirely locally (worklet not connected to destination)  
+  - Note name display with cents deviation  
+  - In-scale scoring: compares detected note PC against current bar's chord scale PCs  
+  - Fretboard highlight: adds `.pitch-live` class to matching fret cell(s)  
+- `#togglePitch` button: toggles mic on/off; `#pitchDisplay` panel shows live data
+- Privacy notice rendered in UI: "🔒 Audio processed locally — never leaves your device"
 
-#### 2. localStorage Preference Persistence
-- Saves: last-selected tune, key, BPM, show-scales state, audio mode
-- Restores on page reload (survives refresh)
-- Uses key `cp_songbook_v7_prefs` to avoid conflicts
-- Fails silently if storage is blocked (private browsing)
-- Triggers restore after initial render to avoid blank state
+### 5. SVG Fretboard Redesign
+- Replaced `<div class="string">` / `<div class="fret">` layout with a single SVG element
+- Dark wood-grain linear gradient background (`fbWood` gradient: `#6b4423` → `#4a2e14`)
+- Ivory nut rect, metal fret line rects, string lines with stroke-width increasing by gauge
+- Position dot markers: single dot at frets 3/5/7/9, double dot at 12; fret numbers below
+- String name labels (E B G D A E) at left edge
+- `<g class="fret">` cells: each contains `<circle>` + `<text>` children
+  - `g._circle` and `g._label` shortcuts for fast attribute access
+  - `Object.defineProperty(g, 'textContent', ...)` routes through SVG `<text>` for compatibility with existing code (shows interval label — second line of two-line strings)
+  - All cells registered in `_fretGrid = new Map()` keyed `"engineString_fretNum"` for O(1) lookup
+- `findFretEl()` uses `_fretGrid.get()` instead of DOM traversal
+- `clearFretboard()` resets SVG `fill`/`stroke` via `setAttribute`
+- `showFretboard()` and `showLibraryScale()` use `fr._circle.setAttribute('fill', ...)` / `fr._label.setAttribute('fill', ...)`
+- `buildFretMarkers()` is a no-op (markers drawn inline during `buildFretboard()`)
+- SVG is responsive: `width="100%"`, `height="auto"`
 
-#### 3. Keyboard Shortcuts
-- `Space` — Play / Stop playback
-- `Esc` — Stop all (playback + resonance lick)
-- `R` — Random tune
-- `G` — Generate lead sheet
-- Disabled when focus is inside form fields (inputs, selects, textareas)
-- Hints displayed in the playback bar and info box
-
-#### 4. Toast Notification System
-- Non-blocking, auto-dismissing notifications
-- Types: `info`, `success`, `error`, `warn` with color coding
-- Click to dismiss early
-- Used for: random tune confirmation, tab copy success, ZIP export status, JSZip error
-- Positioned bottom-right, stacks up to 5 notifications
-- Animated slide-in/fade-out transitions
-
-#### 5. Visual Improvements (CSS)
-- Dark-theme scrollbar styling (`::-webkit-scrollbar`)
-- Smooth transition on `.bar.playing` (instead of instant color change)
-- `audioReadyPop` animation on audio status when ready
-- Improved `.bar:focus-visible` ring for keyboard navigation
-- Better `.bar.active` visual state with inset shadow
-- `--radius`, `--transition`, `--shadow-md`, `--focus-ring` design tokens
-- Hover effect on progress bar (brighten on hover)
-- Stat pill hover effect (border highlights)
-
-#### 6. Mobile Responsive Refinements
-- Added `@media (max-width: 480px)` breakpoint for very small screens
-- Search row stacks vertically on narrow viewports
-- Shortcut hints hidden on very small screens (space-constrained)
-- Reduced button padding on small screens
-
-#### 7. Improved Print CSS
-- More targeted print rules that only hide non-essential UI elements
-- Sheet content preserved with appropriate print colors
-
-### App Tagline
-Added descriptive tagline below the H1: "Interactive Bebop Practice Tool · AI Resonance Engine · Guitar Fretboard Visualizer" — helps new users understand the scope immediately.
+### 6. Accessibility & UX (v7.1)
+- Skip navigation link (`.skip-link`)
+- Quick tune search: always-visible text input, live "N / 66" count
+- `localStorage` preference persistence (`cp_songbook_v7_prefs`)
+- Keyboard shortcuts: `Space` = play/stop, `Esc` = stop all, `R` = random, `G` = generate
+- Toast notification system: non-blocking, auto-dismiss, 5-stack, slide-in animation
+- Dark-theme scrollbar, smooth `.bar.playing` transition, `audioReadyPop` animation
+- `@media (max-width: 480px)` breakpoint for very small screens
 
 ---
 
-## Testing Results
+## Files Modified / Added
 
-### Syntax Validation
-- Inline JavaScript: ✅ Passes `new Function()` syntax check (no parse errors)
-- `<main>` tags: ✅ 1 open, 1 close (balanced)
-- CSS variables: ✅ All `var(--...)` references now resolved in `:root`
-
-### Feature Regression Check
-- All existing event listeners preserved (none removed)
-- All existing functions preserved and intact
-- New code added exclusively via `addEventListener` with `{passive: true}` where safe
-- `exportSectionZip` wrapped (original preserved as `_origExportZip`)
-- No modifications to the SONGS data, OMNIBOOK_ADDITIONS, or audio engine
-- No modifications to the Resonance Engine integration
-- No modifications to the chord voicing modal
-- Search functionality uses existing `populateTuneDropdown()` without code duplication
-
-### Known Acceptable Trade-offs
-- Page renders Anthropology first, then re-renders saved tune if preferences exist — minor flash on first load after a session change
-- Tab copy toast shows 100ms after click (to allow async clipboard write to start)
-- Very small screens hide keyboard shortcut hints (correct space-saving behavior)
+| File | Description |
+|------|-------------|
+| `index.html` | All features above; ~6,500 lines. Single entry point. |
+| `js/pitch-processor.js` | AudioWorklet YIN pitch detection processor |
+| `service-worker.js` | PWA cache-first service worker |
+| `manifest.json` | PWA manifest (name, icons, display mode) |
+| `icons/icon.svg` | Treble clef SVG app icon |
+| `CLAUDE.md` | This file |
 
 ---
 
-## Files Modified
+## Key Implementation Notes
 
-| File | Changes |
-|------|---------|
-| `index.html` | CSS variables fix, new CSS (accessibility, search, toasts, focus, animations), HTML restructure (main landmark, skip link, search input, aria-live regions), JavaScript (toast system, localStorage, search handler, keyboard shortcuts, JSZip wrapper) |
+### `const` vs `window.*`
+Top-level `const` declarations in a `<script>` tag are NOT properties of `window`. Accessing them via `window.SONGS`, `window.NOTE_IDX` etc. returns `undefined`. Always access them directly by name from code in the same script scope.
 
-## Files Added
+### AlphaTab Module Pattern
+`alphaTabNotationModule` is an IIFE that captures `NOTE_IDX`, `SONGS`, `canonicalTuneTitle`, and `TITLE_ALIAS_MAP` from the enclosing scope. All transposition and key-lookup logic must use direct variable access, not `window.*` guards.
 
-| File | Purpose |
-|------|---------|
-| `CLAUDE.md` | This documentation file |
+### Fretboard Engine String Mapping
+`STRING_NOTES = ['E','B','G','D','A','E']` where index 0 = high E (display row 0, top). Engine string number = `6 - si` (display row index). So high E = engine string 6, low E = engine string 1.
 
----
+### Practice Journal Weighted Random
+The `#randomTune` click handler is registered with `{capture: true}` and calls `e.stopImmediatePropagation()` to fire before the original bubble-phase handler. It only acts when session data exists; otherwise it passes through. A `MutationObserver` on `#tuneSel` re-runs `annotateDropdown()` whenever `populateTuneDropdown()` rebuilds the options.
 
-## Next Three Logical Enhancement Steps
-
-### Step 1: Progressive Web App (PWA) + Offline Support
-
-**Rationale:** The app is a static file with CDN dependencies. If SVGuitar or JSZip CDNs are unavailable, features break. Musicians often practice in studios or venues with unreliable internet.
-
-**Implementation Plan:**
-1. Create `service-worker.js` that caches `index.html`, all `/js/` modules, and `/data/chords.json`
-2. Add `manifest.json` for installability (home screen icon, standalone display)
-3. Pre-cache the SVGuitar and JSZip libraries as part of the install step
-4. Add offline fallback indicator in the UI
-5. Use Cache-First strategy for static assets, Network-First for future API calls
-
-**Impact:** Full offline functionality, installable as mobile app, ~100% reliability improvement for CDN-dependent features.
-
-### Step 2: User Practice Session Tracking & Analytics
-
-**Rationale:** Serious musicians need to track progress. Currently, the app has no memory of what tunes were practiced, at what tempo, or for how long.
-
-**Implementation Plan:**
-1. Add `indexedDB` (via a thin wrapper) to log practice sessions with: tune, key, BPM, duration, date
-2. Add a "Practice Journal" panel (collapsible) showing last 10 sessions
-3. Track which tunes have been practiced least and surface them in the random tune selector (weighted toward under-practiced)
-4. Add a "streak" indicator for daily practice
-5. Export practice log as CSV
-6. Show per-tune stats in the tune dropdown (e.g., "practiced 3 times")
-
-**Impact:** Transforms the tool from a reference app to a structured practice companion. Addresses a core musician need: deliberate, measurable practice.
-
-### Step 3: Audio Input — Real-Time Pitch Detection & Feedback
-
-**Rationale:** The app currently is entirely output-oriented (it shows what to play). A major leap would be to listen to the user play and give real-time feedback.
-
-**Implementation Plan:**
-1. Add `getUserMedia` + `AudioWorklet` for real-time microphone input
-2. Implement pitch detection via autocorrelation (YIN algorithm — fast, browser-compatible)
-3. Highlight notes on the fretboard as the user plays them
-4. In Resonance Engine mode: show whether the user is playing the generated lick correctly (note by note)
-5. Add "ear training" mode: play a chord, ask user to identify it
-6. Score the user's lick improvisation against the suggested scale (% of in-scale notes)
-7. Privacy: audio never leaves the browser (processed locally, no server)
-
-**Impact:** Closes the feedback loop between the app's guidance and the user's actual playing. This is the single biggest capability gap in the current app.
+### Service Worker Cache Version
+Increment `CACHE = 'cp-songbook-vN'` in `service-worker.js` whenever any app shell file changes. The activate handler deletes all caches not matching the current version string.
 
 ---
 
-*Documentation generated on: 2026-05-16*  
-*Session: claude/redesign-songbook-tool-0vLDm*
+## Current Song Count
+
+| Source | Count |
+|--------|-------|
+| Core SONGS object | 22 |
+| OMNIBOOK_ADDITIONS | 44 |
+| **Total unique tunes** | **66** |
+
+---
+
+*Last updated: 2026-05-19*  
+*Active branch: `claude/alphatab-notation-integration-QkYOX`*
