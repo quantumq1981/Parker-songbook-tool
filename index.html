@@ -5399,6 +5399,25 @@ async function suggestNext() {
     { name: 'Thriving From a Riff',   file: 'omnibook_xml/Thriving_From_A_Riff.xml' },
     { name: 'Visa',                   file: 'omnibook_xml/Visa.xml' },
     { name: 'Warming Up a Riff',      file: 'omnibook_xml/Warming_Up_A_Riff.xml' },
+    // ── AlphaTex chord charts (tunes without GP/XML transcription) ───────
+    { name: "Relaxin' at Camarillo",  file: 'alphatex/relaxin_at_camarillo.alphatex' },
+    { name: 'Embraceable You',        file: 'alphatex/embraceable_you.alphatex' },
+    { name: 'Oh, Lady Be Good',       file: 'alphatex/oh_lady_be_good.alphatex' },
+    { name: 'Crazeology',             file: 'alphatex/crazeology.alphatex' },
+    { name: 'Ah-Leu-Cha',            file: 'alphatex/ah_leu_cha.alphatex' },
+    { name: 'Cool Blues',             file: 'alphatex/cool_blues.alphatex' },
+    { name: 'Constellation',          file: 'alphatex/constellation.alphatex' },
+    { name: 'Celebrity',              file: 'alphatex/celebrity.alphatex' },
+    { name: 'Drifting on a Reed',     file: 'alphatex/drifting_on_a_reed.alphatex' },
+    { name: 'Leap Frog',              file: 'alphatex/leap_frog.alphatex' },
+    { name: 'Little Willie Leaps',    file: 'alphatex/little_willie_leaps.alphatex' },
+    { name: 'The Hymn',               file: 'alphatex/the_hymn.alphatex' },
+    { name: 'Stupendous',             file: 'alphatex/stupendous.alphatex' },
+    { name: 'Bongo Bop',              file: 'alphatex/bongo_bop.alphatex' },
+    { name: 'Quasimodo',              file: 'alphatex/quasimodo.alphatex' },
+    { name: 'Salt Peanuts',           file: 'alphatex/salt_peanuts.alphatex' },
+    { name: "Tiny's Tempo",           file: 'alphatex/tinys_tempo.alphatex' },
+    { name: 'Meandering',             file: 'alphatex/meandering.alphatex' },
   ];
 
   // ── alphaTab state ────────────────────────────────────────────────────
@@ -5805,13 +5824,13 @@ async function suggestNext() {
     const nt = document.getElementById('headNoteType');     if (nt) nt.textContent = '';
     const nm = document.getElementById('headNoteMeasure');  if (nm) nm.textContent = '';
 
-    // Pre-fetch as ArrayBuffer so api.renderTracks() never needs to re-fetch the URL.
-    // Passing a URL string to api.load() causes renderTracks() to re-fetch from network,
-    // which fails for multi-track files (e.g. Confirmation bass track).
+    // AlphaTex chord charts are fetched as text and loaded via api.tex().
+    // All other formats (GP, MusicXML) are fetched as ArrayBuffer and loaded via api.load().
     const url = OMNIBOOK_BASE + encodeURIComponent(tune.file);
+    const isAlphaTex = tune.file.endsWith('.alphatex');
     fetch(url)
-      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
-      .then(ab => { if (api) api.load(ab); })
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return isAlphaTex ? r.text() : r.arrayBuffer(); })
+      .then(data => { if (api) { isAlphaTex ? api.tex(data) : api.load(data); } })
       .catch(err => {
         if (currentBtn) {
           currentBtn.classList.remove('hd-loading');
@@ -6132,6 +6151,25 @@ async function suggestNext() {
     { name: 'Thriving From a Riff',   file: 'omnibook_xml/Thriving_From_A_Riff.xml' },
     { name: 'Visa',                   file: 'omnibook_xml/Visa.xml' },
     { name: 'Warming Up a Riff',      file: 'omnibook_xml/Warming_Up_A_Riff.xml' },
+    // ── AlphaTex chord charts (tunes without GP/XML transcription) ───────
+    { name: "Relaxin' at Camarillo",  file: 'alphatex/relaxin_at_camarillo.alphatex' },
+    { name: 'Embraceable You',        file: 'alphatex/embraceable_you.alphatex' },
+    { name: 'Oh, Lady Be Good',       file: 'alphatex/oh_lady_be_good.alphatex' },
+    { name: 'Crazeology',             file: 'alphatex/crazeology.alphatex' },
+    { name: 'Ah-Leu-Cha',            file: 'alphatex/ah_leu_cha.alphatex' },
+    { name: 'Cool Blues',             file: 'alphatex/cool_blues.alphatex' },
+    { name: 'Constellation',          file: 'alphatex/constellation.alphatex' },
+    { name: 'Celebrity',              file: 'alphatex/celebrity.alphatex' },
+    { name: 'Drifting on a Reed',     file: 'alphatex/drifting_on_a_reed.alphatex' },
+    { name: 'Leap Frog',              file: 'alphatex/leap_frog.alphatex' },
+    { name: 'Little Willie Leaps',    file: 'alphatex/little_willie_leaps.alphatex' },
+    { name: 'The Hymn',               file: 'alphatex/the_hymn.alphatex' },
+    { name: 'Stupendous',             file: 'alphatex/stupendous.alphatex' },
+    { name: 'Bongo Bop',              file: 'alphatex/bongo_bop.alphatex' },
+    { name: 'Quasimodo',              file: 'alphatex/quasimodo.alphatex' },
+    { name: 'Salt Peanuts',           file: 'alphatex/salt_peanuts.alphatex' },
+    { name: "Tiny's Tempo",           file: 'alphatex/tinys_tempo.alphatex' },
+    { name: 'Meandering',             file: 'alphatex/meandering.alphatex' },
   ];
 
   // Resolve AlphaTab enum values at runtime so the code is safe across builds.
@@ -6277,20 +6315,23 @@ async function suggestNext() {
     if (emptyEl) emptyEl.style.display = 'none';
 
     const url = OMNIBOOK_BASE + encodeURIComponent(tune.file);
+    const isAlphaTex = tune.file.endsWith('.alphatex');
     fetch(url)
-      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
-      .then(ab => {
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return isAlphaTex ? r.text() : r.arrayBuffer(); })
+      .then(data => {
         if (!api) return;
-        // Transposition pitches are per-track arrays; set before load so the
-        // first render is already in the target key.
-        if (semitones !== 0) {
-          // We don't know the track count yet — use [semitones] as a single-element
-          // array; AlphaTab applies it to all tracks when the array is shorter than
-          // the track count.
-          api.settings.display.transpositionPitches = [semitones];
+        if (isAlphaTex) {
+          // AlphaTex chord charts are in concert pitch — transposition not applied
+          api.settings.display.transpositionPitches = [0];
           api.updateSettings();
+          api.tex(data);
+        } else {
+          if (semitones !== 0) {
+            api.settings.display.transpositionPitches = [semitones];
+            api.updateSettings();
+          }
+          api.load(data);
         }
-        api.load(ab);
         loadedTuneName = tune.name;
       })
       .catch(err => {

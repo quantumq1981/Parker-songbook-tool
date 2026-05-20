@@ -1,0 +1,36 @@
+\title "Constellation"
+\tempo 280
+.
+\ts 4 4
+0.2.1{ch "Abmaj7"} |
+0.2.2{ch "Bbm7"} 0.2.2{ch "Eb7"} |
+0.2.2{ch "Cm7"} 0.2.2{ch "F7"} |
+0.2.2{ch "Bbm7"} 0.2.2{ch "Eb7"} |
+0.2.2{ch "Ebm7"} 0.2.2{ch "Ab7"} |
+0.2.1{ch "Dbmaj7"} |
+0.2.2{ch "Abmaj7"} 0.2.2{ch "F7"} |
+0.2.2{ch "Bbm7"} 0.2.2{ch "Eb7"} |
+0.2.1{ch "Abmaj7"} |
+0.2.2{ch "Bbm7"} 0.2.2{ch "Eb7"} |
+0.2.2{ch "Cm7"} 0.2.2{ch "F7"} |
+0.2.2{ch "Bbm7"} 0.2.2{ch "Eb7"} |
+0.2.1{ch "Ab7"} |
+0.2.2{ch "Dbmaj7"} 0.2.2{ch "Ddim7"} |
+0.2.1{ch "Abmaj7"} |
+0.2.1{ch "Abmaj7"} |
+0.2.1{ch "C7"} |
+0.2.1{ch "C7"} |
+0.2.1{ch "F7"} |
+0.2.1{ch "F7"} |
+0.2.1{ch "Bb7"} |
+0.2.1{ch "Bb7"} |
+0.2.1{ch "Eb7"} |
+0.2.1{ch "Eb7"} |
+0.2.1{ch "Abmaj7"} |
+0.2.2{ch "Bbm7"} 0.2.2{ch "Eb7"} |
+0.2.2{ch "Abmaj7"} 0.2.2{ch "F7"} |
+0.2.2{ch "Bbm7"} 0.2.2{ch "Eb7"} |
+0.2.1{ch "Ab7"} |
+0.2.2{ch "Dbmaj7"} 0.2.2{ch "Dbm7"} |
+0.2.1{ch "Abmaj7"} |
+0.2.2{ch "Bbm7"} 0.2.2{ch "Eb7"} |
