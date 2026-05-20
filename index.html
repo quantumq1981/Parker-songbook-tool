@@ -159,7 +159,8 @@ padding:12px;margin-top:10px;}
 .fret-markers { display: none; }
 /* Remove old print CSS for divs */
 @media (min-width:768px) { .fb-svg { min-width: 480px; } }
-@media (max-width:480px) { .fb-svg { min-width: 300px; } }
+/* On narrow phones the SVG is flexible — it has width="100%" already */
+@media (max-width:480px) { .fb-svg { min-width: 0; width: 100%; } }
 /* Functional harmony legend */
 .func-legend{display:none;flex-wrap:wrap;gap:10px;justify-content:center;
 font-size:11px;margin:6px 0;padding:4px 0;}
@@ -518,6 +519,76 @@ body{padding:8px;}
   .app-tagline { font-size: 10px; }
 }
 
+/* ── Mobile polish: 480px and below ─────────────────────────────────────── */
+@media (max-width: 480px) {
+  /* Prevent any child from causing horizontal scroll */
+  .card, #sheet, #fbSection, #fretboardWrap { overflow-x: hidden; }
+  #fretboardWrap { width: 100%; }
+
+  /* Fretboard SVG: already set to min-width:0 above; ensure wrapper fits */
+  .fretboard { width: 100%; overflow-x: hidden; }
+
+  /* Heads Library grid — 2 columns, bigger tap targets */
+  .heads-grid {
+    grid-template-columns: repeat(2, 1fr);
+    max-height: 300px;
+  }
+  .head-btn {
+    font-size: 10px;
+    padding: 7px 6px;
+    min-height: 40px;
+  }
+
+  /* Heads player transport controls — 2×2 grid for easy tapping */
+  .head-melody-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .head-melody-controls button {
+    min-height: 44px;
+    font-size: 11px;
+    padding: 8px 4px;
+  }
+
+  /* Speed presets — easier touch targets on mobile */
+  .hd-sp-btn { padding: 6px 14px; font-size: 11px; min-height: 36px; }
+
+  /* Speed slider row: tighten up */
+  .hd-speed-row { gap: 5px; }
+  .hd-speed-row input[type=range] { min-width: 60px; }
+
+  /* Loop row — wrap on small screens */
+  .hd-loop-row { flex-wrap: wrap; row-gap: 4px; }
+
+  /* Notation viewer control bar */
+  .at-main-ctrl { flex-wrap: wrap; row-gap: 6px; }
+  .at-ctrl-hint { display: none; }
+  .at-main-ctrl input[type=range] { width: 70px; }
+
+  /* View tabs — slightly smaller padding */
+  .at-view-tab { padding: 5px 12px; font-size: 11px; }
+
+  /* Notation score — shorter on phones to leave room for chord grid */
+  #atMainScore { min-height: 180px; }
+  #atScore { height: 180px; }
+
+  /* Main controls rows — ensure items wrap and don't force overflow */
+  .controls { flex-wrap: wrap; gap: 5px; }
+  .controls label { flex-basis: 100%; font-size: 12px; margin-bottom: -2px; }
+  .controls select { min-width: 0; flex: 1 1 120px; }
+  .controls button { flex: 1 1 auto; min-width: 0; }
+  .controls input[type=number] { flex: 0 0 72px; min-width: 0; }
+
+  /* Playback bar: tighten loop target selector */
+  #loopTargetSel { max-width: 100% !important; flex: 1 1 100%; }
+
+  /* Ensure chord grid rows don't overflow */
+  .row { min-width: 0 !important; }
+  .bar { min-width: 0; }
+  .chord { word-break: break-all; }
+}
+
 /* =====================================================
    GUIDE TONE & VOICE LEADING (Step 1)
 ===================================================== */
@@ -793,6 +864,19 @@ details.panel.heads-panel summary { color: #ce93d8; }
 .hd-speed-row input[type=range] { flex:1; min-width:80px; accent-color:#ce93d8;
   cursor:pointer; }
 .hd-speed-val { min-width:34px; color:#ce93d8; font-weight:bold; }
+
+/* Speed preset quick-tap buttons — shared by Heads Library and Notation viewer */
+.hd-sp-presets { display:flex; gap:4px; flex-wrap:wrap; margin-top:6px; }
+.hd-sp-btn {
+  background:#1a0d2e; border:1px solid #7b1fa2; color:#ce93d8;
+  border-radius:14px; padding:4px 11px; font-size:10px; cursor:pointer;
+  font-family:inherit; transition:background .12s, color .12s, border-color .12s;
+  touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+  white-space:nowrap; line-height:1.4;
+}
+.hd-sp-btn:hover { background:#2a1a42; border-color:#ce93d8; }
+.hd-sp-btn.hd-sp-active { background:#7b1fa2; color:#fff; border-color:#ce93d8; font-weight:bold; }
+
 .hd-gp-badge { background:#1a0d2e; border:1px solid #7b1fa2; color:#ce93d8;
   border-radius:20px; padding:3px 12px; font-size:11px; cursor:pointer;
   -webkit-tap-highlight-color:transparent; white-space:nowrap; }
@@ -1006,12 +1090,18 @@ details.panel.heads-panel summary { color: #ce93d8; }
         <button class="controls btn-sec"  id="headFbToggle">🎸 Fretboard: On</button>
       </div>
 
-      <!-- Tempo-scaling slider (api.playbackSpeed) -->
+      <!-- Tempo-scaling slider + presets (api.playbackSpeed) -->
       <div class="hd-speed-row">
         <label for="hdSpeedSlider">Speed:</label>
         <input type="range" id="hdSpeedSlider" min="25" max="150" value="100" step="5"
                aria-label="Playback speed percentage">
         <span class="hd-speed-val" id="hdSpeedLabel">100%</span>
+      </div>
+      <div class="hd-sp-presets" role="group" aria-label="Speed presets">
+        <button class="hd-sp-btn" data-speed="50">50%</button>
+        <button class="hd-sp-btn" data-speed="75">75%</button>
+        <button class="hd-sp-btn hd-sp-active" data-speed="100">100%</button>
+        <button class="hd-sp-btn" data-speed="125">125%</button>
       </div>
 
       <!-- Track selector — shown when GP file has multiple tracks -->
@@ -1140,9 +1230,7 @@ details.panel.heads-panel summary { color: #ce93d8; }
     </div>
     <div class="at-main-empty" id="atMainEmpty" style="display:none;">
       <p>No notation file available for this tune.</p>
-      <small>Notation available for: Anthropology · Au Privave · Billie's Bounce · Bloomdido ·
-        Blues for Alice · Confirmation · Donna Lee · Loverman · Moose the Mooche ·
-        Now's the Time · Ornithology · Parker's Mood · Yardbird Suite · Cheryl</small>
+      <small>Notation available for all 66 tunes — GP files, MusicXML, and AlphaTex chord charts. Select a tune from the dropdown above and switch to the Notation or Tab view.</small>
     </div>
     <div class="at-main-ctrl">
       <button class="controls btn-ok"   id="atMainPlayBtn">▶ Play</button>
@@ -1152,6 +1240,12 @@ details.panel.heads-panel summary { color: #ce93d8; }
               style="width:90px;accent-color:#ce93d8;cursor:pointer;"
               aria-label="Playback speed percentage">
       <span id="atMainSpeedLabel" style="color:#ce93d8;font-size:11px;min-width:32px;">100%</span>
+      <div class="hd-sp-presets at-sp-presets" role="group" aria-label="Speed presets">
+        <button class="hd-sp-btn" data-speed="50">50%</button>
+        <button class="hd-sp-btn" data-speed="75">75%</button>
+        <button class="hd-sp-btn hd-sp-active" data-speed="100">100%</button>
+        <button class="hd-sp-btn" data-speed="125">125%</button>
+      </div>
       <span class="at-ctrl-hint">AlphaTab · SoundFont · click any note to seek</span>
     </div>
   </div>
@@ -5548,6 +5642,26 @@ async function suggestNext() {
     }
   }
 
+  // ── Speed preference helpers ──────────────────────────────────────────
+  let savedHdSpeed = 100;  // persisted across sessions
+
+  function hdApplySpeed(val) {
+    savedHdSpeed = val;
+    if (api) api.playbackSpeed = val / 100;
+    const slider = document.getElementById('hdSpeedSlider');
+    const label  = document.getElementById('hdSpeedLabel');
+    if (slider) slider.value = val;
+    if (label)  label.textContent = val + '%';
+    document.querySelectorAll('#headMelodyBar .hd-sp-btn').forEach(b =>
+      b.classList.toggle('hd-sp-active', parseInt(b.dataset.speed) === val)
+    );
+    try {
+      const p = JSON.parse(localStorage.getItem('cp_songbook_v7_prefs') || '{}');
+      p.hdSpeed = val;
+      localStorage.setItem('cp_songbook_v7_prefs', JSON.stringify(p));
+    } catch(e) {}
+  }
+
   // ── Initialize alphaTab API (lazy — triggered when panel opens) ───────
   function atInit() {
     if (api || !window.alphaTab) {
@@ -5590,6 +5704,9 @@ async function suggestNext() {
       if (overlay) overlay.classList.add('at-hidden');
       return;
     }
+
+    // Apply persisted speed immediately after API creation
+    if (savedHdSpeed !== 100) api.playbackSpeed = savedHdSpeed / 100;
 
     // ── SoundFont ready ───────────────────────────────────────────────
     api.playerReady.on(() => {
@@ -6049,13 +6166,20 @@ async function suggestNext() {
       if (!hdFbOn) hdClearFb();
     });
 
+    // Restore persisted speed and sync UI before API exists
+    try {
+      const p = JSON.parse(localStorage.getItem('cp_songbook_v7_prefs') || '{}');
+      if (p.hdSpeed) hdApplySpeed(parseInt(p.hdSpeed));
+    } catch(e) {}
+
     // Tempo-scaling slider → api.playbackSpeed (0.25–1.5 range)
-    // This slows/speeds without altering pitch — essential for bebop drill
     document.getElementById('hdSpeedSlider')?.addEventListener('input', function() {
-      const ratio = parseInt(this.value) / 100;
-      if (api) api.playbackSpeed = ratio;
-      const lbl = document.getElementById('hdSpeedLabel');
-      if (lbl) lbl.textContent = this.value + '%';
+      hdApplySpeed(parseInt(this.value));
+    });
+
+    // Speed preset buttons
+    document.querySelectorAll('#headMelodyBar .hd-sp-btn').forEach(btn => {
+      btn.addEventListener('click', () => hdApplySpeed(parseInt(btn.dataset.speed)));
     });
 
     // Loop range inputs → refresh tick boundaries
@@ -6184,6 +6308,25 @@ async function suggestNext() {
   let currentView    = 'grid'; // 'grid' | 'notation' | 'tab'
   let loadedTuneName = '';     // Friendly name of the currently loaded GP tune
   let pendingLoad    = null;   // { tune, semitones } deferred until atInit() completes
+  let savedAtSpeed   = 100;   // persisted playback speed %
+
+  // ── Speed helper ────────────────────────────────────────────────────────
+  function atApplySpeed(val) {
+    savedAtSpeed = val;
+    if (api) api.playbackSpeed = val / 100;
+    const slider = document.getElementById('atMainSpeedSlider');
+    const label  = document.getElementById('atMainSpeedLabel');
+    if (slider) slider.value = val;
+    if (label)  label.textContent = val + '%';
+    document.querySelectorAll('.at-sp-presets .hd-sp-btn').forEach(b =>
+      b.classList.toggle('hd-sp-active', parseInt(b.dataset.speed) === val)
+    );
+    try {
+      const p = JSON.parse(localStorage.getItem('cp_songbook_v7_prefs') || '{}');
+      p.atSpeed = val;
+      localStorage.setItem('cp_songbook_v7_prefs', JSON.stringify(p));
+    } catch(e) {}
+  }
 
   // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -6258,6 +6401,9 @@ async function suggestNext() {
       if (typeof showToast === 'function') showToast('Notation viewer init error: ' + err.message, 'error');
       return;
     }
+
+    // Apply persisted speed immediately after API creation
+    if (savedAtSpeed !== 100) api.playbackSpeed = savedAtSpeed / 100;
 
     // SoundFont ready — hide spinner
     api.playerReady.on(() => {
@@ -6476,11 +6622,20 @@ async function suggestNext() {
       if (api) api.stop();
     });
 
+    // Restore persisted speed
+    try {
+      const p = JSON.parse(localStorage.getItem('cp_songbook_v7_prefs') || '{}');
+      if (p.atSpeed) atApplySpeed(parseInt(p.atSpeed));
+    } catch(e) {}
+
     // Speed slider — api.playbackSpeed accepts 0.25–1.5
     document.getElementById('atMainSpeedSlider')?.addEventListener('input', function () {
-      if (api) api.playbackSpeed = parseInt(this.value, 10) / 100;
-      const lbl = document.getElementById('atMainSpeedLabel');
-      if (lbl) lbl.textContent = this.value + '%';
+      atApplySpeed(parseInt(this.value, 10));
+    });
+
+    // Speed preset buttons
+    document.querySelectorAll('.at-sp-presets .hd-sp-btn').forEach(btn => {
+      btn.addEventListener('click', () => atApplySpeed(parseInt(btn.dataset.speed)));
     });
 
     // Responsive resize → toggle Page / Horizontal layout mode
