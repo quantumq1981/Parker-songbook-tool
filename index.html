@@ -20,7 +20,9 @@
 <meta name="description" content="Interactive bebop practice tool — 46 Charlie Parker tunes, AI resonance engine, guitar fretboard, AlphaTab notation"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/icon.svg"/>
-<script src="https://unpkg.com/svguitar@1.7.1/dist/svguitar.umd.js" data-svguitar-lib="cdn"></script>
+<script src="https://unpkg.com/svguitar@1.7.1/dist/svguitar.umd.js" data-svguitar-lib="cdn"
+        integrity="sha384-/9qeiDrUhvT9kSYnoh4KnjcrKtTuwwh6rBgKzeeWcqcZbDNv09lRypQ2sLfwoh4H"
+        crossorigin="anonymous"></script>
 <script src="./js/svguitar.umd.js" data-svguitar-lib="local" onerror="console.warn('Local SVGuitar fallback failed to load')"></script>
 <style>
 :root{
@@ -1379,9 +1381,13 @@ details.panel.heads-panel summary { color: #ce93d8; }
 
 <div id="toastContainer" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/alphaTab.min.js"
+<script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.3/dist/alphaTab.min.js"
+        integrity="sha384-qUm2Zrf12JTeEmtMQAdvtbVFGrxkxSSrmqyEU4avNOo/QxYnmgpDsfsdWvYrhmxw"
+        crossorigin="anonymous"
         onerror="console.warn('alphaTab CDN failed — heads notation renderer unavailable')"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
+        integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG"
+        crossorigin="anonymous"
         onerror="console.warn('JSZip CDN failed to load — ZIP export unavailable')"></script>
 <script src="js/resonanceEngine.js?v=1.0"></script>
 <script src="js/chordParser.js?v=7.2"></script>
@@ -5769,7 +5775,7 @@ async function suggestNext() {
         player: {
           enablePlayer: true,
           enableUserInteraction: true,
-          soundFont: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/soundfont/sonivox.sf2',
+          soundFont: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.3/dist/soundfont/sonivox.sf2',
           scrollMode: 2,       // 2 = Continuous cursor following
           scrollElement: container  // scroll #atScore (not its overflow:hidden parent)
         }
@@ -6373,7 +6379,7 @@ async function suggestNext() {
   ];
 
   // Resolve AlphaTab enum values at runtime so the code is safe across builds.
-  // Fallback numerics match the @coderline/alphatab@latest StaveProfile / LayoutMode enums.
+  // Fallback numerics match the @coderline/alphatab@1.8.3 StaveProfile / LayoutMode enums.
   const SP_SCORE = () => window.alphaTab?.StaveProfile?.Score        ?? 2;
   const SP_TAB   = () => window.alphaTab?.StaveProfile?.Tab          ?? 3;
   const LM_PAGE  = () => window.alphaTab?.LayoutMode?.Page           ?? 0;
@@ -6466,7 +6472,7 @@ async function suggestNext() {
         player: {
           enablePlayer:          true,
           enableUserInteraction: true,
-          soundFont: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/soundfont/sonivox.sf2',
+          soundFont: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.3/dist/soundfont/sonivox.sf2',
           scrollMode:    2,           // continuous cursor
           scrollElement: container
         }

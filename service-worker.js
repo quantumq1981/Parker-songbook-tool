@@ -1,7 +1,7 @@
 'use strict';
 
 // Bump this string whenever the app shell changes to force cache refresh.
-const CACHE = 'cp-songbook-v2';
+const CACHE = 'cp-songbook-v3';
 
 // Core app shell — pre-cached at install so the page works offline from the
 // very first load after the SW is installed.
@@ -21,9 +21,15 @@ const SHELL = [
   './js/pitch-processor.js',
 ];
 
-// CDN hostnames whose responses should be cached on first use.
-// Covers alphaTab (library + SoundFont), JSZip, and SVGuitar CDN copies.
-const CDN_HOSTS = new Set(['cdn.jsdelivr.net', 'unpkg.com']);
+// Pinned CDN asset URLs whose responses should be cached on first use.
+// Locked to exact versioned URLs (matching the SRI-protected <script> tags in
+// index.html) so the SW never caches an unpinned or unexpected CDN resource.
+const CDN_ASSETS = new Set([
+  'https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.3/dist/alphaTab.min.js',
+  'https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.3/dist/soundfont/sonivox.sf2',
+  'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+  'https://unpkg.com/svguitar@1.7.1/dist/svguitar.umd.js',
+]);
 
 // ── Cache-first strategy ────────────────────────────────────────────────────
 // Serve from cache immediately when available; populate cache on network hit.
@@ -84,9 +90,10 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // CDN requests (alphaTab, SoundFont, JSZip, SVGuitar) → cache-first
+  // Pinned CDN requests (alphaTab, SoundFont, JSZip, SVGuitar) → cache-first.
+  // Only the exact versioned URLs are cached; any other CDN path passes through.
   // These are fetched lazily on first use and cached for offline playback thereafter.
-  if (CDN_HOSTS.has(url.hostname)) {
+  if (CDN_ASSETS.has(url.href)) {
     event.respondWith(cacheFirst(request));
   }
   // All other cross-origin requests (e.g. GitHub API calls) pass through unchanged.
