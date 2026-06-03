@@ -22,7 +22,9 @@ The highest- and mid-priority findings have now been **fixed in `index.html`** o
 | **P1** pitch hot path (86 Hz) | ✅ Optimized — added `_pcIndex` (pc→cells); `highlightPc` toggles only changed cells; pitch-display refs cached once |
 | **P3** per-click fretboard scans | ✅ Optimized — all `querySelectorAll('.fret')` repaints now iterate the cached `_fretGrid` |
 | **P2** per-keystroke song re-scan | ✅ Optimized — `renderStats` single-pass + memoized scale total; search input debounced (120 ms) |
-| **ST1** monolith de-composition | ⏳ Not in this PR — large structural refactor; recommend a dedicated follow-up |
+| **ST4** timer/race cleanup | ✅ Fixed — `renderLeadSheet` and `startPlayback` now cancel in-flight resonance lick timers (`stopResonanceLick`) so they can't fire against rebuilt fret cells or overlap the sequencer |
+| **ST2** error boundaries | ✅ Fixed — bar-click (`selectBar`) and the playback `tick()` per-bar audio/render are wrapped in `try/catch`, so a malformed chord can't half-update the UI or silently kill the transport |
+| **ST1** monolith de-composition | ⏳ Not yet — large structural refactor that needs in-browser verification (no test harness here); recommend a dedicated, incremental follow-up |
 
 The analysis below is the original review that motivated these changes.
 
