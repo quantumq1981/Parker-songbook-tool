@@ -3742,6 +3742,7 @@ function renderLeadSheet(tuneName, targetKey) {
   const tune = SONGS[canonicalName];
   if (!tune) return;
   stopPlayback();
+  stopResonanceLick(); // ST4: cancel in-flight lick timers — they reference fret cells we're about to rebuild
   lastBarData = null;
   document.getElementById('fbSection').style.display = 'none';
   document.getElementById('funcLegend').style.display = 'none';
@@ -3795,11 +3796,18 @@ function renderLeadSheet(tuneName, targetKey) {
         const { root, scale, chord } = bar.dataset;
         prevBarData = lastBarData; // capture previous for voice leading
         lastBarData = { root, scale, chord };
-        // Audio mode toggle determines what plays on click
-        if (audioMode === 'voicing') playChordVoicing(root, chord);
-        else playScaleRun(root, scale);
-        showFretboard(root, scale, chord);
-        updateChordScaleAnalysis(bar);
+        // ST2 error boundary: a malformed chord (e.g. from an import) must not
+        // leave the UI half-updated or break audio for the rest of the tune.
+        try {
+          // Audio mode toggle determines what plays on click
+          if (audioMode === 'voicing') playChordVoicing(root, chord);
+          else playScaleRun(root, scale);
+          showFretboard(root, scale, chord);
+          updateChordScaleAnalysis(bar);
+        } catch (err) {
+          console.error('Bar selection failed:', err);
+          if (typeof showToast === 'function') showToast('Could not render this bar — see console.', 'error');
+        }
       };
       bar.addEventListener('click', selectBar);
       ch.addEventListener('click', e => {
@@ -4043,6 +4051,7 @@ async function startPlayback() {
     currentTrainerTier = 0;
     bpmInput.value = tempoTrainerTiers[currentTrainerTier];
   }
+  stopResonanceLick(); // ST4: don't let a still-running standalone/auto lick overlap the sequencer
   isPlaying = true; playIdx = 0;
   loopSection.currentLoop = 0;
   document.getElementById('playBtn').textContent = '⏸ Pause';
@@ -4069,14 +4078,21 @@ async function startPlayback() {
     bar.classList.add('playing');
     bar.scrollIntoView({behavior:'smooth',block:'nearest'});
     const { root, chord, scale } = bar.dataset;
-    if (audioMode === 'bebop') playBebopBackingBar(root, chord, parseInt(document.getElementById('bpmInput').value) || 120);
-    else if (audioMode === 'voicing') playChordVoicing(root, chord);
-    else playScaleRun(root, scale);
-    if (audioMode !== 'bebop') playMetronomeClick();
-    else if (metronomeEnabled) playMetronomeClick(); // keep visual flash when metro is on
-    lastBarData = { root, scale, chord };
-    updateChordScaleAnalysis(bar);
-    if (document.getElementById('fbSection').style.display !== 'none') showFretboard(root, scale, chord);
+    // ST2 error boundary: keep the transport advancing even if one bar's audio
+    // or render throws (a throw here would otherwise leave playTimer unset and
+    // silently kill playback).
+    try {
+      if (audioMode === 'bebop') playBebopBackingBar(root, chord, parseInt(document.getElementById('bpmInput').value) || 120);
+      else if (audioMode === 'voicing') playChordVoicing(root, chord);
+      else playScaleRun(root, scale);
+      if (audioMode !== 'bebop') playMetronomeClick();
+      else if (metronomeEnabled) playMetronomeClick(); // keep visual flash when metro is on
+      lastBarData = { root, scale, chord };
+      updateChordScaleAnalysis(bar);
+      if (document.getElementById('fbSection').style.display !== 'none') showFretboard(root, scale, chord);
+    } catch (err) {
+      console.error('Playback tick failed on bar', playIdx + 1, err);
+    }
     document.getElementById('playStatus').textContent =
       `♩ Bar ${playIdx + 1} / ${bars.length}${loopEnabled ? ` · Loop ${loopSection.currentLoop + 1}` : ''} · ${audioMode === 'voicing' ? 'Chord Audio' : audioMode === 'bebop' ? 'Bebop Groove 🥁' : 'Scale Audio'}`;
     updatePlaybackProgress(playIdx + 1, bars.length);
