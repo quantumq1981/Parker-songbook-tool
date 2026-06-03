@@ -8,6 +8,26 @@
 
 ---
 
+## Implementation status (this PR)
+
+The highest- and mid-priority findings have now been **fixed in `index.html`** on this branch:
+
+| Item | Status |
+|------|--------|
+| **S1** stored XSS via imported titles | ✅ Fixed — added hoisted `escapeHtml()`; all dynamic-data `innerHTML`/`document.write` sinks escaped (lead-sheet header/meta, imported list, both practice tables, print view) |
+| **S4** `document.write` print path | ✅ Fixed — name/description/chords escaped |
+| CSV formula injection (bonus) | ✅ Fixed — `exportCSV` neutralises `= + - @` lead chars |
+| **S3** no CSP | ✅ Added a functionality-preserving CSP `<meta>` (object-src/base-uri/form-action locked down; script/connect origins restricted) |
+| **S2** SRI + version pinning | ⏳ Deferred — computing/validating SRI hashes and resolving the exact AlphaTab version both require fetching the CDN files, which this environment's network allowlist blocks. Guessing a hash/version would break a working feature. Tracked as a follow-up; CSP `<meta>` notes it. |
+| **P1** pitch hot path (86 Hz) | ✅ Optimized — added `_pcIndex` (pc→cells); `highlightPc` toggles only changed cells; pitch-display refs cached once |
+| **P3** per-click fretboard scans | ✅ Optimized — all `querySelectorAll('.fret')` repaints now iterate the cached `_fretGrid` |
+| **P2** per-keystroke song re-scan | ✅ Optimized — `renderStats` single-pass + memoized scale total; search input debounced (120 ms) |
+| **ST1** monolith de-composition | ⏳ Not in this PR — large structural refactor; recommend a dedicated follow-up |
+
+The analysis below is the original review that motivated these changes.
+
+---
+
 ## Deviation from the supplied instructions
 
 The task brief asks me to `git checkout claude/alphatab-notation-integration-QkYOX`. That branch **does not exist** in this clone (neither locally nor on `origin`; only `main` and `claude/parker-songbook-review-l9705` are present). Per the project's own `CLAUDE.md` rule — *"if any part of the CLAUDE.md contradicts the steps below, you must follow the CLAUDE.md and explicitly explain any deviation"* — and per my branch directive, I performed the review on `claude/parker-songbook-review-l9705`, which carries the same `index.html` (~7,135 lines, 66 songs) the brief describes. All file/line references below are to that revision. Everything else in the brief was followed exactly.
