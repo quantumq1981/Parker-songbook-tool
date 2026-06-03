@@ -3,6 +3,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
+<!--
+  Content-Security-Policy (defense-in-depth alongside the escapeHtml() output
+  encoding). 'unsafe-inline' is retained because the app is built on one large
+  inline <script> and inline <style>; the primary hardening here is restricting
+  script/connect origins to self + the two pinned CDNs, and locking down
+  object-src / base-uri / form-action so injected <object>/<base>/<form> vectors
+  cannot be used for exfiltration or script-base hijacking. blob: is allowed for
+  AlphaTab's audio worklet. NOTE: pair this with Subresource Integrity hashes on
+  the three CDN <script> tags once the exact pinned versions can be fetched.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Charlie Parker Songbook Trainer v7.0</title>
 <meta name="theme-color" content="#1a0d2e"/>
@@ -2121,6 +2132,24 @@ const SHARP_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const FLAT_NAMES  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
 const FLAT_KEYS   = ['F','Bb','Eb','Ab','Db','Gb','Cb'];
 
+/* ============================================================
+   SECURITY — HTML escaping for any dynamic / user-supplied string
+   that is interpolated into innerHTML / document.write.
+   Imported song titles (MusicXML <work-title>, GP metadata, MIDI
+   track names) are attacker-controllable and persisted to
+   localStorage, so they must be escaped at every HTML sink to
+   prevent stored DOM-XSS. Function declaration → hoisted across
+   the whole inline script, so every render path can use it.
+============================================================ */
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function noteName(idx, useFlats) {
   return (useFlats ? FLAT_NAMES : SHARP_NAMES)[(idx % 12 + 12) % 12];
 }
@@ -2760,7 +2789,7 @@ function _applyPulseMap(pulseMap) {
 function _markResonanceDegrees(gravityMap) {
   const pcToDeg = {};
   gravityMap.notes.forEach(function(n) { pcToDeg[n.pitchClass] = n.degree; });
-  document.querySelectorAll('.fret').forEach(function(fr) {
+  _fretGrid.forEach(function(fr) {   // cached grid iteration (Map.forEach → value=<g.fret>)
     const pc = parseInt(fr.dataset.idx, 10);
     if (isNaN(pc)) return;
     const deg = pcToDeg[pc];
@@ -2857,7 +2886,7 @@ function deactivateResonanceMode() {
   resonanceLastScale   = null;
   resonanceLick        = null;
   // Clear all resonance DOM markings
-  document.querySelectorAll('.fret').forEach(function(fr) {
+  _fretGrid.forEach(function(fr) {   // cached grid iteration (Map.forEach → value=<g.fret>)
     fr.classList.remove('ghost-tone', 'lick-step', 'lick-step-active');
     fr.removeAttribute('data-pulse');
     fr.removeAttribute('data-res-degree');
@@ -3293,11 +3322,13 @@ function initFretboardResizeObserver() {
 
 const SVG_NS   = 'http://www.w3.org/2000/svg';
 const _fretGrid = new Map(); // "engineString_fretNum" → <g.fret> element
+const _pcIndex  = new Map(); // pitch-class (0-11) → [<g.fret> elements] for O(1) repaint by note
 
 function buildFretboard() {
   const container = document.getElementById('fretboard');
   container.innerHTML = '';
   _fretGrid.clear();
+  _pcIndex.clear();
 
   const FRETS      = 13;   // frets 0 (open) through 12
   const STRINGS    = 6;
@@ -3456,6 +3487,14 @@ function buildFretboard() {
 
       // Register in O(1) lookup grid
       _fretGrid.set(`${engineString}_${f}`, g);
+      // Also index by pitch-class so the pitch detector / fretboard repaint can
+      // light cells by note without an O(F) document.querySelectorAll('.fret') scan.
+      const _pc = parseInt(g.dataset.idx, 10);
+      if (!isNaN(_pc)) {
+        let bucket = _pcIndex.get(_pc);
+        if (!bucket) { bucket = []; _pcIndex.set(_pc, bucket); }
+        bucket.push(g);
+      }
     }
   });
 
@@ -3472,7 +3511,7 @@ function clearFretboard() {
   // Clear lick step highlights before removing class refs
   clearLickStepHighlights();
   resonanceLickFretEls = [];
-  document.querySelectorAll('.fret').forEach(fr => {
+  _fretGrid.forEach(fr => {   // iterate cached grid (Map.forEach → value=<g.fret>); avoids a full-DOM .fret query
     fr.setAttribute('class', 'fret');
     if (fr._circle) {
       fr._circle.setAttribute('fill', 'transparent');
@@ -3538,7 +3577,7 @@ function showFretboard(root, scaleName, chordSym) {
   const ri  = NOTE_IDX[root] % 12;
   const tgt = new Set(pattern.map(i => (ri + i) % 12));
 
-  document.querySelectorAll('.fret').forEach(fr => {
+  _fretGrid.forEach(fr => {   // iterate cached grid (Map.forEach → value=<g.fret>); avoids a full-DOM .fret query
     const idx = parseInt(fr.dataset.idx, 10);
     if (isNaN(idx) || !tgt.has(idx)) return;
     const iv      = (idx - ri + 12) % 12;
@@ -3583,7 +3622,7 @@ function showFretboard(root, scaleName, chordSym) {
     const prevRI              = NOTE_IDX[prevBarData.root] || 0;
     const prevGT              = new Set([(prevRI + pThird) % 12, (prevRI + pSeventh) % 12]);
     const prevUF              = FLAT_KEYS.includes(prevBarData.root) || prevBarData.root.endsWith('b');
-    document.querySelectorAll('.fret').forEach(fr => {
+    _fretGrid.forEach(fr => {   // iterate cached grid (Map.forEach → value=<g.fret>); avoids a full-DOM .fret query
       const idx = parseInt(fr.dataset.idx, 10);
       if (isNaN(idx) || fr.classList.contains('hl') || !prevGT.has(idx)) return;
       fr.classList.add('gt-ghost');
@@ -3606,7 +3645,7 @@ function showLibraryScale(scaleName, noteNames, rootName) {
   document.getElementById('fbTitle').textContent = `📖 ${scaleName}  (C reference — functional harmony)`;
   const rootIdx = NOTE_IDX[rootName] || 0;
   const noteSet = new Set(noteNames.map(n => (NOTE_IDX[n] + 12) % 12));
-  document.querySelectorAll('.fret').forEach(fr => {
+  _fretGrid.forEach(fr => {   // iterate cached grid (Map.forEach → value=<g.fret>); avoids a full-DOM .fret query
     const idx = parseInt(fr.dataset.idx, 10);
     if (isNaN(idx) || !noteSet.has(idx)) return;
     const iv = (idx - rootIdx + 12) % 12;
@@ -3711,13 +3750,14 @@ function renderLeadSheet(tuneName, targetKey) {
   sheet.innerHTML = '';
 
   const hdr = document.createElement('div'); hdr.className = 'tune-header';
-  hdr.innerHTML = `${canonicalName} &nbsp;—&nbsp; Key of ${targetKey} &nbsp;${diffBadge(tune.difficulty)}`;
+  // escapeHtml on canonicalName/targetKey: imported tunes carry attacker-controlled names.
+  hdr.innerHTML = `${escapeHtml(canonicalName)} &nbsp;—&nbsp; Key of ${escapeHtml(targetKey)} &nbsp;${diffBadge(tune.difficulty)}`;
   sheet.appendChild(hdr);
 
   const meta = document.createElement('div'); meta.className = 'tune-meta';
   meta.innerHTML = [['Form',tune.form],['Bars',tune.bars],['Structure',tune.structure],
     ['Style',tune.style],['Original Key',tune.key]].map(([l,v]) =>
-    `<div class="meta-item"><span class="meta-lbl">${l}</span><span class="meta-val">${v}</span></div>`).join('');
+    `<div class="meta-item"><span class="meta-lbl">${escapeHtml(l)}</span><span class="meta-val">${escapeHtml(v)}</span></div>`).join('');
   sheet.appendChild(meta);
 
   let bn = 1;
@@ -4079,18 +4119,28 @@ function populateTuneDropdown(filtered = null) {
   });
   if ([...sel.options].some(o => o.value === active)) sel.value = active;
 }
+// SCALE_LIBRARY is static after load → count scales once instead of on every render.
+const _SCALE_TOTAL = Object.values(SCALE_LIBRARY).reduce((a, c) => a + c.length, 0);
+
 function renderStats(entries = null) {
-  const data = entries ? entries.map(([,t])=>t) : Object.values(SONGS);
-  const beg = data.filter(t=>t.difficulty==='Beginner').length;
-  const int = data.filter(t=>t.difficulty==='Intermediate').length;
-  const adv = data.filter(t=>t.difficulty==='Advanced').length;
+  // Accept the same [name, tune] entry pairs as before; default to all songs.
+  const data = entries || Object.entries(SONGS);
+  // Single O(S) pass replaces six independent .filter() scans over the song set.
+  let beg = 0, int = 0, adv = 0, blues = 0, aaba = 0;
+  for (const [, t] of data) {
+    if (t.difficulty === 'Beginner')          beg++;
+    else if (t.difficulty === 'Intermediate') int++;
+    else if (t.difficulty === 'Advanced')     adv++;
+    if (t.form === 'Blues')     blues++;
+    else if (t.form === 'AABA') aaba++;
+  }
   document.getElementById('statsBar').innerHTML = `
     <div class="stat-pill">🎷 <strong>${data.length}</strong> Tunes</div>
-    <div class="stat-pill"><strong>${data.filter(t=>t.form==='Blues').length}</strong> Blues · <strong>${data.filter(t=>t.form==='AABA').length}</strong> AABA</div>
+    <div class="stat-pill"><strong>${blues}</strong> Blues · <strong>${aaba}</strong> AABA</div>
     <div class="stat-pill"><span class="diff-b">B</span> <strong>${beg}</strong></div>
     <div class="stat-pill"><span class="diff-i">I</span> <strong>${int}</strong></div>
     <div class="stat-pill"><span class="diff-a">A</span> <strong>${adv}</strong></div>
-    <div class="stat-pill">📖 <strong>${Object.values(SCALE_LIBRARY).reduce((a,c)=>a+c.length,0)}</strong> Scales</div>`;
+    <div class="stat-pill">📖 <strong>${_SCALE_TOTAL}</strong> Scales</div>`;
 }
 function printLeadSheet() {
   const name = canonicalTuneTitle(document.getElementById('tuneSel').value);
@@ -4104,20 +4154,20 @@ function printLeadSheet() {
     .bn{position:absolute;top:1px;left:2px;font-size:7px;color:#ccc;}.ch{font-size:17px;font-weight:bold;}.ro{font-size:8px;color:#555;margin-top:2px;}
     @page{size:A4 portrait;margin:12mm 10mm;}</style>
 
-<h1>🎷 ${name}</h1><div class="meta">${tune.description} | Form: ${tune.form} | Key: ${key} | ${tune.bars} bars | ${tune.difficulty}</div>`;
+<h1>🎷 ${escapeHtml(name)}</h1><div class="meta">${escapeHtml(tune.description)} | Form: ${escapeHtml(tune.form)} | Key: ${escapeHtml(key)} | ${escapeHtml(tune.bars)} bars | ${escapeHtml(tune.difficulty)}</div>`;
 
 let bn = 1;
 tune.progression.forEach((row, ri) => {
 const lbl = getSectionLabel(tune.form, ri);
-if (lbl) html += `<div class="sl">${lbl}</div>`;
+if (lbl) html += `<div class="sl">${escapeHtml(lbl)}</div>`;
 html += '<div class="row">';
 row.forEach(obj => { const t = transposeChord(obj, tune.key, key);
-html += `<div class="bar"><div class="bn">${bn++}</div><div class="ch">${t.chord}</div><div class="ro">${t.roman}</div></div>`; });
+html += `<div class="bar"><div class="bn">${bn++}</div><div class="ch">${escapeHtml(t.chord)}</div><div class="ro">${escapeHtml(t.roman)}</div></div>`; });
 html += '</div>';
 });
 const w = window.open('','_blank','width=860,height=1120');
 if (!w) { alert('Allow pop-ups to enable printing.'); return; }
-w.document.write(`<!DOCTYPE html><html><head><title>${name}</title></head><body>${html}</body></html>`);
+w.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(name)}</title></head><body>${html}</body></html>`);
 w.document.close(); w.focus(); setTimeout(() => w.print(), 350);
 }
 
@@ -4528,8 +4578,18 @@ _loadAndApplyPrefs();
   const countEl  = document.getElementById('searchCount');
   if (!searchEl) return;
 
+  // Debounce: a burst of keystrokes collapses into one filter+dropdown rebuild
+  // (~120 ms idle) instead of re-scanning all songs and rebuilding the <select>
+  // on every character.
+  let _searchTimer = null;
   searchEl.addEventListener('input', function () {
-    const q   = this.value.toLowerCase().trim();
+    const value = this.value;            // capture now — `this` is not the input inside the timer
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(() => runSearch(value), 120);
+  });
+
+  function runSearch(rawValue) {
+    const q   = rawValue.toLowerCase().trim();
     const all = Object.entries(SONGS);
     if (!q) {
       populateTuneDropdown(null);
@@ -4550,7 +4610,7 @@ _loadAndApplyPrefs();
     if (filtered.length === 1) {
       tuneSel.value = filtered[0][0];
     }
-  });
+  }
 
   // Clear search when a tune is selected from dropdown
   tuneSel.addEventListener('change', function () {
@@ -4954,10 +5014,10 @@ function renderImportedList() {
   }
   list.innerHTML = names.map(n => {
     const t = IMPORTED_SONGS[n];
-    const safeN = n.replace(/"/g, '&quot;');
+    const safeN = escapeHtml(n); // imported title is attacker-controlled — escape for both text and attribute contexts
     return `<div class="imported-item">
-      <span class="imported-name">📁 ${n}</span>
-      <span class="imported-meta">${t.key} · ${t.bars}b</span>
+      <span class="imported-name">📁 ${safeN}</span>
+      <span class="imported-meta">${escapeHtml(t.key)} · ${escapeHtml(t.bars)}b</span>
       <button class="btn btn-stop import-del" data-name="${safeN}" title="Remove imported tune" aria-label="Remove ${safeN}">✕</button>
     </div>`;
   }).join('');
@@ -5293,7 +5353,7 @@ async function refreshDashboard() {
     needsEl.innerHTML =
       `<div class="prac-needs-label">Needs practice (${unpracticed.length} never · ${rare.length} once)</div>` +
       `<div class="prac-chips">${
-        needsList.map(n => `<button class="prac-tune-chip" data-tune="${n.replace(/"/g,'&quot;')}">${n}</button>`).join('')
+        needsList.map(n => `<button class="prac-tune-chip" data-tune="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')
       }</div>`;
     needsEl.querySelectorAll('.prac-tune-chip').forEach(btn => {
       btn.addEventListener('click', () => drillTune(btn.dataset.tune));
@@ -5315,10 +5375,10 @@ async function refreshDashboard() {
         <thead><tr><th>Tune</th><th>Key</th><th>BPM</th><th>Duration</th><th>When</th></tr></thead>
         <tbody>${recent.map(s =>
           `<tr>
-            <td class="prac-td-tune" title="${s.tune}">${s.tune}</td>
-            <td>${s.key}</td><td>${s.bpm}</td>
-            <td>${fmtDur(s.duration)}</td>
-            <td class="prac-td-when">${fmtWhen(s.startTime)}</td>
+            <td class="prac-td-tune" title="${escapeHtml(s.tune)}">${escapeHtml(s.tune)}</td>
+            <td>${escapeHtml(s.key)}</td><td>${escapeHtml(s.bpm)}</td>
+            <td>${escapeHtml(fmtDur(s.duration))}</td>
+            <td class="prac-td-when">${escapeHtml(fmtWhen(s.startTime))}</td>
           </tr>`
         ).join('')}</tbody>
       </table>`;
@@ -6724,27 +6784,44 @@ async function suggestNext() {
   }
 
   // ── Fretboard: highlight detected pitch class ─────────────────────────
+  // Track only the cells we lit last frame. At ~86 Hz this lets us toggle a
+  // handful of elements instead of re-scanning all ~90 fret cells with
+  // document.querySelectorAll('.fret') on every detected pitch.
+  let _litCells = [];
+
   function highlightPc(pc) {
-    document.querySelectorAll('.fret').forEach(fr => {
-      if (parseInt(fr.dataset.idx, 10) === pc) {
-        fr.classList.add('pitch-live');
-      } else {
-        fr.classList.remove('pitch-live');
-      }
-    });
+    for (let i = 0; i < _litCells.length; i++) _litCells[i].classList.remove('pitch-live');
+    _litCells = [];
+    // Pull the cells for this pitch-class straight from the prebuilt index — O(1) lookup, no DOM scan.
+    const cells = (typeof _pcIndex !== 'undefined' && _pcIndex.get(pc)) || null;
+    if (cells) {
+      for (let i = 0; i < cells.length; i++) { cells[i].classList.add('pitch-live'); _litCells.push(cells[i]); }
+    }
   }
 
   function clearHighlight() {
-    document.querySelectorAll('.fret.pitch-live').forEach(fr => fr.classList.remove('pitch-live'));
+    for (let i = 0; i < _litCells.length; i++) _litCells[i].classList.remove('pitch-live');
+    _litCells = [];
   }
 
   // ── UI update (called on each detected frequency) ─────────────────────
+  // Pitch-display elements are static markup — resolve them once instead of
+  // 5× getElementById on every detected pitch (~86 Hz).
+  let _pels = null;
+  function pitchEls() {
+    if (_pels) return _pels;
+    _pels = {
+      noteEl:    document.getElementById('pitchNote'),
+      centsEl:   document.getElementById('pitchCents'),
+      inScaleEl: document.getElementById('pitchInScale'),
+      meterEl:   document.getElementById('pitchMeterBar'),
+      scoreEl:   document.getElementById('pitchScore'),
+    };
+    return _pels;
+  }
+
   function onFrequency(freq) {
-    const noteEl    = document.getElementById('pitchNote');
-    const centsEl   = document.getElementById('pitchCents');
-    const inScaleEl = document.getElementById('pitchInScale');
-    const meterEl   = document.getElementById('pitchMeterBar');
-    const scoreEl   = document.getElementById('pitchScore');
+    const { noteEl, centsEl, inScaleEl, meterEl, scoreEl } = pitchEls();
 
     if (freq < 0) {
       // Silence / no pitch detected
@@ -6996,10 +7073,10 @@ async function suggestNext() {
       if (tbody) {
         tbody.innerHTML = sessions.length
           ? sessions.slice(0, 10).map(r =>
-              `<tr><td>${(r.date || '').slice(5).replace('-', '/')}</td>` +
-              `<td title="${r.tune || ''}">${(r.tune || '—').slice(0, 22)}</td>` +
-              `<td>${r.key || '—'}</td><td>${r.bpm || '—'}</td>` +
-              `<td>${fmtDuration(r.duration || 0)}</td></tr>`
+              `<tr><td>${escapeHtml((r.date || '').slice(5).replace('-', '/'))}</td>` +
+              `<td title="${escapeHtml(r.tune || '')}">${escapeHtml((r.tune || '—').slice(0, 22))}</td>` +
+              `<td>${escapeHtml(r.key || '—')}</td><td>${escapeHtml(r.bpm || '—')}</td>` +
+              `<td>${escapeHtml(fmtDuration(r.duration || 0))}</td></tr>`
             ).join('')
           : '<tr><td colspan="5" class="pj-empty">No sessions yet — generate a lead sheet to begin tracking</td></tr>';
       }
@@ -7028,7 +7105,15 @@ async function suggestNext() {
     const rows = [['Date', 'Tune', 'Key', 'BPM', 'Duration (s)']];
     sessions.sort((a, b) => (b.ts || 0) - (a.ts || 0))
       .forEach(r => rows.push([r.date, r.tune, r.key, r.bpm, r.duration]));
-    const csv  = rows.map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
+    // Neutralise spreadsheet formula injection: a cell beginning with = + - @
+    // (or a tab/CR) is treated as a formula by Excel/Sheets. Imported tune
+    // titles are user-supplied, so prefix such cells with a single quote.
+    const csvCell = v => {
+      let s = String(v ?? '');
+      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"';
+    };
+    const csv  = rows.map(r => r.map(csvCell).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
