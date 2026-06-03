@@ -1,0 +1,10 @@
+{
+  "name": "parker-songbook-tool",
+  "version": "7.2.0",
+  "private": true,
+  "description": "Charlie Parker Songbook Trainer — vanilla-JS bebop practice SPA",
+  "scripts": {
+    "test": "node tests/run-all.js"
+  },
+  "license": "MIT"
+}

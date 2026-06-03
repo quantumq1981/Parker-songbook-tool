@@ -16,7 +16,9 @@
 - 9 external JavaScript modules in `/js/` (including `pitch-processor.js`)
 - Resonance Engine in `/src/features/resonance-engine/`
 - Pure CSS design system with CSS custom properties
-- No framework (no React/Vue/Svelte), no build tool, no package manager
+- No framework (no React/Vue/Svelte), no build tool, no runtime dependencies
+- `package.json` exists only for the dev `test` script (`npm test` → `node tests/run-all.js`); there are no installable deps
+- CI: `.github/workflows/ci.yml` runs `npm test` on every push and PR to `main`
 - CDN dependencies (all version-pinned with SRI `integrity` + `crossorigin="anonymous"`): AlphaTab `@coderline/alphatab@1.8.3`, SVGuitar 1.7.1, JSZip 3.10.1
 - Web Audio API for synthesis + AudioWorklet for real-time pitch detection
 - IndexedDB for practice session storage
