@@ -17,7 +17,7 @@
 - Resonance Engine in `/src/features/resonance-engine/`
 - Pure CSS design system with CSS custom properties
 - No framework (no React/Vue/Svelte), no build tool, no package manager
-- CDN dependencies: AlphaTab `@coderline/alphatab@latest`, SVGuitar 1.7.1, JSZip 3.10.1
+- CDN dependencies (all version-pinned with SRI `integrity` + `crossorigin="anonymous"`): AlphaTab `@coderline/alphatab@1.8.3`, SVGuitar 1.7.1, JSZip 3.10.1
 - Web Audio API for synthesis + AudioWorklet for real-time pitch detection
 - IndexedDB for practice session storage
 - Service Worker for offline/PWA support
@@ -72,7 +72,7 @@ An Oscar for Treadwell, Another Hairdo, Back Home Blues, Bird Gets the Worm, Blu
 ## Features Added
 
 ### 1. AlphaTab Notation Integration
-- AlphaTab CDN library `@coderline/alphatab@latest` loaded with AudioWorklet SoundFont
+- AlphaTab CDN library `@coderline/alphatab@1.8.3` (pinned, SRI-protected) loaded with AudioWorklet SoundFont
 - GP file loading from `/docs/` directory (13 GP/GPX files bundled)
 - Notation tab inside the lead sheet panel; renders standard notation + tablature
 - Transposition via `getSemitones()` + AlphaTab `settings.display.transpositionPitches`
@@ -84,7 +84,8 @@ An Oscar for Treadwell, Another Hairdo, Back Home Blues, Bird Gets the Worm, Blu
 - `manifest.json`: standalone display, theme color, maskable SVG icon
 - `icons/icon.svg`: treble clef on dark purple background
 - Offline banner (`#offlineBanner`) shown when `navigator.onLine` is false
-- Cache version: `cp-songbook-v2`; bump on any shell change
+- Cache version: `cp-songbook-v3`; bump on any shell change
+- CDN caching locked to an explicit pinned-URL allowlist (`CDN_ASSETS`), not a host wildcard
 
 ### 3. Practice Session Tracker
 - IndexedDB database `cp_practice_db` v1, store `sessions` with `by_tune` + `by_date` indexes
