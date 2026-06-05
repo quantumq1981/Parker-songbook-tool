@@ -10,8 +10,9 @@
   script/connect origins to self + the two pinned CDNs, and locking down
   object-src / base-uri / form-action so injected <object>/<base>/<form> vectors
   cannot be used for exfiltration or script-base hijacking. blob: is allowed for
-  AlphaTab's audio worklet. NOTE: pair this with Subresource Integrity hashes on
-  the three CDN <script> tags once the exact pinned versions can be fetched.
+  AlphaTab's audio worklet. This is paired with Subresource Integrity (SRI)
+  hashes on all three CDN <script> tags (AlphaTab 1.8.3, JSZip 3.10.1,
+  SVGuitar 1.7.1), each pinned to an exact version with crossorigin="anonymous".
 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
