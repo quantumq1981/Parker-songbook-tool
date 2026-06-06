@@ -1049,8 +1049,10 @@ details.panel.heads-panel summary { color: #ce93d8; }
       <div class="import-drop-icon">📂</div>
       <div class="import-drop-text">Drop file here or click to browse</div>
       <div class="import-drop-formats">.xml &nbsp;·&nbsp; .mxl &nbsp;·&nbsp; .mid &nbsp;·&nbsp; .midi &nbsp;·&nbsp; .gp &nbsp;·&nbsp; .gp3 &nbsp;·&nbsp; .gp4 &nbsp;·&nbsp; .gp5 &nbsp;·&nbsp; .gp7 &nbsp;·&nbsp; .gpx</div>
+      <!-- No `accept` filter: iOS Safari greys out files whose extension it
+           doesn't recognise (.gp/.gpx/.gp5…), which made Guitar Pro files
+           unselectable. We validate the extension in handleImportFile instead. -->
       <input type="file" id="importFileInput"
-             accept=".xml,.mxl,.mid,.midi,.gp,.gp3,.gp4,.gp5,.gp7,.gpx"
              style="display:none" aria-hidden="true">
     </div>
     <div id="importStatus" class="import-status" aria-live="polite" role="status"></div>
@@ -5125,76 +5127,41 @@ async function handleImportFile(file) {
       statusEl.textContent = `✓ MIDI · ${tune.bpm} BPM · ${tune.bars} chord groups · key of ${tune.key}`;
       statusEl.className   = 'import-status import-ok';
 
-    } else if (['gp','gp3','gp4','gp5'].includes(ext)) {
-      const buf = await file.arrayBuffer();
-      const {title, artist, album} = parseGPHeader(buf, file.name);
-      const tune = {
-        key:'C', form:'Custom', bars:32, difficulty:'Custom',
-        style:'Imported', structure:'Imported',
-        description:`GuitarPro .${ext} import${artist?' · '+artist:''}${album?' · '+album:''} — export as MusicXML for full chord data`,
-        progression:[[
-          {chord:'CΔ7',roman:'IΔ7',scale:'Ionian'},
-          {chord:'Am7',roman:'VIm7',scale:'Dorian'},
-          {chord:'Dm7',roman:'IIm7',scale:'Dorian'},
-          {chord:'G7', roman:'V7',  scale:'Mixolydian'}
-        ]]
-      };
-      addImportedSong(title, tune);
-      statusEl.textContent = `⚠ GuitarPro .${ext}: title "${title}" extracted · chord symbols unavailable in binary format · export as MusicXML for full import`;
-      statusEl.className   = 'import-status import-warn';
+    } else if (['gp','gp3','gp4','gp5','gp6','gp7','gpx'].includes(ext)) {
+      // Guitar Pro: load the real transcription straight into the alphaTab
+      // Heads player so the MELODY plays accurately. alphaTab auto-detects the
+      // format from the binary header — legacy binary (.gp3/.gp4/.gp5) and the
+      // modern zip containers (.gp/.gp7/.gpx) are all handled natively.
+      const buf   = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      const isZip = bytes[0] === 0x50 && bytes[1] === 0x4B; // "PK" → GP6/7/8/GPX container
 
-    } else if (ext === 'gpx' || ext === 'gp7') {
-      let parsed = false;
-      if (typeof JSZip !== 'undefined') {
+      // Best-effort title for the status line (and the Heads-player label).
+      let title = cleanFilename(file.name.replace(/\.[^.]+$/, '')) || 'Imported head';
+      if (isZip && typeof JSZip !== 'undefined') {
         try {
-          const zip      = await JSZip.loadAsync(file);
+          const zip      = await JSZip.loadAsync(buf);
           const gpifFile = zip.file('Content/score.gpif')
                         || zip.file('score.gpif')
                         || Object.values(zip.files).find(f => f.name.endsWith('.gpif') && !f.dir);
           if (gpifFile) {
-            const gpifText = await gpifFile.async('string');
-            const gpifDoc  = new DOMParser().parseFromString(gpifText, 'text/xml');
-            const gpTitle  = (
-              gpifDoc.querySelector('Title')?.textContent ||
-              gpifDoc.querySelector('ScoreTitle')?.textContent ||
-              file.name.replace(/\.[^.]+$/, '')
-            ).trim();
-            const gpTempo = parseInt(gpifDoc.querySelector('Tempo value')?.textContent || '120') || 120;
-            const tune = {
-              key:'C', bpm:gpTempo, form:'Custom', bars:32,
-              difficulty:'Custom', style:'Imported', structure:'Imported',
-              description:`GuitarPro .${ext} import · ${gpTempo} BPM — export as MusicXML for full chord data`,
-              progression:[[
-                {chord:'CΔ7',roman:'IΔ7',scale:'Ionian'},
-                {chord:'Am7',roman:'VIm7',scale:'Dorian'},
-                {chord:'Dm7',roman:'IIm7',scale:'Dorian'},
-                {chord:'G7', roman:'V7',  scale:'Mixolydian'}
-              ]]
-            };
-            addImportedSong(gpTitle, tune);
-            statusEl.textContent = `⚠ GuitarPro .${ext}: "${gpTitle}" · ${gpTempo} BPM extracted — export as MusicXML for full chord import`;
-            statusEl.className   = 'import-status import-warn';
-            parsed = true;
+            const gpifDoc = new DOMParser().parseFromString(await gpifFile.async('string'), 'text/xml');
+            title = (gpifDoc.querySelector('Title')?.textContent
+                  || gpifDoc.querySelector('ScoreTitle')?.textContent || title).trim() || title;
           }
         } catch(_) {}
+      } else if (!isZip) {
+        try { title = parseGPHeader(buf, file.name).title || title; } catch(_) {}
       }
-      if (!parsed) {
-        const buf    = await file.arrayBuffer();
-        const {title} = parseGPHeader(buf, file.name);
-        const tune = {
-          key:'C', form:'Custom', bars:32, difficulty:'Custom',
-          style:'Imported', structure:'Imported',
-          description:`GuitarPro .${ext} import — chord data unavailable; export as MusicXML`,
-          progression:[[
-            {chord:'CΔ7',roman:'IΔ7',scale:'Ionian'},
-            {chord:'Am7',roman:'VIm7',scale:'Dorian'},
-            {chord:'Dm7',roman:'IIm7',scale:'Dorian'},
-            {chord:'G7', roman:'V7',  scale:'Mixolydian'}
-          ]]
-        };
-        addImportedSong(title, tune);
-        statusEl.textContent = `⚠ GuitarPro .${ext}: metadata only · export as MusicXML for full chord import`;
-        statusEl.className   = 'import-status import-warn';
+
+      if (typeof window.hdLoadArrayBuffer === 'function') {
+        window.hdLoadArrayBuffer(buf, title);
+        statusEl.textContent = `✓ Guitar Pro .${ext}: "${title}" loaded into the Heads player — press ▶ Play Head to hear the melody`;
+        statusEl.className   = 'import-status import-ok';
+      } else {
+        statusEl.textContent = `✗ Heads player not ready — open the Parker Heads Library panel, then re-upload`;
+        statusEl.className   = 'import-status import-err';
+        showToast('Heads player not ready — try again in a moment', 'warn');
       }
 
     } else {
@@ -6065,9 +6032,10 @@ async function suggestNext() {
     if (countEl) countEl.textContent = n + ' / ' + OMNIBOOK_TUNES.length;
   }
 
-  // ── Import hook: load local GP or MusicXML file via the importer ─────
-  // Passes the ArrayBuffer directly to alphaTab — format is auto-detected
-  // from the binary header (GP3/GP4/GP5/GPX) or XML declaration (MusicXML).
+  // ── Import hook: render uploaded MusicXML as notation in the player ─────
+  // Guitar Pro uploads are owned by the Import panel (handleImportFile →
+  // window.hdLoadArrayBuffer); this hook only mirrors MusicXML uploads into
+  // the player so the notation is visible alongside the parsed chord chart.
   function attachImportHook() {
     const fi = document.getElementById('importFileInput');
     if (!fi) return;
@@ -6075,41 +6043,56 @@ async function suggestNext() {
       const file = fi.files[0];
       if (!file) return;
       const ext = file.name.split('.').pop().toLowerCase();
-      if (!['xml','mxl','gp','gp3','gp4','gp5','gpx'].includes(ext)) return;
-
+      if (!['xml','mxl'].includes(ext)) return; // GP handled by handleImportFile
       const reader = new FileReader();
-      reader.onload = ev => {
-        if (!api) atInit();
-        if (!api) {
-          if (typeof showToast === 'function') showToast('alphaTab unavailable', 'error');
-          return;
-        }
-        const displayName = file.name.replace(/\.[^.]+$/, '');
-        currentBtn        = null;
-        currentTuneName   = displayName;
-
-        const bar     = document.getElementById('headMelodyBar');
-        const titleEl = document.getElementById('headMelodyTitle');
-        const wrap    = document.getElementById('atScoreWrap');
-        const overlay = document.getElementById('atLoadingOverlay');
-        const loadMsg = document.getElementById('atLoadingMsg');
-
-        if (bar)     bar.classList.add('hd-visible');
-        if (titleEl) titleEl.textContent = '🎵 ' + displayName + ' — loading…';
-        if (wrap)    { wrap.classList.remove('at-empty'); wrap.classList.add('at-loaded'); }
-        if (overlay) overlay.classList.remove('at-hidden');
-        if (loadMsg) loadMsg.textContent = 'Loading ' + displayName + '…';
-
-        const panel = document.getElementById('headsPanel');
-        if (panel) panel.open = true;
-
-        api.load(ev.target.result); // ArrayBuffer — alphaTab auto-detects format
-      };
+      reader.onload = ev => window.hdLoadArrayBuffer(ev.target.result, file.name.replace(/\.[^.]+$/, ''));
       reader.readAsArrayBuffer(file);
     }, { passive: true });
   }
 
   // ── Public API exposed to the rest of the page ────────────────────────
+
+  // Load a local Guitar Pro / MusicXML ArrayBuffer straight into the player so
+  // the melody plays accurately. Used by the Import panel (handleImportFile)
+  // for uploaded .gp/.gp3/.gp4/.gp5/.gp7/.gpx files. alphaTab auto-detects the
+  // format from the binary header — no AlphaTex conversion required.
+  window.hdLoadArrayBuffer = function(buf, displayName) {
+    if (!api) atInit();
+    if (!api) {
+      if (typeof showToast === 'function') showToast('alphaTab unavailable — check network', 'error');
+      return;
+    }
+    const name = (displayName || 'Imported head').toString();
+    currentBtn      = null;
+    currentTuneName = name;
+
+    // Reset all grid buttons — this ad-hoc upload isn't one of them.
+    document.querySelectorAll('.head-btn').forEach(b => {
+      b.classList.remove('hd-loaded', 'hd-loading', 'hd-error');
+      if (b.dataset.tuneName) b.textContent = b.dataset.tuneName;
+    });
+
+    const bar      = document.getElementById('headMelodyBar');
+    const titleEl  = document.getElementById('headMelodyTitle');
+    const wrap     = document.getElementById('atScoreWrap');
+    const overlay  = document.getElementById('atLoadingOverlay');
+    const loadMsg  = document.getElementById('atLoadingMsg');
+    const trackRow = document.getElementById('hdTrackRow');
+
+    if (bar)      bar.classList.add('hd-visible');
+    if (titleEl)  titleEl.textContent = '🎵 ' + name + ' — loading…';
+    if (wrap)     { wrap.classList.remove('at-empty'); wrap.classList.add('at-loaded'); }
+    if (overlay)  overlay.classList.remove('at-hidden');
+    if (loadMsg)  loadMsg.textContent = 'Loading ' + name + '…';
+    if (trackRow) trackRow.style.display = 'none';
+
+    const panel = document.getElementById('headsPanel');
+    if (panel) panel.open = true;
+
+    try { api.stop(); } catch(e) {}
+    hdClearFb();
+    api.load(buf); // ArrayBuffer / Uint8Array — alphaTab auto-detects format
+  };
 
   // Returns the matching OMNIBOOK_TUNES entry for a tune name, or null.
   window.hdHasGP = function(tuneName) {

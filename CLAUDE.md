@@ -69,6 +69,22 @@ An Oscar for Treadwell, Another Hairdo, Back Home Blues, Bird Gets the Worm, Blu
 **Issue:** `updateGpBadge()` was never called at startup or on preference restore, so the AlphaTab notation badge only appeared after user interaction.  
 **Fix:** Added `updateGpBadge()` call after `renderLeadSheet()` in both the startup sequence and `_loadAndApplyPrefs()`.
 
+### 8. Guitar Pro Uploads Never Played the Melody
+**Issue (3 compounding bugs):**
+1. The `#importFileInput` `accept=".xml,.mxl,.mid,.midi,.gp,.gp3,.gp4,.gp5,.gp7,.gpx"` filter caused iOS Safari to grey out GP files (it doesn't recognise those extensions/MIME types), so only `.xml`/`.midi` could be selected — matching the report that "it only accepts XML and MIDI."
+2. `handleImportFile` routed modern zip-based `.gp` (GP6/7/8 containers) into the **legacy binary** `parseGPHeader` path and only ever produced a junk placeholder progression (`CΔ7 Am7 Dm7 G7`) — the melody was never loaded.
+3. The `attachImportHook` that was meant to load GP into the alphaTab Heads player was effectively dead: the importer's own `change` listener calls `fileInput.value = ''` first, clearing the `FileList` before the hook reads it.
+
+**Fix:**
+- Removed the `accept` attribute (extension is still validated in `handleImportFile`).
+- Rewrote the GP branch in `handleImportFile` to cover `gp/gp3/gp4/gp5/gp6/gp7/gpx`, detect the container type via the `PK` (zip) magic bytes, extract a title (gpif `<Title>` for zip, `parseGPHeader` for binary), and load the **actual transcription** into the player via the new `window.hdLoadArrayBuffer(buf, name)` — so the melody plays accurately. No more junk placeholder progression.
+- Added `window.hdLoadArrayBuffer` to `alphaTabHeadsModule` (refactored out of `attachImportHook`); `api.load()` auto-detects the format. Works for drag-drop **and** click-to-browse.
+- Scoped `attachImportHook` to `xml`/`mxl` only so GP can't be double-loaded.
+
+### 9. Confirmation Head Crashed alphaTab (`t.staves`)
+**Issue:** The bundled `docs/Charlie Parker - Confirmation.gp` was a 2-track GP7 file that threw `undefined is not an object (evaluating 't.staves')` in the alphaTab renderer — the head showed chords but never the melody.  
+**Fix:** Replaced it with the user-supplied single-track, alphaTab-authored GP8 transcription of the Confirmation head (clean melody track that loads and plays reliably). `OMNIBOOK_TUNES`'s `Confirmation` entry already points at this filename.
+
 ---
 
 ## Features Added
