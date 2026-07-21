@@ -1002,6 +1002,376 @@ details.panel.heads-panel summary { color: #ce93d8; }
   padding:6px 12px; font-size:12px; font-weight:600; letter-spacing:.04em;
 }
 #offlineBanner.offline-visible { display:block; }
+
+/* ============================================================
+   v7.3 UX REFACTOR — Progressive Disclosure, Global Transport,
+   Toggle Standardization, Prerequisite Hints, Typography Scale
+   ============================================================ */
+
+/* ── Typography scale (3-tier) ─────────────────────────────── */
+.h-mode  { font-size: 20px; color: var(--accent);  margin: 4px 0 12px; letter-spacing: .5px; font-weight: 700; }
+.h-panel { font-size: 15px; color: var(--accent2); margin: 6px 0 8px; letter-spacing: .3px; font-weight: 600; text-transform: uppercase; }
+.h-sub   { font-size: 12px; color: var(--ink-dim); margin: 4px 0 6px; letter-spacing: .2px; font-weight: 500; text-transform: uppercase; }
+
+/* ── Workflow mode navigation ──────────────────────────────── */
+.mode-nav {
+  display: flex;
+  gap: 4px;
+  background: #14161f;
+  border: 1px solid var(--barline);
+  border-radius: 10px;
+  padding: 4px;
+  margin: 10px 0 14px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+.mode-nav-btn {
+  flex: 1 1 0;
+  background: transparent;
+  color: var(--ink-dim);
+  border: none;
+  border-radius: 7px;
+  padding: 10px 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .4px;
+  cursor: pointer;
+  min-height: 44px;
+  transition: background .15s ease, color .15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-transform: uppercase;
+}
+.mode-nav-btn:hover { background: #1f2333; color: var(--ink); }
+.mode-nav-btn[aria-selected="true"] {
+  background: var(--indigo);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(99,102,241,.35);
+}
+.mode-nav-btn .mode-icon { font-size: 15px; opacity: .85; }
+.mode-hint {
+  font-size: 11px;
+  color: var(--ink-dim);
+  text-align: center;
+  margin: -6px 0 12px;
+  min-height: 14px;
+  font-style: italic;
+}
+
+/* ── Progressive disclosure via data-modes attribute ───────── */
+[data-modes] { display: none; }
+body[data-active-mode="learn"]     [data-modes~="learn"],
+body[data-active-mode="practice"]  [data-modes~="practice"],
+body[data-active-mode="improvise"] [data-modes~="improvise"],
+body[data-active-mode="journal"]   [data-modes~="journal"],
+[data-modes~="all"] { display: revert; }
+
+/* Restore flex/grid displays for containers that use them */
+body[data-active-mode] .playback-bar[data-modes]:not([hidden]),
+body[data-active-mode] .fb-section[data-modes]:not([hidden]) { }
+
+/* ── Global sticky transport bar ───────────────────────────── */
+.global-transport {
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+  background: linear-gradient(180deg, #14161f 0%, #0d0f16 100%);
+  border-top: 2px solid var(--indigo);
+  border-radius: 12px 12px 0 0;
+  padding: 10px 14px;
+  margin: 16px -14px -14px;
+  box-shadow: 0 -6px 20px rgba(0,0,0,.55);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Courier New', monospace;
+}
+.gt-label {
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  margin-right: 4px;
+}
+.gt-target {
+  font-size: 12px;
+  color: var(--accent2);
+  font-weight: 600;
+  padding: 3px 8px;
+  background: #1e2331;
+  border-radius: 12px;
+  border: 1px solid var(--accent2);
+}
+.gt-btn {
+  min-height: 40px;
+  min-width: 44px;
+  background: #1e1e1e;
+  color: var(--sym);
+  border: 1px solid var(--barline);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background .15s ease, border-color .15s ease;
+}
+.gt-btn:hover:not(:disabled) { background: #2a2a2a; border-color: var(--accent); }
+.gt-btn:disabled { opacity: .4; cursor: not-allowed; }
+.gt-btn-play { border-color: var(--green); color: #a5e8a8; }
+.gt-btn-play[aria-pressed="true"] { background: var(--green); color: #000; }
+.gt-btn-stop { border-color: var(--red); color: #ffb0b0; }
+.gt-btn-loop[aria-pressed="true"] { background: var(--indigo); color: #fff; border-color: var(--indigo); }
+.gt-speed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+.gt-speed input[type="range"] { width: 110px; accent-color: var(--accent); cursor: pointer; }
+.gt-speed-val {
+  color: var(--accent);
+  font-weight: 700;
+  min-width: 44px;
+  text-align: right;
+}
+.gt-bpm {
+  width: 62px;
+  background: #1e1e1e;
+  color: var(--sym);
+  border: 1px solid var(--barline);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  text-align: center;
+}
+@media (max-width: 640px) {
+  .global-transport { gap: 6px; padding: 8px 10px; }
+  .gt-btn { padding: 8px 10px; font-size: 12px; }
+  .gt-speed { margin-left: 0; width: 100%; justify-content: center; }
+}
+
+/* ── AudioContext consent overlay ──────────────────────────── */
+.audio-consent-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(6,8,15,.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.audio-consent-card {
+  background: #1a1d2c;
+  border: 2px solid var(--indigo);
+  border-radius: 14px;
+  padding: 28px 32px;
+  max-width: 380px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  font-family: 'Courier New', monospace;
+}
+.audio-consent-icon { font-size: 44px; margin-bottom: 8px; }
+.audio-consent-title {
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: .5px;
+}
+.audio-consent-body {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+  margin-bottom: 18px;
+}
+.audio-consent-btn {
+  background: var(--indigo);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .5px;
+  min-height: 48px;
+  transition: background .15s ease, transform .1s ease;
+}
+.audio-consent-btn:hover { background: #7c7ef5; }
+.audio-consent-btn:active { transform: scale(.97); }
+body.audio-ready .audio-consent-overlay { display: none; }
+body:not(.audio-ready) .gt-btn-play,
+body:not(.audio-ready) .gt-btn-stop { opacity: .35; pointer-events: none; }
+
+/* ── Standardized aria-pressed toggle (pill) ───────────────── */
+.toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #1e1e1e;
+  color: var(--ink-dim);
+  border: 1px solid var(--barline);
+  border-radius: 999px;
+  padding: 7px 12px 7px 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  min-height: 36px;
+}
+.toggle-pill:hover { border-color: var(--accent); color: var(--ink); }
+.toggle-pill::before {
+  content: '';
+  display: inline-block;
+  width: 26px;
+  height: 14px;
+  background: #333;
+  border-radius: 999px;
+  position: relative;
+  transition: background .15s ease;
+  flex-shrink: 0;
+}
+.toggle-pill::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #999;
+  border-radius: 50%;
+  margin-left: 2px;
+  margin-top: 2px;
+  transition: transform .15s ease, background .15s ease;
+}
+.toggle-pill { position: relative; }
+.toggle-pill[aria-pressed="true"] {
+  background: #0d1f2e;
+  color: #9fd2ff;
+  border-color: var(--accent2);
+}
+.toggle-pill[aria-pressed="true"]::before { background: var(--accent2); }
+.toggle-pill[aria-pressed="true"]::after { transform: translateX(12px); background: #fff; }
+.toggle-pill .toggle-label { font-weight: 600; letter-spacing: .3px; }
+
+/* ── Prerequisite hint ─────────────────────────────────────── */
+.prerequisite-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1c1a10;
+  border: 1px dashed var(--accent);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  margin-left: 6px;
+  font-style: italic;
+}
+.prerequisite-hint::before { content: 'ⓘ'; font-style: normal; }
+
+button[disabled], select[disabled], input[disabled] {
+  opacity: .4;
+  cursor: not-allowed !important;
+}
+.controls button[disabled]:hover { background: #1e1e1e; color: var(--sym); }
+
+/* ── Practice Tips — scannable vertical layout ─────────────── */
+.tips-card {
+  background: #14161f;
+  border: 1px solid var(--barline);
+  border-left: 4px solid var(--indigo);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+.tips-card .tips-title {
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.tips-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink);
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.02);
+}
+.tips-list li .tip-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--indigo);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  min-width: 60px;
+  text-align: center;
+}
+.tips-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--barline);
+  margin-top: 12px;
+}
+.tips-shortcuts .kbd-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-dim);
+  font-size: 11px;
+}
+.tips-difficulty {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--barline);
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+/* Global transport not visible until DOM ready */
+body:not([data-active-mode]) .global-transport { display: none; }
+
+/* Hide legacy transport-related controls superseded by global bar */
+body[data-active-mode] .playback-bar .legacy-transport-btn { display: none; }
+
 </style>
 
 
@@ -1011,13 +1381,30 @@ details.panel.heads-panel summary { color: #ce93d8; }
   📵 You are offline — serving cached version
 </div>
 <a class="skip-link" href="#sheet">Skip to lead sheet</a>
+
+<!-- ── AudioContext consent overlay (dismisses on first click; global unlockAudio still fires) ── -->
+<div class="audio-consent-overlay" id="audioConsentOverlay" role="dialog"
+     aria-labelledby="audioConsentTitle" aria-modal="true">
+  <div class="audio-consent-card">
+    <div class="audio-consent-icon" aria-hidden="true">🎵</div>
+    <h2 class="audio-consent-title" id="audioConsentTitle">Enable audio playback</h2>
+    <p class="audio-consent-body">
+      Browsers require a tap before audio can play. Click below to unlock the
+      synthesis engine, metronome, and pitch detection.
+    </p>
+    <button class="audio-consent-btn" id="audioConsentBtn" type="button">
+      ▶ Enable Audio
+    </button>
+  </div>
+</div>
+
 <h1>🎷 Charlie Parker Songbook Trainer</h1>
 <p class="app-tagline" aria-hidden="true">Interactive Bebop Practice Tool · AI Resonance Engine · Guitar Fretboard Visualizer</p>
 <main class="card" id="main-content" role="main" aria-label="Charlie Parker Songbook Trainer">
-  <h2 id="main-heading">Complete Bebop Songbook</h2>
-  <div class="stats-bar" id="statsBar" role="status" aria-live="polite" aria-label="Songbook statistics"></div>
+  <h2 id="main-heading" class="h-mode">Complete Bebop Songbook</h2>
+  <div class="stats-bar" id="statsBar" data-modes="all" role="status" aria-live="polite" aria-label="Songbook statistics"></div>
 
-  <div class="search-row" role="search" aria-label="Search tunes by name">
+  <div class="search-row" data-modes="all" role="search" aria-label="Search tunes by name">
     <input type="search" id="tuneSearch" class="search-input"
            placeholder="Search tunes by name…"
            aria-label="Quick search tunes by name"
@@ -1025,7 +1412,34 @@ details.panel.heads-panel summary { color: #ce93d8; }
     <span class="search-count" id="searchCount" aria-live="polite" aria-atomic="true"></span>
   </div>
 
-  <details class="panel filter-panel">
+  <!-- ── Workflow mode navigation (Progressive Disclosure) ─────────── -->
+  <nav class="mode-nav" role="tablist" aria-label="Workflow mode" data-modes="all">
+    <button class="mode-nav-btn" role="tab" data-mode="learn"
+            aria-selected="true" aria-controls="main-content"
+            id="modeBtnLearn">
+      <span class="mode-icon" aria-hidden="true">📖</span>Learn
+    </button>
+    <button class="mode-nav-btn" role="tab" data-mode="practice"
+            aria-selected="false" aria-controls="main-content"
+            id="modeBtnPractice">
+      <span class="mode-icon" aria-hidden="true">🎯</span>Practice
+    </button>
+    <button class="mode-nav-btn" role="tab" data-mode="improvise"
+            aria-selected="false" aria-controls="main-content"
+            id="modeBtnImprovise">
+      <span class="mode-icon" aria-hidden="true">🎸</span>Improvise
+    </button>
+    <button class="mode-nav-btn" role="tab" data-mode="journal"
+            aria-selected="false" aria-controls="main-content"
+            id="modeBtnJournal">
+      <span class="mode-icon" aria-hidden="true">📊</span>Journal
+    </button>
+  </nav>
+  <div class="mode-hint" data-modes="all" id="modeHint" aria-live="polite">
+    Read the lead sheet, hear each chord, and see the fretboard visualiser.
+  </div>
+
+  <details class="panel filter-panel" data-modes="all">
     <summary>🔧 Advanced Filters</summary>
     <div class="filter-grid">
       <div><label>Form</label>
@@ -1042,7 +1456,7 @@ details.panel.heads-panel summary { color: #ce93d8; }
     </div>
   </details>
 
-  <details class="panel import-panel" id="importPanel">
+  <details class="panel import-panel" id="importPanel" data-modes="all">
     <summary>📂 Import Tune — MusicXML · GuitarPro · MIDI</summary>
     <div id="importDropZone" class="import-drop-zone" role="button" tabindex="0"
          aria-label="Drop a tune file here or click to browse">
@@ -1059,8 +1473,8 @@ details.panel.heads-panel summary { color: #ce93d8; }
     <div id="importedList" class="imported-list" aria-label="Imported tunes"></div>
   </details>
 
-  <details class="panel" id="practicePanel">
-    <summary>📊 Practice Journal</summary>
+  <details class="panel" id="practicePanel" data-modes="journal" open>
+    <summary>📊 Practice Journal — Session Tracker</summary>
     <div class="pj-active" id="pjActive">
       ▶ Practicing: <strong id="pjActiveTune">—</strong> &nbsp;·&nbsp; <span id="pjTimer">0:00</span>
     </div>
@@ -1081,7 +1495,7 @@ details.panel.heads-panel summary { color: #ce93d8; }
     </table>
   </details>
 
-  <details class="panel heads-panel" id="headsPanel">
+  <details class="panel heads-panel" id="headsPanel" data-modes="practice">
     <summary>🎵 Parker Heads Library — Omnibook Melodies</summary>
     <p style="font-size:11px;color:var(--ink-dim);margin:8px 0 4px;">
       Click any tune to fetch its composed head from the Charlie Parker Omnibook.
@@ -1162,45 +1576,48 @@ details.panel.heads-panel summary { color: #ce93d8; }
     </div>
   </details>
 
-  <div class="controls">
+  <div class="controls" data-modes="all">
     <label>Tune:</label>
     <select id="tuneSel"></select>
-    <button id="randomTune" class="btn-sec">🎲 Random</button>
+    <button id="randomTune" class="btn-sec" title="Random tune (weighted by practice history if available)">🎲 Random</button>
   </div>
-  <div class="controls">
+  <div class="controls" data-modes="all">
     <label>Key:</label>
     <select id="keySel"></select>
-    <button id="generateBtn" class="btn-ok">▶ Generate</button>
-    <button id="toggleScales" class="btn-sec">Show Scales</button>
+    <button id="generateBtn" class="btn-ok">▶ Generate Lead Sheet</button>
     <button id="printBtn" class="btn-sec">🖨️ Print</button>
     <button id="hdGpBadge" class="hd-gp-badge" style="display:none;"
-            title="GuitarPro head available — click to load in player">🎵 Play Head</button>
+            title="GuitarPro head available — switch to Practice mode to load in player">🎵 GP Available</button>
   </div>
 
-  <div class="playback-bar">
-    <h3>🎵 Playback Engine</h3>
+  <!-- Simplified Playback Options panel: BPM, loop range, trainer, metronome
+       Transport controls (Play/Stop/Loop toggle) live in the global sticky bar. -->
+  <div class="playback-bar" data-modes="learn practice">
+    <h3 class="h-panel">🎵 Playback Options</h3>
     <div class="controls" style="margin-bottom:0;">
       <label>BPM:</label>
       <input type="number" id="bpmInput" value="120" min="40" max="320" step="5"/>
-      <button id="playBtn" class="btn-ok">▶ Play</button>
-      <button id="stopBtn" class="btn-stop">⏹ Stop</button>
-      <button id="loopBtn" class="btn-sec">🔁 Loop: OFF</button>
-      <select id="loopTargetSel" style="max-width:190px;">
+      <button id="toggleScales" class="btn-sec">Show Scales</button>
+      <select id="loopTargetSel" style="max-width:190px;" aria-label="Loop target">
         <option value="full">Loop: Full Form</option>
         <option value="sectionA">Loop: Section A</option>
         <option value="sectionB">Loop: Section B/Bridge</option>
         <option value="bars">Loop: Bar Range</option>
       </select>
-      <input type="number" id="loopStart" min="1" value="1" title="Loop start bar"/>
-      <input type="number" id="loopEnd" min="1" value="8" title="Loop end bar"/>
-      <input type="number" id="countInInput" min="0" max="8" value="2" title="Count-in beats"/>
-      <button id="tempoTrainerBtn" class="btn-sec">Tempo Trainer: OFF</button>
-      <button id="metroBtn" class="btn-sec">Metronome: OFF</button>
+      <input type="number" id="loopStart" min="1" value="1" title="Loop start bar" aria-label="Loop start bar"/>
+      <input type="number" id="loopEnd" min="1" value="8" title="Loop end bar" aria-label="Loop end bar"/>
+      <input type="number" id="countInInput" min="0" max="8" value="2" title="Count-in beats" aria-label="Count-in beats"/>
+      <button id="tempoTrainerBtn" class="toggle-pill" aria-pressed="false" data-toggle-label="Tempo Trainer">
+        <span class="toggle-label">Tempo Trainer</span>
+      </button>
+      <button id="metroBtn" class="toggle-pill" aria-pressed="false" data-toggle-label="Metronome">
+        <span class="toggle-label">Metronome</span>
+      </button>
     </div>
     <div class="metro-indicator" id="metroIndicator">🕒 Metronome click</div>
     <div class="playback-progress"><div class="playback-progress-fill" id="playbackProgressFill"></div></div>
     <div class="play-status" id="playStatus" role="status" aria-live="polite" aria-atomic="true">Ready — generate a lead sheet to begin</div>
-    <div class="audio-status" id="audioStatus" aria-live="polite">🎵 Tap anywhere to enable audio</div>
+    <div class="audio-status" id="audioStatus" aria-live="polite" style="display:none;">🎵 Audio ready</div>
     <div class="shortcut-hint" aria-label="Keyboard shortcuts">
       <span><kbd class="kbd">Space</kbd> Play/Stop</span>
       <span><kbd class="kbd">R</kbd> Random</span>
@@ -1209,7 +1626,15 @@ details.panel.heads-panel summary { color: #ce93d8; }
     </div>
   </div>
 
-  <div class="analysis-panel" id="analysisPanel" aria-live="polite" aria-label="Chord scale analysis">
+  <!-- Legacy transport buttons — kept in DOM as JS proxies for global transport.
+       Hidden from users; existing handlers still bind so audio pipelines are untouched. -->
+  <div style="display:none;" aria-hidden="true">
+    <button id="playBtn"></button>
+    <button id="stopBtn"></button>
+    <button id="loopBtn">🔁 Loop: OFF</button>
+  </div>
+
+  <div class="analysis-panel" id="analysisPanel" data-modes="learn" aria-live="polite" aria-label="Chord scale analysis">
     <div class="analysis-title">Chord-Scale Relationship Guide</div>
     <div class="analysis-row" id="analysisChord" aria-live="polite">Select a bar to analyze compatibility.</div>
     <div class="analysis-row" id="analysisScales"></div>
@@ -1217,10 +1642,10 @@ details.panel.heads-panel summary { color: #ce93d8; }
     <div class="analysis-row" id="analysisTension"></div>
   </div>
 
-  <div class="legend">Tap any bar to hear the chord or scale · Use Playback to sequence at tempo · Open Scale Library for bebop theory reference</div>
+  <div class="legend" data-modes="learn">Tap any bar to hear the chord or scale · Use the global transport to sequence at tempo · Switch to <strong>Improvise</strong> mode for Scale Library</div>
 
   <!-- ── View mode tabs: Chord Grid | Notation | Tab ──────────────────── -->
-  <div class="at-view-tabs" id="atViewTabs" role="tablist" aria-label="Lead sheet view mode">
+  <div class="at-view-tabs" id="atViewTabs" data-modes="learn practice" role="tablist" aria-label="Lead sheet view mode">
     <button class="at-view-tab active" data-view="grid" id="atTabGrid"
             role="tab" aria-selected="true" aria-controls="sheet"
             title="Interactive chord grid with Roman numerals, scale suggestions, and bar click-to-play">📋 Chord Grid</button>
@@ -1232,12 +1657,12 @@ details.panel.heads-panel summary { color: #ce93d8; }
             title="Guitar tablature rendered by AlphaTab — available for Omnibook tunes">𝄩 Tab</button>
   </div>
 
-  <div id="sheet" class="sheet">
+  <div id="sheet" class="sheet" data-modes="learn practice">
     <div style="text-align:center;color:var(--ink-dim);padding:30px;">Select a tune and click Generate to begin.</div>
   </div>
 
   <!-- ── AlphaTab main notation/tab viewer (replaces chord grid when active) ── -->
-  <div id="alphatab-container" style="display:none;"
+  <div id="alphatab-container" data-modes="practice" style="display:none;"
        role="tabpanel" aria-labelledby="atTabNotation atTabTab">
     <div id="atMainScore"></div>
     <div class="at-main-overlay at-hidden" id="atMainOverlay">
@@ -1266,13 +1691,19 @@ details.panel.heads-panel summary { color: #ce93d8; }
     </div>
   </div>
 
-  <div class="fb-section" id="fbSection" style="display:none;">
-    <div class="fb-title" id="fbTitle">Select a bar to view chord / scale tones</div>
+  <div class="fb-section" id="fbSection" data-modes="learn practice improvise" style="display:none;">
+    <div class="fb-title h-panel" id="fbTitle">Select a bar to view chord / scale tones</div>
     <div class="controls" style="justify-content:center;margin-bottom:6px;flex-wrap:wrap;">
-      <button id="toggleMode" class="btn-sec">Mode: Chord Tones</button>
-      <button id="toggleAudio" class="btn-sec">🎵 Audio: Chord</button>
-      <button id="toggleResonance" class="btn-sec">🎸 Resonance: OFF</button>
-      <button id="togglePitch" class="btn-sec" title="Real-time pitch detection via microphone — audio stays on your device">🎤 Pitch: OFF</button>
+      <button id="toggleMode" class="btn-sec" aria-label="Cycle fretboard display mode">Fretboard: Chord Tones</button>
+      <button id="toggleAudio" class="btn-sec" aria-label="Cycle audio synthesis mode">Audio: Chord</button>
+      <button id="toggleResonance" class="toggle-pill" aria-pressed="false" data-toggle-label="Resonance Engine">
+        <span class="toggle-label">Resonance Engine</span>
+      </button>
+      <button id="togglePitch" class="toggle-pill" aria-pressed="false"
+              title="Real-time pitch detection via microphone — audio stays on your device"
+              data-toggle-label="Mic Pitch Detection">
+        <span class="toggle-label">🎤 Pitch Detection</span>
+      </button>
     </div>
     <!-- Real-time pitch display (shown when mic is active) -->
     <div class="pitch-display" id="pitchDisplay">
@@ -1307,7 +1738,7 @@ details.panel.heads-panel summary { color: #ce93d8; }
   </div>
 
   <!-- ===== Voice Leading Panel (Guide Tone mode) ===== -->
-  <div id="voiceLeadPanel" class="voice-lead-panel" style="display:none;" aria-live="polite" aria-label="Voice leading analysis">
+  <div id="voiceLeadPanel" class="voice-lead-panel" data-modes="learn practice improvise" style="display:none;" aria-live="polite" aria-label="Voice leading analysis">
     <div class="vl-header">
       <span class="vl-title">♩ Guide Tone Voice Leading</span>
       <span class="vl-chord-label" id="vlChordLabel"></span>
@@ -1316,16 +1747,23 @@ details.panel.heads-panel summary { color: #ce93d8; }
     <div id="vlMotionSection"></div>
   </div>
 
-  <div id="resonancePanel" class="resonance-panel" style="display:none;">
-    <h3>🎸 Resonance Engine</h3>
+  <div id="resonancePanel" class="resonance-panel" data-modes="improvise" style="display:none;">
+    <h3 class="h-panel">🎸 Resonance Engine</h3>
+    <div id="resonancePrereq" class="prerequisite-hint" style="margin:0 0 10px;display:none;">
+      Select a bar in Learn mode to unlock lick generation.
+    </div>
     <div class="controls" style="justify-content:center;flex-wrap:wrap;margin-bottom:0;">
       <button id="resonanceRegenBtn" class="btn-sec">↻ Regenerate Lick</button>
       <button id="resonancePlayBtn" class="btn-ok">▶ Play Lick</button>
       <button id="resonanceStopBtn" class="btn-stop">⏹ Stop</button>
-      <button id="resonanceArrowsBtn" class="btn-sec">Gravity Arrows: OFF</button>
+      <button id="resonanceArrowsBtn" class="toggle-pill" aria-pressed="false" data-toggle-label="Gravity Arrows">
+        <span class="toggle-label">Gravity Arrows</span>
+      </button>
       <button id="resonanceCopyTabBtn" class="btn-sec">📋 Copy Tab</button>
       <button id="resonancePreviewBtn" class="btn-sec">🎵 Preview Lick</button>
-      <button id="resonanceAutoPlayBtn" class="btn-sec">Auto-play: OFF</button>
+      <button id="resonanceAutoPlayBtn" class="toggle-pill" aria-pressed="false" data-toggle-label="Auto-play">
+        <span class="toggle-label">Auto-play</span>
+      </button>
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:8px;justify-content:center;flex-wrap:wrap;">
       <label style="color:var(--ink-dim);font-size:12px;">Lick length:</label>
@@ -1337,28 +1775,32 @@ details.panel.heads-panel summary { color: #ce93d8; }
   </div>
 
   <!-- ===== Section Lick Generator Panel ===== -->
-  <div id="sectionLickPanel" class="resonance-panel" style="display:none;margin-top:8px;">
-    <h3>🎼 Section Lick Generator</h3>
+  <div id="sectionLickPanel" class="resonance-panel" data-modes="improvise" style="display:none;margin-top:8px;">
+    <h3 class="h-panel">🎼 Section Lick Generator</h3>
     <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;">
       <select id="sectionSelect" style="padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--card);color:var(--ink);font-size:13px;cursor:pointer;">
         <option value="">— select section —</option>
       </select>
       <button id="sectionGenBtn" class="btn-sec">🎼 Generate Section</button>
-      <button id="sectionSaveTabBtn" class="btn-sec" style="display:none;">💾 Save as TAB</button>
-      <button id="sectionExportZipBtn" class="btn-sec" style="display:none;" title="Download ASCII tab, alphaTex, and MusicXML in a ZIP file">📦 Download ZIP</button>
-      <button id="sectionPreviewBtn" class="btn-sec" style="display:none;">🎵 Preview</button>
+      <!-- Post-generation actions: disabled + hinted until Generate has run. -->
+      <button id="sectionSaveTabBtn" class="btn-sec" disabled aria-disabled="true">💾 Save as TAB</button>
+      <button id="sectionExportZipBtn" class="btn-sec" disabled aria-disabled="true"
+              title="Download ASCII tab, alphaTex, and MusicXML in a ZIP file">📦 Download ZIP</button>
+      <button id="sectionPreviewBtn" class="btn-sec" disabled aria-disabled="true">🎵 Preview</button>
+      <span class="prerequisite-hint" id="sectionLickPrereq">Generate a section first</span>
     </div>
     <pre id="sectionTabDisplay" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:11px;overflow-x:auto;white-space:pre;color:var(--ink);max-height:220px;line-height:1.5;margin:0;"></pre>
   </div>
 
-  <details class="panel scale-lib" style="margin-top:10px;">
+  <details class="panel scale-lib" data-modes="improvise" style="margin-top:10px;">
     <summary>📖 Bebop Scale Library — Click any scale to visualise &amp; hear</summary>
     <div class="lib-note">All scales shown in C as a reference. Functional harmony colouring: <span class="fl-root">Root</span> · <span class="fl-sub">Subdominant</span> · <span class="fl-dom">Dominant</span> · <span class="fl-other">Mediant</span></div>
     <div class="lib-grid" id="libGrid"></div>
   </details>
 
-  <details class="panel practice-panel" id="practicePanel">
-    <summary>📊 Practice Journal — Session Tracking &amp; Drill Suggestions</summary>
+  <!-- Renamed from duplicate id="practicePanel" → id="practiceDrillsPanel" to fix invalid HTML. -->
+  <details class="panel practice-panel" id="practiceDrillsPanel" data-modes="journal">
+    <summary>💡 Practice Drills &amp; Suggestions</summary>
     <div id="pracStats"  class="prac-stats"         aria-live="polite"></div>
     <div id="pracNeeds"  class="prac-needs-section" aria-live="polite"></div>
     <div id="pracSessions"                           aria-live="polite"></div>
@@ -1368,21 +1810,60 @@ details.panel.heads-panel summary { color: #ce93d8; }
     </div>
   </details>
 
-  <div class="info-box">
-    <strong style="color:var(--accent)">🎯 Practice Tips</strong><br>
-    Study Roman numerals for harmonic function · Transpose to all 12 keys ·
-    Focus on ii-V-I patterns and tritone substitutions · Use Playback at slow tempo first ·
-    Toggle <em>Mode</em> between Chord Tones, Full Scale, and Functional Harmony ·
-    Toggle <em>Audio</em> between Chord Voicing, Scale Run, and Bebop Groove ·
-    Open Scale Library to visualise bebop scales across the neck ·
-    <span class="diff-b">B</span> Beginner &nbsp;
-    <span class="diff-i">I</span> Intermediate &nbsp;
-    <span class="diff-a">A</span> Advanced ·
-    <strong style="color:var(--ink-dim)">Keyboard:</strong> <kbd class="kbd">Space</kbd> Play · <kbd class="kbd">R</kbd> Random · <kbd class="kbd">G</kbd> Generate · <kbd class="kbd">Esc</kbd> Stop
+  <!-- Practice Tips — restructured from run-on paragraph into scannable vertical list. -->
+  <aside class="tips-card" data-modes="journal" aria-labelledby="tipsTitle">
+    <h3 class="tips-title" id="tipsTitle"><span aria-hidden="true">🎯</span> Practice Tips</h3>
+    <ul class="tips-list">
+      <li><span class="tip-tag">Theory</span>Study Roman numerals for harmonic function; transpose every head to all 12 keys.</li>
+      <li><span class="tip-tag">Focus</span>Master ii-V-I patterns and tritone substitutions before tackling full choruses.</li>
+      <li><span class="tip-tag">Tempo</span>Start slow with the global transport; use Tempo Trainer to graduate 80 → 120 → 160 BPM.</li>
+      <li><span class="tip-tag">Fretboard</span>Cycle Fretboard between Chord Tones, Full Scale, Guide Tones, and Functional Harmony.</li>
+      <li><span class="tip-tag">Audio</span>Cycle Audio between Chord Voicing, Scale Run, and Bebop Groove to internalise sound.</li>
+      <li><span class="tip-tag">Explore</span>Switch to Improvise mode and open the Scale Library for bebop scale visualisation.</li>
+    </ul>
+    <div class="tips-shortcuts" aria-label="Keyboard shortcuts">
+      <span class="kbd-item"><kbd class="kbd">Space</kbd> Play/Stop</span>
+      <span class="kbd-item"><kbd class="kbd">R</kbd> Random</span>
+      <span class="kbd-item"><kbd class="kbd">G</kbd> Generate</span>
+      <span class="kbd-item"><kbd class="kbd">Esc</kbd> Stop all</span>
+    </div>
+    <div class="tips-difficulty">
+      <span><span class="diff-b">B</span> Beginner</span>
+      <span><span class="diff-i">I</span> Intermediate</span>
+      <span><span class="diff-a">A</span> Advanced</span>
+    </div>
+  </aside>
+
+  <!-- ── GLOBAL STICKY TRANSPORT BAR ─────────────────────────────────
+       Single Play/Stop/Loop unified across Learn (chord grid),
+       Practice (AlphaTab), Improvise (Resonance lick). Speed & BPM
+       are synchronized to a shared state (see transportRouter JS). -->
+  <div class="global-transport" role="toolbar" data-modes="all"
+       aria-label="Global playback transport" id="globalTransport">
+    <span class="gt-label">Transport</span>
+    <span class="gt-target" id="gtTarget" aria-live="polite">Learn · Chord Grid</span>
+    <button class="gt-btn gt-btn-play" id="gtPlayBtn"
+            aria-pressed="false" aria-label="Play">▶ Play</button>
+    <button class="gt-btn gt-btn-stop" id="gtStopBtn"
+            aria-label="Stop">■ Stop</button>
+    <button class="gt-btn gt-btn-loop toggle-pill" id="gtLoopBtn"
+            aria-pressed="false" data-toggle-label="Loop">
+      <span class="toggle-label">Loop</span>
+    </button>
+    <div class="gt-speed">
+      <label for="gtBpm" class="gt-label" style="margin:0;">BPM</label>
+      <input type="number" id="gtBpm" class="gt-bpm" value="120" min="40" max="320" step="5"
+             aria-label="Global tempo BPM"/>
+      <label for="gtSpeed" class="gt-label" style="margin:0;">Speed</label>
+      <input type="range" id="gtSpeed" min="25" max="150" value="100" step="5"
+             aria-label="Playback speed percentage"/>
+      <span class="gt-speed-val" id="gtSpeedVal">100%</span>
+    </div>
   </div>
 </main>
 
-<div id="toastContainer" role="alert" aria-live="assertive" aria-atomic="true"></div>
+<!-- Downgraded from assertive to polite; individual error toasts elevate themselves at runtime. -->
+<div id="toastContainer" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.3/dist/alphaTab.min.js"
         integrity="sha384-qUm2Zrf12JTeEmtMQAdvtbVFGrxkxSSrmqyEU4avNOo/QxYnmgpDsfsdWvYrhmxw"
@@ -5277,7 +5758,8 @@ function practiceEnd() {
   const rec = {tune:_sessTune, key:_sessKey, bpm:_sessBpm,
                 startTime: Date.now() - duration * 1000, duration};
   dbAdd(rec).then(() => {
-    const panel = document.getElementById('practicePanel');
+    // Refresh the drills dashboard (renamed from duplicate id) if it's currently open.
+    const panel = document.getElementById('practiceDrillsPanel');
     if (panel && panel.open) refreshDashboard();
   }).catch(() => {});
   _sessTune = null;
@@ -5452,8 +5934,8 @@ async function suggestNext() {
     showToast('Practice history cleared', 'info');
   });
 
-  // Open panel → render dashboard
-  document.getElementById('practicePanel')?.addEventListener('toggle', e => {
+  // Open drills panel → render dashboard (renamed from duplicate practicePanel id)
+  document.getElementById('practiceDrillsPanel')?.addEventListener('toggle', e => {
     if (e.target.open) refreshDashboard();
   });
 
@@ -7218,6 +7700,300 @@ async function suggestNext() {
   window.addEventListener('online',  updateOnlineStatus, { passive: true });
   window.addEventListener('offline', updateOnlineStatus, { passive: true });
   updateOnlineStatus(); // set correct state on initial load
+})();
+
+/* ============================================================
+   v7.3 UX REFACTOR RUNTIME
+   - Workflow mode router (Learn/Practice/Improvise/Journal)
+   - Global transport router (dispatches to legacy buttons)
+   - Speed / BPM synchronization
+   - AudioContext consent overlay
+   - aria-pressed toggle standardization
+   - Prerequisite hint activation
+   - Toast aria-live tiering
+   ============================================================ */
+(function uxRefactor() {
+  'use strict';
+
+  /* ── 1. AudioContext consent gate ─────────────────────────── */
+  const consent = document.getElementById('audioConsentOverlay');
+  const consentBtn = document.getElementById('audioConsentBtn');
+  function dismissConsent() {
+    document.body.classList.add('audio-ready');
+    if (consent) consent.style.display = 'none';
+    // Existing document-level unlockAudio handler will fire on the same click.
+  }
+  if (consentBtn) consentBtn.addEventListener('click', dismissConsent);
+  // Also dismiss on any other user interaction (backwards compatible with existing unlock).
+  ['click', 'touchstart', 'keydown'].forEach(evt =>
+    document.addEventListener(evt, function once() {
+      dismissConsent();
+      document.removeEventListener(evt, once);
+    }, { passive: true, capture: true }));
+
+  /* ── 2. Workflow mode router ──────────────────────────────── */
+  const MODE_HINTS = {
+    learn:     'Read the lead sheet, hear each chord, and see the fretboard visualiser.',
+    practice:  'Play along with notation, tab, and Parker head melodies at your tempo.',
+    improvise: 'Generate licks, explore Bebop scales, and export section tabs.',
+    journal:   'Track sessions, get drill suggestions, and review practice tips.'
+  };
+  const TRANSPORT_TARGETS = {
+    learn:     'Learn · Chord Grid',
+    practice:  'Practice · Notation / Head',
+    improvise: 'Improvise · Resonance Lick',
+    journal:   '—'
+  };
+
+  function setActiveMode(mode) {
+    if (!MODE_HINTS[mode]) mode = 'learn';
+    document.body.setAttribute('data-active-mode', mode);
+    document.querySelectorAll('.mode-nav-btn').forEach(b => {
+      const on = b.dataset.mode === mode;
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    const hint = document.getElementById('modeHint');
+    if (hint) hint.textContent = MODE_HINTS[mode];
+    const tgt = document.getElementById('gtTarget');
+    if (tgt) tgt.textContent = TRANSPORT_TARGETS[mode];
+    // Disable transport controls in Journal mode — there's no playback target.
+    const play = document.getElementById('gtPlayBtn');
+    const stop = document.getElementById('gtStopBtn');
+    const loop = document.getElementById('gtLoopBtn');
+    [play, stop, loop].forEach(b => {
+      if (!b) return;
+      if (mode === 'journal') b.setAttribute('disabled', '');
+      else b.removeAttribute('disabled');
+    });
+    // Auto-stop any active playback when switching modes to prevent audible collisions.
+    try { document.getElementById('stopBtn')?.click(); } catch (e) {}
+    try {
+      if (window.hdStop) window.hdStop();
+      if (typeof stopResonanceLick === 'function') stopResonanceLick();
+    } catch (e) {}
+    // Refresh the drills dashboard if entering Journal mode.
+    if (mode === 'journal' && typeof refreshDashboard === 'function') {
+      try { refreshDashboard(); } catch (e) {}
+    }
+    try { localStorage.setItem('cp_active_mode_v73', mode); } catch (e) {}
+  }
+  document.querySelectorAll('.mode-nav-btn').forEach(b =>
+    b.addEventListener('click', () => setActiveMode(b.dataset.mode)));
+  // Restore last active mode; default Learn on first load.
+  let initialMode = 'learn';
+  try { initialMode = localStorage.getItem('cp_active_mode_v73') || 'learn'; } catch (e) {}
+  setActiveMode(initialMode);
+
+  /* ── 3. Global transport router ───────────────────────────── */
+  // Route the global Play/Stop/Loop to the correct legacy handler by mode.
+  const gtPlay = document.getElementById('gtPlayBtn');
+  const gtStop = document.getElementById('gtStopBtn');
+  const gtLoop = document.getElementById('gtLoopBtn');
+  const gtBpm  = document.getElementById('gtBpm');
+  const gtSpd  = document.getElementById('gtSpeed');
+  const gtSpdV = document.getElementById('gtSpeedVal');
+
+  function currentMode() { return document.body.getAttribute('data-active-mode') || 'learn'; }
+
+  function routePlay() {
+    const m = currentMode();
+    if (m === 'learn') {
+      document.getElementById('playBtn')?.click();
+    } else if (m === 'practice') {
+      // Route to AlphaTab main viewer when Notation or Tab tab is active,
+      // otherwise fall back to the Parker Heads player.
+      const notationTab = document.querySelector('.at-view-tab[data-view="notation"]');
+      const tabTab      = document.querySelector('.at-view-tab[data-view="tab"]');
+      const notationActive = (notationTab && notationTab.classList.contains('active'))
+                         || (tabTab && tabTab.classList.contains('active'));
+      if (notationActive) {
+        document.getElementById('atMainPlayBtn')?.click();
+      } else {
+        document.getElementById('headPlayBtn')?.click();
+      }
+    } else if (m === 'improvise') {
+      document.getElementById('resonancePlayBtn')?.click();
+    }
+    // Reflect the running state on the global button (simple toggle for feedback).
+    const pressed = gtPlay.getAttribute('aria-pressed') === 'true';
+    gtPlay.setAttribute('aria-pressed', pressed ? 'false' : 'true');
+    gtPlay.textContent = pressed ? '▶ Play' : '⏸ Pause';
+  }
+  function routeStop() {
+    document.getElementById('stopBtn')?.click();
+    document.getElementById('headStopBtn')?.click();
+    document.getElementById('atMainStopBtn')?.click();
+    document.getElementById('resonanceStopBtn')?.click();
+    gtPlay.setAttribute('aria-pressed', 'false');
+    gtPlay.textContent = '▶ Play';
+  }
+  gtPlay?.addEventListener('click', routePlay);
+  gtStop?.addEventListener('click', routeStop);
+  gtLoop?.addEventListener('click', () => {
+    // Delegate to the legacy loop button, then mirror aria-pressed on the global pill.
+    document.getElementById('loopBtn')?.click();
+    const legacy = document.getElementById('loopBtn');
+    const on = legacy && /ON/i.test(legacy.textContent);
+    gtLoop.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+
+  /* ── 4. Speed / BPM synchronization ───────────────────────── */
+  function syncBpm(val) {
+    const v = Math.max(40, Math.min(320, parseInt(val, 10) || 120));
+    if (gtBpm.value !== String(v)) gtBpm.value = v;
+    const legacy = document.getElementById('bpmInput');
+    if (legacy && legacy.value !== String(v)) {
+      legacy.value = v;
+      legacy.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+  function syncSpeed(pct) {
+    const p = Math.max(25, Math.min(150, parseInt(pct, 10) || 100));
+    gtSpd.value = p;
+    gtSpdV.textContent = p + '%';
+    // Forward to head player and AlphaTab main player speed sliders.
+    const hd = document.getElementById('hdSpeedSlider');
+    if (hd && hd.value !== String(p)) {
+      hd.value = p;
+      hd.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    const at = document.getElementById('atMainSpeedSlider');
+    if (at && at.value !== String(p)) {
+      at.value = p;
+      at.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+  gtBpm?.addEventListener('change', () => syncBpm(gtBpm.value));
+  gtBpm?.addEventListener('input',  () => syncBpm(gtBpm.value));
+  gtSpd?.addEventListener('input',  () => syncSpeed(gtSpd.value));
+  // Mirror legacy changes back into global bar.
+  document.getElementById('bpmInput')?.addEventListener('change', e => syncBpm(e.target.value));
+  document.getElementById('hdSpeedSlider')?.addEventListener('input', e => syncSpeed(e.target.value));
+  document.getElementById('atMainSpeedSlider')?.addEventListener('input', e => syncSpeed(e.target.value));
+  syncBpm(gtBpm.value);
+  syncSpeed(gtSpd.value);
+
+  /* ── 5. aria-pressed toggle standardization ───────────────── */
+  // For toggle-pill buttons that wrap legacy text-swapping toggles,
+  // reflect state from the legacy button label into aria-pressed each click.
+  function bindPillToLegacy(pillId, legacyId, onRegex) {
+    const pill = document.getElementById(pillId);
+    const legacy = document.getElementById(legacyId);
+    if (!pill || !legacy || pill === legacy) return;
+    // If pill and legacy are the same node (e.g. metroBtn upgraded in place), skip.
+  }
+  // Wire the in-place upgraded pills: metroBtn, tempoTrainerBtn, toggleResonance,
+  // togglePitch, resonanceArrowsBtn, resonanceAutoPlayBtn — their existing click
+  // handlers still fire and mutate .textContent, but we now derive aria-pressed
+  // from the legacy on/off signal. A MutationObserver watches the label change.
+  const pillIds = [
+    'metroBtn', 'tempoTrainerBtn', 'toggleResonance', 'togglePitch',
+    'resonanceArrowsBtn', 'resonanceAutoPlayBtn'
+  ];
+  pillIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const update = () => {
+      const t = (el.textContent || '').toLowerCase();
+      const on = /(:\s*on|on\s*\(|arrows:\s*on|auto-play:\s*on|pitch:\s*on|resonance:\s*on|trainer:\s*on|metronome:\s*on)/.test(t)
+              || el.classList.contains('btn-loop-on')
+              || el.classList.contains('btn-resonance-on');
+      el.setAttribute('aria-pressed', on ? 'true' : 'false');
+      // Preserve label as data-toggle-label if present so the visible text is stable.
+      const label = el.dataset.toggleLabel;
+      if (label) {
+        const span = el.querySelector('.toggle-label');
+        if (span) span.textContent = label;
+        else el.textContent = label;
+      }
+    };
+    // Initial sync
+    update();
+    // Observe legacy handlers that mutate textContent.
+    const mo = new MutationObserver(update);
+    mo.observe(el, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    // Also update on click (after handler runs).
+    el.addEventListener('click', () => setTimeout(update, 0));
+  });
+
+  /* ── 6. Section Lick prerequisite enablement ──────────────── */
+  const sectionGen = document.getElementById('sectionGenBtn');
+  const sectionPost = ['sectionSaveTabBtn', 'sectionExportZipBtn', 'sectionPreviewBtn']
+    .map(id => document.getElementById(id));
+  const sectionPrereq = document.getElementById('sectionLickPrereq');
+  function enableSectionPostActions(enable) {
+    sectionPost.forEach(b => {
+      if (!b) return;
+      if (enable) {
+        b.removeAttribute('disabled');
+        b.removeAttribute('aria-disabled');
+      } else {
+        b.setAttribute('disabled', '');
+        b.setAttribute('aria-disabled', 'true');
+      }
+    });
+    if (sectionPrereq) sectionPrereq.style.display = enable ? 'none' : '';
+  }
+  sectionGen?.addEventListener('click', () => setTimeout(() => {
+    // If any post-action button was un-hidden by legacy code, enable them now.
+    const anyVisible = sectionPost.some(b => b && b.style.display !== 'none');
+    enableSectionPostActions(anyVisible);
+    // Ensure they remain visible (legacy toggled display:none).
+    sectionPost.forEach(b => { if (b) b.style.display = ''; });
+  }, 100));
+
+  /* ── 7. Resonance Engine prerequisite hint ────────────────── */
+  const resonancePrereq = document.getElementById('resonancePrereq');
+  function updateResonancePrereq() {
+    if (!resonancePrereq) return;
+    const hasBar = typeof lastBarData !== 'undefined' && lastBarData;
+    resonancePrereq.style.display = hasBar ? 'none' : '';
+  }
+  // Re-check on any bar click and periodically.
+  document.addEventListener('click', e => {
+    if (e.target.closest && e.target.closest('.bar')) {
+      setTimeout(updateResonancePrereq, 50);
+    }
+  });
+  updateResonancePrereq();
+
+  /* ── 8. Toast aria-live tiering ───────────────────────────── */
+  // Override showToast to elevate errors to assertive live-region announcement.
+  if (typeof window.showToast === 'function') {
+    const original = window.showToast;
+    window.showToast = function(msg, type = 'info', duration = 2500) {
+      const container = document.getElementById('toastContainer');
+      if (container) {
+        // Elevate to assertive briefly for errors only; polite otherwise.
+        if (type === 'error') {
+          container.setAttribute('role', 'alert');
+          container.setAttribute('aria-live', 'assertive');
+        } else {
+          container.setAttribute('role', 'status');
+          container.setAttribute('aria-live', 'polite');
+        }
+      }
+      return original(msg, type, duration);
+    };
+  }
+
+  /* ── 9. Route Space/Escape through global transport (capture, pre-empt legacy) ─ */
+  // Capture-phase + stopImmediatePropagation prevents the older learn-only kbShortcuts
+  // (index.html:5132) from double-firing chord-grid playback in Practice/Improvise modes.
+  document.addEventListener('keydown', e => {
+    if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.code === 'Space') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      routePlay();
+    } else if (e.key === 'Escape') {
+      e.stopImmediatePropagation();
+      routeStop();
+    }
+  }, { capture: true });
+
+  console.log('✅ v7.3 UX refactor initialised — mode:', initialMode);
 })();
 
 </script>
