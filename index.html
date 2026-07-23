@@ -58,12 +58,16 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{margin:0;min-height:100vh;color:var(--ink);
   font-family:var(--font-mono);padding:10px;line-height:1.4;
+  background:#0b090e;}
+/* Fixed backdrop on a GPU-composited layer instead of background-attachment:fixed,
+   which repaints the whole gradient on every scroll frame and janks iOS Safari. */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  transform:translateZ(0);
   background:
     radial-gradient(1100px 600px at 50% -8%, rgba(230,169,75,.12), transparent 60%),
     radial-gradient(900px 720px at 92% 8%, rgba(178,107,196,.11), transparent 55%),
     radial-gradient(820px 820px at 2% 100%, rgba(79,182,173,.08), transparent 55%),
-    linear-gradient(180deg,#141019 0%, #100d14 45%, #0b090e 100%);
-  background-attachment:fixed;}
+    linear-gradient(180deg,#141019 0%, #100d14 45%, #0b090e 100%);}
 select option{background:var(--bg-2);color:var(--sym);}
 
 h1{text-align:center;color:var(--accent);margin:12px 0;font-size:22px;font-family:var(--font-display);}
@@ -71,7 +75,7 @@ h2{color:var(--accent2);font-size:15px;margin:8px 0 6px 0;}
 .card{background:linear-gradient(180deg, rgba(31,25,39,.96), rgba(21,17,27,.96));
   border:1px solid rgba(230,169,75,.28);border-radius:var(--radius-lg);
   padding:16px;max-width:1200px;margin:0 auto 16px auto;
-  box-shadow:var(--glow-brass), 0 18px 40px rgba(0,0,0,.45);backdrop-filter:blur(6px);}
+  box-shadow:var(--glow-brass), 0 18px 40px rgba(0,0,0,.45);}
 
 /* ── Hero ──────────────────────────────────────────────────── */
 .hero{max-width:1200px;margin:20px auto 14px;padding:0 6px;text-align:center;}
