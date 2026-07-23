@@ -3892,11 +3892,15 @@ function buildFretboard() {
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('width',  '100%');
-  svg.setAttribute('height', 'auto');
+  // Responsive height comes from CSS (viewBox aspect ratio), never the SVG
+  // presentation attribute: height="auto" is invalid and throws
+  // "<svg> attribute height: Expected length, auto" on every render.
   svg.setAttribute('class',  'fb-svg');
   svg.setAttribute('role',   'img');
   svg.setAttribute('aria-label', 'Guitar fretboard');
   svg.style.display = 'block';
+  svg.style.width   = '100%';
+  svg.style.height  = 'auto';
 
   // ── Background ──────────────────────────────────────────────────────────
   const _bgDef = document.createElementNS(SVG_NS, 'defs');
@@ -6484,7 +6488,32 @@ async function suggestNext() {
   // ── Load a GuitarPro file into alphaTab via URL ────────────────────────
   // alphaTab fetches the binary file itself and auto-detects the format
   // from the binary header — no AlphaTex conversion required.
+  // ── Keep the lead-sheet chart in sync with the loaded head ────────────
+  // Selecting a head auto-selects its matching song chart so the chords on
+  // screen follow the melody — one action instead of two. No-op when the head
+  // has no matching chart or the chart is already selected (so no redundant
+  // re-render, and no loop: #tuneSel's change handlers never load a head).
+  function hdSyncChart(headName) {
+    const sel = document.getElementById('tuneSel');
+    if (!sel || !sel.options.length) return;
+    const canon = (typeof canonicalTuneTitle === 'function')
+      ? canonicalTuneTitle(headName) : headName;
+    let match = null;
+    for (const o of sel.options) {
+      if (o.value === canon ||
+          (typeof canonicalTuneTitle === 'function' && canonicalTuneTitle(o.value) === canon)) {
+        match = o.value; break;
+      }
+    }
+    if (!match || sel.value === match) return;
+    sel.value = match;
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
   function hdFetch(tune, btn) {
+    // Auto-select the matching lead-sheet chart first, independent of the audio
+    // engine, so the chart follows the head even if alphaTab isn't ready yet.
+    hdSyncChart(tune.name);
     if (!api) atInit();
     if (!api) {
       if (typeof showToast === 'function') showToast('alphaTab unavailable — check network', 'error');
