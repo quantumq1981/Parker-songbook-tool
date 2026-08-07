@@ -11,8 +11,9 @@
   object-src / base-uri / form-action so injected <object>/<base>/<form> vectors
   cannot be used for exfiltration or script-base hijacking. blob: is allowed for
   AlphaTab's audio worklet. This is paired with Subresource Integrity (SRI)
-  hashes on all three CDN <script> tags (AlphaTab 1.8.3, JSZip 3.10.1,
-  SVGuitar 1.7.1), each pinned to an exact version with crossorigin="anonymous".
+  hashes on all three CDN libraries (AlphaTab 1.8.3, JSZip 3.10.1, SVGuitar
+  1.7.1), each pinned to an exact version with crossorigin="anonymous" — see
+  the CDN_LIBS manifest below, which is the single source of truth for both.
 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -20,11 +21,104 @@
 <meta name="theme-color" content="#1a0d2e"/>
 <meta name="description" content="Interactive bebop practice tool — 46 Charlie Parker tunes, AI resonance engine, guitar fretboard, AlphaTab notation"/>
 <link rel="manifest" href="manifest.json"/>
+<!-- Declared explicitly so the browser stops issuing a doomed /favicon.ico request. -->
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml"/>
 <link rel="apple-touch-icon" href="icons/icon.svg"/>
-<script src="https://unpkg.com/svguitar@1.7.1/dist/svguitar.umd.js" data-svguitar-lib="cdn"
-        integrity="sha384-/9qeiDrUhvT9kSYnoh4KnjcrKtTuwwh6rBgKzeeWcqcZbDNv09lRypQ2sLfwoh4H"
-        crossorigin="anonymous"></script>
-<script src="./js/svguitar.umd.js" data-svguitar-lib="local" onerror="console.warn('Local SVGuitar fallback failed to load')"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   ON-DEMAND CDN LOADER  (perf: keeps ~2 MB of third-party JS off the critical path)
+
+   These three libraries used to be render-blocking <script src> tags — SVGuitar
+   twice over (CDN *and* the local fallback, both parser-blocking in <head>, both
+   defining the same window.svguitar). None of them is needed to paint the first
+   screen:
+     · svguitar — only when the chord-voicings modal opens
+     · alphatab — only when Practice mode renders notation / a Parker head
+     · jszip    — only for ZIP export and .mxl / GP-container import
+   Every consumer already guards on the global (window.alphaTab / window.JSZip /
+   window.svguitar), so deferring the fetch is behaviour-preserving.
+
+   This manifest is the single source of truth for URL + SRI hash; the tags are
+   injected with the same integrity + crossorigin="anonymous" a static tag would
+   carry, so SRI is still enforced. tests/cdnSri.test.js validates it.
+   ═══════════════════════════════════════════════════════════════════════════ */
+window.CDN_LIBS = {
+  alphatab: {
+    url: 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.3/dist/alphaTab.min.js',
+    integrity: 'sha384-qUm2Zrf12JTeEmtMQAdvtbVFGrxkxSSrmqyEU4avNOo/QxYnmgpDsfsdWvYrhmxw',
+    global: 'alphaTab'
+  },
+  jszip: {
+    url: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+    integrity: 'sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG',
+    global: 'JSZip'
+  },
+  svguitar: {
+    url: 'https://unpkg.com/svguitar@1.7.1/dist/svguitar.umd.js',
+    integrity: 'sha384-/9qeiDrUhvT9kSYnoh4KnjcrKtTuwwh6rBgKzeeWcqcZbDNv09lRypQ2sLfwoh4H',
+    global: 'svguitar',
+    // Same-origin copy used only if the CDN is unreachable. Previously this was
+    // loaded unconditionally alongside the CDN copy — 337 KB of pure duplication.
+    fallback: './js/svguitar.umd.js'
+  }
+};
+
+(function () {
+  const cache = Object.create(null);
+
+  function inject(src, integrity) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      if (integrity) {
+        s.integrity = integrity;
+        s.crossOrigin = 'anonymous';
+      }
+      s.addEventListener('load', () => resolve(), { once: true });
+      s.addEventListener('error', () => reject(new Error('Failed to load ' + src)), { once: true });
+      document.head.appendChild(s);
+    });
+  }
+
+  /**
+   * Fetch a CDN library on first use. Repeat calls share one in-flight promise,
+   * so N concurrent callers still produce exactly one network request.
+   * @param {'alphatab'|'jszip'|'svguitar'} name
+   * @returns {Promise<*>} resolves with the library's global
+   */
+  window.loadCdnLib = function (name) {
+    const lib = window.CDN_LIBS[name];
+    if (!lib) return Promise.reject(new Error('Unknown CDN library: ' + name));
+    if (window[lib.global]) return Promise.resolve(window[lib.global]);
+    if (cache[name]) return cache[name];
+
+    cache[name] = inject(lib.url, lib.integrity)
+      .catch((err) => {
+        if (!lib.fallback) throw err;
+        console.warn('[CDN] ' + name + ' CDN unreachable — using local fallback.', err);
+        return inject(lib.fallback, null);
+      })
+      .then(() => {
+        if (!window[lib.global]) throw new Error(name + ' loaded but window.' + lib.global + ' is undefined');
+        return window[lib.global];
+      })
+      .catch((err) => {
+        delete cache[name];   // allow a retry on the next user action
+        throw err;
+      });
+
+    return cache[name];
+  };
+})();
+</script>
+<!-- jsdelivr serves alphaTab + its SoundFont, which nearly every session reaches
+     via Practice mode — worth a full handshake up front so the on-demand fetch
+     starts transferring immediately instead of paying DNS + TCP + TLS first.
+     unpkg only serves SVGuitar for the chord-voicings modal, which many sessions
+     never open, so it gets DNS resolution only rather than an idle connection. -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
+<link rel="dns-prefetch" href="https://unpkg.com"/>
 <style>
 :root{
   /* ── "After Hours" bebop palette — bespoke, not Material defaults ── */
@@ -250,8 +344,6 @@ border-radius:4px;cursor:pointer;transition:.15s;}
 .lib-note{color:var(--ink-dim);font-size:10px;text-align:center;margin-top:6px;}
 
 .legend{text-align:center;color:var(--ink-dim);font-size:11px;margin:6px 0;}
-.info-box{background:#2a2a2a;border-left:4px solid var(--indigo);padding:10px;
-margin-top:10px;border-radius:4px;font-size:11px;line-height:1.6;}
 
 /* Chord voicings modal */
 body.modal-open{overflow:hidden;touch-action:none;}
@@ -388,16 +480,6 @@ body{padding:8px;}
 }
 .skip-link:focus { top: 0; }
 
-/* App tagline under h1 */
-.app-tagline {
-  text-align: center;
-  color: var(--ink-dim);
-  font-size: 11px;
-  letter-spacing: 1.2px;
-  margin: -8px 0 12px;
-  font-family: var(--font-mono);
-}
-
 /* Quick search bar */
 .search-row {
   display: flex;
@@ -528,27 +610,6 @@ body{padding:8px;}
 .stat-pill { cursor: default; transition: border-color var(--transition); }
 .stat-pill:hover { border-color: var(--accent); }
 
-/* Main heading accuracy */
-.tune-count-badge {
-  display: inline-block;
-  background: var(--accent);
-  color: #000;
-  border-radius: 10px;
-  padding: 1px 8px;
-  font-size: 11px;
-  font-weight: bold;
-  margin-left: 6px;
-  vertical-align: middle;
-}
-
-/* Section divider */
-.section-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, var(--barline) 30%, var(--barline) 70%, transparent 100%);
-  margin: 10px 0;
-  border: none;
-}
-
 /* Improved scrollbars (dark theme) */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #111; }
@@ -580,10 +641,6 @@ body{padding:8px;}
     padding: 8px 10px;
   }
 }
-@media (max-width: 600px) {
-  .app-tagline { font-size: 10px; }
-}
-
 /* ── Mobile polish: 480px and below ─────────────────────────────────────── */
 @media (max-width: 480px) {
   /* Prevent any child from causing horizontal scroll */
@@ -707,19 +764,6 @@ body{padding:8px;}
   margin-bottom: 8px;
   font-family: var(--font-mono);
 }
-.vl-tone-badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: #1a0028;
-  border-radius: 6px;
-  padding: 4px 10px;
-  min-width: 54px;
-}
-.vl-tone-role { font-size: 9px; color: #888; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.8px; }
-.vl-tone-note { font-size: 14px; font-weight: bold; }
-.vl-divider   { height: 1px; background: #2a0040; margin: 6px 0; }
-.vl-motion-section { font-size: 10px; color: #666; margin-bottom: 4px; }
 .vl-motion-row {
   display: flex;
   align-items: center;
@@ -742,7 +786,6 @@ body{padding:8px;}
 .vl-tag-ws  { background: #2a1500; color: #ff9800; }  /* whole step */
 .vl-tag-ct  { background: #0a2a0a; color: #4caf50; }  /* common tone */
 .vl-tag-ls  { background: #0d1a3b; color: #7986cb; }  /* larger skip */
-.vl-empty   { color: #444; font-size: 11px; font-style: italic; }
 
 /* Guide-tone pills in voice leading panel */
 .vl-gt-pill {
@@ -834,7 +877,6 @@ details.panel.import-panel summary { color: var(--green); }
   color: var(--ink-dim); line-height: 1.4;
 }
 .import-status.import-ok   { color: #81c784; }
-.import-status.import-warn { color: #ffb74d; }
 .import-status.import-err  { color: #ef9a9a; }
 .imported-list  { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
 .imported-item  {
@@ -1062,7 +1104,6 @@ details.panel.heads-panel summary { color: #ce93d8; }
 /* ── Typography scale (3-tier) ─────────────────────────────── */
 .h-mode  { font-family: var(--font-display); font-size: 24px; color: var(--ink); margin: 4px 0 14px; letter-spacing: .3px; font-weight: 600; }
 .h-panel { font-size: 13px; color: var(--accent2); margin: 6px 0 8px; letter-spacing: .14em; font-weight: 700; text-transform: uppercase; }
-.h-sub   { font-size: 11px; color: var(--ink-dim); margin: 4px 0 6px; letter-spacing: .12em; font-weight: 600; text-transform: uppercase; }
 
 /* ── Workflow mode navigation ──────────────────────────────── */
 /* nav.mode-nav (0,1,1) intentionally outranks [data-modes~="all"]{display:revert}
@@ -1426,7 +1467,6 @@ button[disabled], select[disabled], input[disabled] {
 body:not([data-active-mode]) .global-transport { display: none; }
 
 /* Hide legacy transport-related controls superseded by global bar */
-body[data-active-mode] .playback-bar .legacy-transport-btn { display: none; }
 
 </style>
 
@@ -1924,21 +1964,20 @@ body[data-active-mode] .playback-bar .legacy-transport-btn { display: none; }
 <!-- Downgraded from assertive to polite; individual error toasts elevate themselves at runtime. -->
 <div id="toastContainer" role="status" aria-live="polite" aria-atomic="true"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.3/dist/alphaTab.min.js"
-        integrity="sha384-qUm2Zrf12JTeEmtMQAdvtbVFGrxkxSSrmqyEU4avNOo/QxYnmgpDsfsdWvYrhmxw"
-        crossorigin="anonymous"
-        onerror="console.warn('alphaTab CDN failed — heads notation renderer unavailable')"></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
-        integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG"
-        crossorigin="anonymous"
-        onerror="console.warn('JSZip CDN failed to load — ZIP export unavailable')"></script>
-<script src="js/resonanceEngine.js?v=1.0"></script>
-<script src="js/chordParser.js?v=7.2"></script>
-<script src="js/jazzChordDatabase.js?v=7.2"></script>
-<script src="js/chordDataService.js?v=7.2"></script>
-<script src="js/chordDiagram.js?v=7.2"></script>
-<script src="js/chordVoicingsModal.js?v=7.2"></script>
-<script src="js/chordVoicingsInit.js?v=7.2"></script>
+<!-- alphaTab + JSZip are no longer static tags: they are fetched on first use by
+     window.loadCdnLib() (manifest in <head>). See tests/cdnSri.test.js.
+
+     First-party modules are `defer`red: none of them touches the DOM or the
+     inline script's state before DOMContentLoaded, and `defer` preserves both
+     execution order and the guarantee that they run before DOMContentLoaded —
+     so the parser is no longer blocked waiting on ~50 KB of module JS. -->
+<script defer src="js/resonanceEngine.js?v=1.0"></script>
+<script defer src="js/chordParser.js?v=7.2"></script>
+<script defer src="js/jazzChordDatabase.js?v=7.2"></script>
+<script defer src="js/chordDataService.js?v=7.2"></script>
+<script defer src="js/chordDiagram.js?v=7.2"></script>
+<script defer src="js/chordVoicingsModal.js?v=7.2"></script>
+<script defer src="js/chordVoicingsInit.js?v=7.2"></script>
 <script>
 /* ============================================================
    SONGBOOK DATA — 22 TUNES (v6.0 data model preserved)
@@ -3802,13 +3841,20 @@ function buildMidiFromBarGroups(barGroups, title, bpm) {
 
 // Package ASCII tab + alphaTex + MusicXML into a ZIP and trigger download.
 async function exportSectionZip(barGroups, baseName) {
-  if (!window.JSZip) {
-    alert('JSZip not loaded — cannot create ZIP. Check your network connection and reload.');
-    return;
-  }
   if (!barGroups || !barGroups.length) {
-    alert('No lick data to export — generate a section first.');
-    return;
+    showToast('No lick data to export — generate a section first.', 'warn', 3000);
+    return false;
+  }
+  // JSZip is fetched on demand (see loadCdnLib) — it is only ever needed here
+  // and in the .mxl / GP-container import paths, never to render the page.
+  if (!window.JSZip) {
+    try {
+      await window.loadCdnLib('jszip');
+    } catch (err) {
+      console.error('[Export] JSZip failed to load.', err);
+      showToast('ZIP library unavailable — check your connection.', 'error', 4000);
+      return false;
+    }
   }
   const zip   = new JSZip();
   const title = baseName.replace(/_/g, ' ');
@@ -3831,6 +3877,7 @@ async function exportSectionZip(barGroups, baseName) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  return true;
 }
 
 // Populate section dropdown and show/hide the section panel
@@ -5233,17 +5280,16 @@ document.addEventListener('keydown', function kbShortcuts(e) {
   }, { passive: true });
 })();
 
-// ── Improved JSZip error handling ─────────────────────────
-// Wrap exportSectionZip to show toast instead of alert when JSZip is absent
+// ── ZIP export feedback wrapper ───────────────────────────
+// exportSectionZip() now fetches JSZip on demand and reports its own failure,
+// so this wrapper only adds the success/failure toast around it.
 const _origExportZip = exportSectionZip;
 window.exportSectionZip = async function exportSectionZipEnhanced(barGroups, baseName) {
-  if (!window.JSZip) {
-    showToast('JSZip unavailable — check your connection and reload.', 'error', 4000);
-    return;
-  }
   try {
-    await _origExportZip(barGroups, baseName);
-    showToast('✓ ZIP downloaded!', 'success', 2000);
+    // Falsy result = exportSectionZip already surfaced its own reason for bailing.
+    if (await _origExportZip(barGroups, baseName)) {
+      showToast('✓ ZIP downloaded!', 'success', 2000);
+    }
   } catch (err) {
     console.error('ZIP export failed:', err);
     showToast('Export failed — see console for details.', 'error', 3500);
@@ -5643,7 +5689,10 @@ async function handleImportFile(file) {
       statusEl.className   = 'import-status import-ok';
 
     } else if (ext === 'mxl') {
-      if (typeof JSZip === 'undefined') throw new Error('JSZip not loaded — MXL requires JSZip (reload the page)');
+      // .mxl is a zip container — fetch JSZip on demand (it is no longer bundled
+      // into the initial page load) before unpacking.
+      statusEl.textContent = `Loading ZIP support for "${file.name}"…`;
+      await window.loadCdnLib('jszip');
       const zip = await JSZip.loadAsync(file);
       let xmlText;
       const containerFile = zip.file('META-INF/container.xml');
@@ -5682,8 +5731,12 @@ async function handleImportFile(file) {
 
       // Best-effort title for the status line (and the Heads-player label).
       let title = cleanFilename(file.name.replace(/\.[^.]+$/, '')) || 'Imported head';
-      if (isZip && typeof JSZip !== 'undefined') {
+      if (isZip) {
         try {
+          // Title extraction is a nicety, not a requirement: if JSZip can't be
+          // fetched we still hand the buffer to alphaTab and fall back to the
+          // filename, so the melody always loads.
+          await window.loadCdnLib('jszip');
           const zip      = await JSZip.loadAsync(buf);
           const gpifFile = zip.file('Content/score.gpif')
                         || zip.file('score.gpif')
@@ -6257,7 +6310,51 @@ async function suggestNext() {
     } catch(e) {}
   }
 
-  // ── Initialize alphaTab API (lazy — triggered when panel opens) ───────
+  // ── On-demand alphaTab gate ───────────────────────────────────────────
+  // alphaTab is fetched by window.loadCdnLib() the first time the user asks for
+  // a head, not at page load. Callers wrap their work in atEnsure(): if the
+  // library is already present the call proceeds synchronously (preserving the
+  // iOS user-gesture chain for AudioContext); otherwise the action is replayed
+  // once the download finishes.
+  let atLibPending = false;
+
+  function atEnsure(retry) {
+    if (api) return true;
+    if (window.alphaTab) { atInit(); return !!api; }
+    if (atLibPending) return false;
+    if (typeof window.loadCdnLib !== 'function') {
+      const msg = document.getElementById('atLoadingMsg');
+      if (msg) msg.textContent = 'alphaTab unavailable — check network';
+      return false;
+    }
+    atLibPending = true;
+    const bar     = document.getElementById('headMelodyBar');
+    const wrap    = document.getElementById('atScoreWrap');
+    const overlay = document.getElementById('atLoadingOverlay');
+    const loadMsg = document.getElementById('atLoadingMsg');
+    if (bar)     bar.classList.add('hd-visible');
+    if (wrap)    { wrap.classList.remove('at-empty'); wrap.classList.add('at-loaded'); }
+    if (overlay) overlay.classList.remove('at-hidden');
+    if (loadMsg) loadMsg.textContent = 'Loading notation engine…';
+    // Two-argument .then() on purpose: the rejection handler must see download
+    // failures only. A trailing .catch() would also swallow anything retry()
+    // throws and mislabel a renderer bug as a network problem.
+    window.loadCdnLib('alphatab').then(
+      () => {
+        atLibPending = false;
+        if (typeof retry === 'function') retry();
+      },
+      err => {
+        atLibPending = false;
+        console.warn('[Heads] alphaTab failed to load.', err);
+        if (loadMsg) loadMsg.textContent = 'alphaTab unavailable — check network';
+        if (typeof showToast === 'function') showToast('alphaTab unavailable — check network', 'error');
+      }
+    );
+    return false;
+  }
+
+  // ── Initialize alphaTab API (lazy — triggered on first head load) ─────
   function atInit() {
     if (api || !window.alphaTab) {
       if (!window.alphaTab) {
@@ -6514,11 +6611,8 @@ async function suggestNext() {
     // Auto-select the matching lead-sheet chart first, independent of the audio
     // engine, so the chart follows the head even if alphaTab isn't ready yet.
     hdSyncChart(tune.name);
-    if (!api) atInit();
-    if (!api) {
-      if (typeof showToast === 'function') showToast('alphaTab unavailable — check network', 'error');
-      return;
-    }
+    // Downloads alphaTab on first use, then re-enters hdFetch with the same args.
+    if (!atEnsure(() => hdFetch(tune, btn))) return;
 
     // Stop + clear any currently-loaded tune before switching
     try { api.stop(); } catch(e) {}
@@ -6627,11 +6721,7 @@ async function suggestNext() {
   // for uploaded .gp/.gp3/.gp4/.gp5/.gp7/.gpx files. alphaTab auto-detects the
   // format from the binary header — no AlphaTex conversion required.
   window.hdLoadArrayBuffer = function(buf, displayName) {
-    if (!api) atInit();
-    if (!api) {
-      if (typeof showToast === 'function') showToast('alphaTab unavailable — check network', 'error');
-      return;
-    }
+    if (!atEnsure(() => window.hdLoadArrayBuffer(buf, displayName))) return;
     const name = (displayName || 'Imported head').toString();
     currentBtn      = null;
     currentTuneName = name;
@@ -6679,7 +6769,8 @@ async function suggestNext() {
     if (!match) return;
     const panel = document.getElementById('headsPanel');
     if (panel && !panel.open) panel.open = true;
-    if (!api) atInit();
+    // No atInit() here — hdFetch() below runs atEnsure(), which downloads
+    // alphaTab on demand and replays hdFetch once it is ready.
     // Find grid button for smooth visual feedback (may be null if filtered away)
     let btn = null;
     document.querySelectorAll('.head-btn').forEach(b => {
@@ -6699,11 +6790,7 @@ async function suggestNext() {
     if (panel && !panel.open) panel.open = true;
 
     function doLoad() {
-      if (!api) atInit();
-      if (!api) {
-        if (typeof showToast === 'function') showToast('alphaTab unavailable — check network', 'error');
-        return;
-      }
+      if (!atEnsure(doLoad)) return;
       try { api.stop(); } catch(e) {}
       hdClearFb();
 
@@ -6992,14 +7079,40 @@ async function suggestNext() {
   }
 
   // ── AlphaTab initialization (lazy — called on first Notation/Tab open) ─
+  // The library itself is also lazy: loadCdnLib('alphatab') fetches it on the
+  // first call and then re-enters atInit(), which drains `pendingLoad`. The
+  // overlay carries the "downloading" state so the wait is never silent.
+  let atLibPending = false;
+
+  function atShowUnavailable(text) {
+    const msg = document.getElementById('atMainLoadMsg');
+    if (msg) msg.textContent = text;
+    const ov = document.getElementById('atMainOverlay');
+    if (ov) ov.classList.remove('at-hidden');
+  }
+
   function atInit() {
-    if (api || !window.alphaTab) {
-      if (!window.alphaTab) {
-        const msg = document.getElementById('atMainLoadMsg');
-        if (msg) msg.textContent = 'alphaTab library unavailable — check network';
-        const ov = document.getElementById('atMainOverlay');
-        if (ov) ov.classList.remove('at-hidden');
+    if (api) return;
+
+    if (!window.alphaTab) {
+      if (atLibPending) return;
+      if (typeof window.loadCdnLib !== 'function') {
+        atShowUnavailable('alphaTab library unavailable — check network');
+        return;
       }
+      atLibPending = true;
+      atShowUnavailable('Loading notation engine…');
+      // Two-argument .then(): only download failures reach the second handler,
+      // so a throw inside the re-entrant atInit() is not reported as a network
+      // error (and stays visible as a real error).
+      window.loadCdnLib('alphatab').then(
+        () => { atLibPending = false; atInit(); },
+        err => {
+          atLibPending = false;
+          console.warn('[Notation] alphaTab failed to load.', err);
+          atShowUnavailable('alphaTab library unavailable — check network');
+        }
+      );
       return;
     }
 
