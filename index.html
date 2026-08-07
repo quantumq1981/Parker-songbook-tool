@@ -1381,6 +1381,23 @@ body:not(.audio-ready) .gt-btn-stop { opacity: .35; pointer-events: none; }
 }
 .prerequisite-hint::before { content: 'ⓘ'; font-style: normal; }
 
+/* ── Resonance Engine "locked" stand-in ────────────────────── */
+/* Occupies the Resonance panel's slot in Improvise mode while the engine is
+   inactive, so the mode never renders an unexplained gap where its headline
+   feature should be. */
+.resonance-locked {
+  text-align: center;
+  border-style: dashed;
+}
+.resonance-locked-msg {
+  color: var(--ink-dim);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 6px auto 12px;
+  max-width: 46ch;
+}
+.resonance-locked-msg strong { color: var(--accent); font-weight: 600; }
+
 button[disabled], select[disabled], input[disabled] {
   opacity: .4;
   cursor: not-allowed !important;
@@ -1844,6 +1861,18 @@ body:not([data-active-mode]) .global-transport { display: none; }
     </div>
     <div class="vl-tones-row" id="vlTonesRow"></div>
     <div id="vlMotionSection"></div>
+  </div>
+
+  <!-- Stand-in shown in Improvise mode while the Resonance Engine is inactive.
+       Without it the mode advertises "Generate licks" and then renders nothing
+       where the engine should be — and the explanatory hint (#resonancePrereq)
+       was nested INSIDE the hidden panel, so the one message that would explain
+       the emptiness was itself invisible. This card takes the panel's place and
+       offers the next step as a button rather than an instruction. -->
+  <div id="resonanceLocked" class="resonance-panel resonance-locked" data-modes="improvise">
+    <h3 class="h-panel">🎸 Resonance Engine</h3>
+    <p class="resonance-locked-msg" id="resonanceLockedMsg"></p>
+    <button type="button" class="btn-ok" id="resonanceLockedAction"></button>
   </div>
 
   <div id="resonancePanel" class="resonance-panel" data-modes="improvise" style="display:none;">
@@ -3243,6 +3272,7 @@ function stopResonanceLick() {
   clearLickStepHighlights();
   const btn = document.getElementById('resonancePlayBtn');
   if (btn) btn.textContent = '▶ Play Lick';
+  window.reportTransportState?.(false, 'improvise');
 }
 
 async function playResonanceLick(opts) {
@@ -3261,6 +3291,7 @@ async function playResonanceLick(opts) {
 
   resonanceIsPlaying = true;
   document.getElementById('resonancePlayBtn').textContent = '⏸ Stop';
+  window.reportTransportState?.(true, 'improvise');
 
   // When auto-playing during sequencer, scale step time to ~85% of bar duration
   let stepMs  = 380;
@@ -3289,6 +3320,7 @@ async function playResonanceLick(opts) {
     resonanceIsPlaying = false;
     clearLickStepHighlights();
     document.getElementById('resonancePlayBtn').textContent = '▶ Play Lick';
+    window.reportTransportState?.(false, 'improvise');
     setResonanceStatus(
       '✓ Lick complete · ' + resonanceLick.notes.length + ' notes · ' +
       (resonanceLick.containsTenseNote ? 'tension resolved' : 'stable') +
@@ -3459,6 +3491,7 @@ function applyResonanceOverlays(root, scaleName) {
 function activateResonanceMode() {
   resonanceModeEnabled = true;
   document.getElementById('resonancePanel').style.display = 'block';
+  window.updateResonanceLock?.();
   document.getElementById('fbSection').style.display      = 'block';
   if (lastBarData) {
     showFretboard(lastBarData.root, lastBarData.scale, lastBarData.chord);
@@ -3483,6 +3516,7 @@ function deactivateResonanceMode() {
   const svg = document.getElementById('gravityArrowsSvg');
   if (svg) { svg.innerHTML = ''; svg.setAttribute('width', 0); svg.setAttribute('height', 0); }
   document.getElementById('resonancePanel').style.display = 'none';
+  window.updateResonanceLock?.();
   setResonanceStatus('');
 }
 
@@ -4625,6 +4659,7 @@ function stopPlayback() {
   document.querySelectorAll('#sheet .bar.loop-target').forEach(b => b.classList.remove('loop-target'));
   document.getElementById('playStatus').textContent = 'Stopped';
   document.getElementById('playBtn').textContent = '▶ Play';
+  window.reportTransportState?.(false, 'learn');
   updatePlaybackProgress(0, 1);
 }
 
@@ -4655,6 +4690,7 @@ async function startPlayback() {
   isPlaying = true; playIdx = 0;
   loopSection.currentLoop = 0;
   document.getElementById('playBtn').textContent = '⏸ Pause';
+  window.reportTransportState?.(true, 'learn');
   const { start, end } = resolveLoopRange(bars);
   loopSection.startBar = start;
   loopSection.endBar = end;
@@ -6506,6 +6542,7 @@ async function suggestNext() {
       const playing = args.state === 1; // PlayerState.Playing = 1
       const btn = document.getElementById('headPlayBtn');
       if (btn) btn.textContent = playing ? '⏸ Pause' : '▶ Play Head';
+      window.reportTransportState?.(playing, 'practice');
     });
 
     // ── Playback finished ─────────────────────────────────────────────
@@ -6515,6 +6552,7 @@ async function suggestNext() {
       if (fill) fill.style.width = '0';
       const btn = document.getElementById('headPlayBtn');
       if (btn) btn.textContent = '▶ Play Head';
+      window.reportTransportState?.(false, 'practice');
       if (hdLoopOn && api) setTimeout(() => api.play(), 60);
     });
 
@@ -7176,11 +7214,13 @@ async function suggestNext() {
     api.playerStateChanged.on(args => {
       const btn = document.getElementById('atMainPlayBtn');
       if (btn) btn.textContent = args.state === 1 ? '⏸ Pause' : '▶ Play';
+      window.reportTransportState?.(args.state === 1, 'practice');
     });
 
     api.playerFinished.on(() => {
       const btn = document.getElementById('atMainPlayBtn');
       if (btn) btn.textContent = '▶ Play';
+      window.reportTransportState?.(false, 'practice');
     });
 
     // Error
@@ -7972,6 +8012,10 @@ async function suggestNext() {
       if (window.hdStop) window.hdStop();
       if (typeof stopResonanceLick === 'function') stopResonanceLick();
     } catch (e) {}
+    // Everything was just stopped, so the new mode starts from a truthful
+    // "not playing". (No-op on the very first call — the transport router
+    // below has not defined this yet, which is why it is optional-called.)
+    window.reportTransportState?.(false);
     // Refresh the drills dashboard if entering Journal mode.
     if (mode === 'journal' && typeof refreshDashboard === 'function') {
       try { refreshDashboard(); } catch (e) {}
@@ -7996,6 +8040,45 @@ async function suggestNext() {
 
   function currentMode() { return document.body.getAttribute('data-active-mode') || 'learn'; }
 
+  /* ── 3a. Transport state mirror ───────────────────────────────
+     The transport must never assert a state it has not observed.
+
+     Previously routePlay() flipped its own label to "⏸ Pause" unconditionally,
+     so clicking Play in Practice mode with no head loaded produced a toast
+     ("Load a head first"), played nothing, and *still* showed "⏸ Pause" with
+     aria-pressed="true" — the app's most-used control misreporting system
+     state to sighted users and screen readers alike.
+
+     Now each engine reports its real state here, at the same points where it
+     already updates its own legacy button, and the global button renders from
+     that and from nothing else. If a target refuses to start, nothing reports
+     and the button correctly keeps saying "▶ Play". */
+  let transportPlaying = false;
+
+  function renderTransport() {
+    if (!gtPlay) return;
+    gtPlay.textContent = transportPlaying ? '⏸ Pause' : '▶ Play';
+    gtPlay.setAttribute('aria-pressed', transportPlaying ? 'true' : 'false');
+    gtPlay.setAttribute('aria-label', transportPlaying ? 'Pause' : 'Play');
+  }
+
+  /**
+   * Report real playback state from an engine.
+   * @param {boolean} playing
+   * @param {'learn'|'practice'|'improvise'} [source] the mode this engine backs.
+   *   Reports from an engine that is not the active mode's target are ignored —
+   *   routeStop() broadcasts to every engine, and the already-idle ones must not
+   *   overwrite the state of the one that actually matters.
+   */
+  window.reportTransportState = function (playing, source) {
+    if (source && source !== currentMode()) return;
+    const next = !!playing;
+    if (next === transportPlaying) return;
+    transportPlaying = next;
+    renderTransport();
+  };
+  renderTransport();
+
   function routePlay() {
     const m = currentMode();
     if (m === 'learn') {
@@ -8015,18 +8098,18 @@ async function suggestNext() {
     } else if (m === 'improvise') {
       document.getElementById('resonancePlayBtn')?.click();
     }
-    // Reflect the running state on the global button (simple toggle for feedback).
-    const pressed = gtPlay.getAttribute('aria-pressed') === 'true';
-    gtPlay.setAttribute('aria-pressed', pressed ? 'false' : 'true');
-    gtPlay.textContent = pressed ? '▶ Play' : '⏸ Pause';
+    // Deliberately no optimistic label flip here. The dispatched engine reports
+    // its real state through reportTransportState(); if it refused to start
+    // (nothing generated, no head loaded, audio still blocked) nothing reports
+    // and the button keeps saying "▶ Play", which is the truth.
   }
   function routeStop() {
     document.getElementById('stopBtn')?.click();
     document.getElementById('headStopBtn')?.click();
     document.getElementById('atMainStopBtn')?.click();
     document.getElementById('resonanceStopBtn')?.click();
-    gtPlay.setAttribute('aria-pressed', 'false');
-    gtPlay.textContent = '▶ Play';
+    // Stop is unconditional, so asserting the stopped state is safe here.
+    window.reportTransportState(false);
   }
   gtPlay?.addEventListener('click', routePlay);
   gtStop?.addEventListener('click', routeStop);
@@ -8143,16 +8226,79 @@ async function suggestNext() {
     sectionPost.forEach(b => { if (b) b.style.display = ''; });
   }, 100));
 
-  /* ── 7. Resonance Engine prerequisite hint ────────────────── */
+  /* ── 7. Resonance Engine prerequisite state ───────────────────
+     Two distinct blockers stand between Improvise mode and lick generation,
+     and each gets its own message and its own one-click way out:
+       a) no bar has been selected yet  → go to Learn and pick one
+       b) a bar is selected but the engine is off → switch it on
+     The in-panel #resonancePrereq stays as-is for the case where the panel is
+     open but the bar selection was cleared. */
   const resonancePrereq = document.getElementById('resonancePrereq');
-  function updateResonancePrereq() {
-    if (!resonancePrereq) return;
-    const hasBar = typeof lastBarData !== 'undefined' && lastBarData;
-    resonancePrereq.style.display = hasBar ? 'none' : '';
+  const resLocked       = document.getElementById('resonanceLocked');
+  const resLockedMsg    = document.getElementById('resonanceLockedMsg');
+  const resLockedBtn    = document.getElementById('resonanceLockedAction');
+
+  function hasSelectedBar() {
+    return typeof lastBarData !== 'undefined' && !!lastBarData;
   }
-  // Re-check on any bar click and periodically.
+  function resonanceIsActive() {
+    return typeof resonanceModeEnabled !== 'undefined' && !!resonanceModeEnabled;
+  }
+
+  function updateResonancePrereq() {
+    if (resonancePrereq) {
+      resonancePrereq.style.display = hasSelectedBar() ? 'none' : '';
+    }
+    if (!resLocked || !resLockedMsg || !resLockedBtn) return;
+
+    if (resonanceIsActive()) {
+      // The real panel is up; the stand-in must not double it.
+      resLocked.style.display = 'none';
+      return;
+    }
+    // Clearing the inline value hands visibility back to [data-modes], so the
+    // card appears in Improvise mode only.
+    resLocked.style.display = '';
+
+    if (!hasSelectedBar()) {
+      resLockedMsg.innerHTML =
+        'Lick generation is built around <strong>one chord at a time</strong>. ' +
+        'Pick a bar on the chord grid in Learn mode and the engine will open here.';
+      resLockedBtn.textContent = '📖 Go to Learn and pick a bar';
+      resLockedBtn.dataset.action = 'learn';
+    } else {
+      resLockedMsg.innerHTML =
+        'Ready to generate over <strong>' + escapeHtml(lastBarData.chord || '') + '</strong>. ' +
+        'Switch the engine on to map gravity and build licks.';
+      resLockedBtn.textContent = '🎸 Turn on the Resonance Engine';
+      resLockedBtn.dataset.action = 'enable';
+    }
+  }
+
+  window.updateResonanceLock = updateResonancePrereq;
+
+  resLockedBtn?.addEventListener('click', () => {
+    if (resLockedBtn.dataset.action === 'enable') {
+      // Delegate to the existing toggle so its pill state stays in sync.
+      document.getElementById('toggleResonance')?.click();
+      updateResonancePrereq();
+      return;
+    }
+    setActiveMode('learn');
+    // Nothing to pick a bar from yet — render the sheet first.
+    if (!document.querySelector('#sheet .bar')) {
+      document.getElementById('generateBtn')?.click();
+    }
+    requestAnimationFrame(() => {
+      document.getElementById('sheet')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+
+  // Re-check whenever either blocker could have changed.
   document.addEventListener('click', e => {
-    if (e.target.closest && e.target.closest('.bar')) {
+    if (!e.target.closest) return;
+    if (e.target.closest('.bar') || e.target.closest('#toggleResonance') ||
+        e.target.closest('.mode-nav-btn')) {
       setTimeout(updateResonancePrereq, 50);
     }
   });
