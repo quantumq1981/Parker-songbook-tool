@@ -1,10 +1,20 @@
 'use strict';
 
 // Bump this string whenever the app shell changes to force cache refresh.
-const CACHE = 'cp-songbook-v5';
+const CACHE = 'cp-songbook-v6';
 
 // Core app shell — pre-cached at install so the page works offline from the
 // very first load after the SW is installed.
+//
+// Deliberately excluded:
+//   · js/svguitar.umd.js (337 KB) — this is only the offline fallback for the
+//     unpkg copy, used by the chord-voicings modal. Pre-caching it made every
+//     first visit pay 337 KB of background bandwidth for a file most sessions
+//     never touch, and cache.addAll() is all-or-nothing, so one flaky fetch of
+//     it failed the whole install. It is still cached on first real use by the
+//     same-origin cache-first rule below.
+//   · data/chords.json (369 KB) — same reasoning; fetched lazily and only when
+//     a chord is missing from the in-memory jazz voicing DB.
 const SHELL = [
   './',
   './index.html',
@@ -17,7 +27,6 @@ const SHELL = [
   './js/chordVoicingsModal.js',
   './js/jazzChordDatabase.js',
   './js/resonanceEngine.js',
-  './js/svguitar.umd.js',
   './js/pitch-processor.js',
 ];
 

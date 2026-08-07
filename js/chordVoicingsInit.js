@@ -31,16 +31,16 @@
   }
 
   global.openChordVoicingsForSymbol = openChordVoicingsForSymbol;
+
+  // Both heavy dependencies of the voicings modal are now demand-loaded rather
+  // than warmed at DOMContentLoaded, where they competed with first paint:
+  //   · data/chords.json (369 KB) — ChordDataService.getChordVoicings() already
+  //     fetches it lazily, and only when the in-memory jazz DB has no match.
+  //   · SVGuitar (~330 KB)        — ChordDiagram.renderChordDiagram() awaits
+  //     waitForSvguitar(), which fetches it on the first draw.
+  // Building the (empty) modal shell up front is cheap and keeps the open path
+  // synchronous, so that stays.
   document.addEventListener('DOMContentLoaded', () => {
-    console.info('[ChordVoicingsInit] DOM ready. Initializing chord voicings dependencies.');
     global.ChordVoicingsModal.ensureModal();
-    global.ChordDataService.loadChordData().catch((error) => {
-      console.error('[ChordVoicingsInit] Failed to preload chord data.', error);
-    });
-    if (global.ChordDiagram && typeof global.ChordDiagram.waitForSvguitar === 'function') {
-      global.ChordDiagram.waitForSvguitar()
-        .then(() => console.info('[ChordVoicingsInit] SVGuitar dependency is ready.'))
-        .catch((error) => console.error('[ChordVoicingsInit] SVGuitar dependency failed to load.', error));
-    }
   });
 })(typeof window !== 'undefined' ? window : globalThis);

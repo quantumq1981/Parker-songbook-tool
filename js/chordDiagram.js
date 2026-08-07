@@ -136,6 +136,21 @@
 
   function waitForSvguitar() {
     if (libraryReadyPromise) return libraryReadyPromise;
+
+    // Preferred path: SVGuitar is no longer a render-blocking <script> in <head>
+    // (it was loaded twice there — CDN *and* local fallback). loadCdnLib fetches
+    // one copy on demand, the first time a chord diagram is actually drawn.
+    if (!getSvguitarNamespace() && typeof global.loadCdnLib === 'function') {
+      libraryReadyPromise = global.loadCdnLib('svguitar').then(() => {
+        const ns = getSvguitarNamespace();
+        if (!ns) throw new Error('SVGuitar loaded but no usable namespace was found.');
+        return ns;
+      });
+      return libraryReadyPromise;
+    }
+
+    // Fallback path: static <script src*="svguitar"> tags (or a test harness
+    // that stubs the global). Kept so the module works without the loader.
     libraryReadyPromise = new Promise((resolve, reject) => {
       const ready = getSvguitarNamespace();
       if (ready) return resolve(ready);
