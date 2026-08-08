@@ -8174,29 +8174,69 @@ async function suggestNext() {
     'metroBtn', 'tempoTrainerBtn', 'toggleResonance', 'togglePitch',
     'resonanceArrowsBtn', 'resonanceAutoPlayBtn'
   ];
+  // Classes the legacy handlers toggle in lockstep with their label text. These
+  // are the load-bearing state signal: unlike the text, they survive the label
+  // normalisation below.
+  const PILL_ON_CLASSES = ['btn-loop-on', 'btn-resonance-on', 'btn-pitch-on'];
+  const PILL_OBS = { childList: true, characterData: true, subtree: true,
+                     attributes: true, attributeFilter: ['class'] };
+  const LEGACY_ON  = /:\s*on\b/i;
+  const LEGACY_OFF = /:\s*off\b/i;
+
   pillIds.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
+    const label = el.dataset.toggleLabel;
+    let mo = null;
+
+    const derivePressed = () => {
+      // Class first: it is the one signal the label rewrite cannot destroy.
+      if (PILL_ON_CLASSES.some(c => el.classList.contains(c))) return true;
+      const t = el.textContent || '';
+      if (LEGACY_ON.test(t))  return true;
+      if (LEGACY_OFF.test(t)) return false;
+      // Text already normalised and no class is set — keep the last derived
+      // value rather than guessing "off". (togglePitch passes through a
+      // transient "⏳ Starting…" label that carries no state either way.)
+      return el.getAttribute('aria-pressed') === 'true';
+    };
+
     const update = () => {
-      const t = (el.textContent || '').toLowerCase();
-      const on = /(:\s*on|on\s*\(|arrows:\s*on|auto-play:\s*on|pitch:\s*on|resonance:\s*on|trainer:\s*on|metronome:\s*on)/.test(t)
-              || el.classList.contains('btn-loop-on')
-              || el.classList.contains('btn-resonance-on');
-      el.setAttribute('aria-pressed', on ? 'true' : 'false');
-      // Preserve label as data-toggle-label if present so the visible text is stable.
-      const label = el.dataset.toggleLabel;
-      if (label) {
-        const span = el.querySelector('.toggle-label');
-        if (span) span.textContent = label;
-        else el.textContent = label;
+      // Detach before writing. This function rewrites the label, and those
+      // writes are themselves childList mutations — left observed they re-enter
+      // update() forever. Observer callbacks are microtasks, so that queue never
+      // drains, the main thread never returns to the event loop, and the tab
+      // hard-freezes on the first click of any pill.
+      if (mo) mo.disconnect();
+      try {
+        const pressed = derivePressed() ? 'true' : 'false';
+        if (el.getAttribute('aria-pressed') !== pressed) {
+          el.setAttribute('aria-pressed', pressed);
+        }
+        if (label) {
+          // A legacy handler assigning el.textContent wipes the span out, so
+          // rebuild it instead of flattening the pill to a bare text node.
+          let span = el.querySelector('.toggle-label');
+          if (!span) {
+            el.textContent = '';
+            span = document.createElement('span');
+            span.className = 'toggle-label';
+            el.appendChild(span);
+          }
+          // Assigning textContent replaces the child text node even when the
+          // string is identical, so this guard is what keeps the write count at
+          // zero once the label has settled.
+          if (span.textContent !== label) span.textContent = label;
+        }
+      } finally {
+        if (mo) { mo.takeRecords(); mo.observe(el, PILL_OBS); }
       }
     };
-    // Initial sync
-    update();
-    // Observe legacy handlers that mutate textContent.
-    const mo = new MutationObserver(update);
-    mo.observe(el, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-    // Also update on click (after handler runs).
+
+    update();                       // initial sync, before the observer exists
+    mo = new MutationObserver(update);
+    mo.observe(el, PILL_OBS);
+    // Also update after the legacy click handler has run.
     el.addEventListener('click', () => setTimeout(update, 0));
   });
 
