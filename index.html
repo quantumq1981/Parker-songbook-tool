@@ -18,7 +18,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Charlie Parker Songbook Trainer v7.0</title>
-<meta name="theme-color" content="#1a0d2e"/>
+<meta name="theme-color" content="var(--legacy-purple-dark)"/>
 <meta name="description" content="Interactive bebop practice tool — 46 Charlie Parker tunes, AI resonance engine, guitar fretboard, AlphaTab notation"/>
 <link rel="manifest" href="manifest.json"/>
 <!-- Declared explicitly so the browser stops issuing a doomed /favicon.ico request. -->
@@ -137,6 +137,12 @@ window.CDN_LIBS = {
   --red:#ef6f6f;           /* coral (stop) */
   /* Compatibility aliases used in inline styles */
   --border:var(--barline);--card:var(--panel);
+  /* Legacy Material-purple aliases — remap the leftover AlphaTab/Practice-mode
+     hexes onto the After Hours palette so Practice mode doesn't look like a
+     different product. Introduced per audit Phase-2 "palette is split in half". */
+  --legacy-purple:var(--indigo);        /* was #7b1fa2 */
+  --legacy-purple-lt:var(--sym);        /* was #ce93d8 */
+  --legacy-purple-dark:var(--panel-2);  /* was #1a0d2e */
   /* Type */
   --font-display:'Iowan Old Style','Palatino Linotype','Palatino','Georgia',serif;
   --font-mono:'JetBrains Mono','SFMono-Regular','SF Mono','Cascadia Code',ui-monospace,'Courier New',monospace;
@@ -150,7 +156,7 @@ window.CDN_LIBS = {
   --focus-ring:0 0 0 2px rgba(79,182,173,.65);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-body{margin:0;min-height:100vh;color:var(--ink);
+body{margin:0;min-height:100vh;min-height:100dvh;color:var(--ink);
   font-family:var(--font-mono);padding:10px;line-height:1.4;
   background:#0b090e;}
 /* Fixed backdrop on a GPU-composited layer instead of background-attachment:fixed,
@@ -223,7 +229,10 @@ padding:9px 12px;border-radius:6px;cursor:pointer;font-weight:bold;
 transition:.15s;font-family:var(--font-mono);font-size:13px;touch-action:manipulation;}
 .controls select:hover,.controls button:hover{background:var(--accent);color:#000;}
 .controls select{min-width:160px;flex:1;max-width:300px;}
-.controls input[type=number]{width:75px;flex:none;}
+.controls input[type=number]{width:75px;flex:none;cursor:text;}
+/* iOS Safari zooms the viewport when a focused form control is under 16px.
+   Inputs and selects must be >=16px to keep BPM/loop/count-in on a phone. */
+.controls input,.controls select{font-size:16px;}
 .btn-sec{border-color:var(--accent2)!important;color:#9fd2ff;}
 .btn-sec:hover{background:var(--accent2)!important;color:#000;}
 .btn-ok{border-color:var(--green)!important;color:#81c784;}
@@ -299,8 +308,8 @@ padding:12px;margin-top:10px;}
 /* Active highlight states — !important overrides JS setAttribute fill */
 .fret.hl circle { stroke: rgba(255,255,255,0.6); stroke-width: 1.5; }
 .fret.rt circle { stroke: #fff !important; stroke-width: 2.5 !important; }
-.fret.hd-best   circle { fill: #ce93d8 !important; stroke: #fff !important; stroke-width: 2 !important; }
-.fret.hd-active circle { fill: #7b1fa2 !important; opacity: .65; }
+.fret.hd-best   circle { fill: var(--legacy-purple-lt) !important; stroke: #fff !important; stroke-width: 2 !important; }
+.fret.hd-active circle { fill: var(--legacy-purple) !important; opacity: .65; }
 .fret.hd-ghost  circle { fill: #555 !important; opacity: .5; }
 .fret.hd-rest   circle { fill: #333 !important; opacity: .4; }
 .fret.pitch-live circle { fill: #76ff03 !important; stroke: #fff !important; stroke-width: 2 !important; filter: drop-shadow(0 0 5px #76ff0388); }
@@ -374,7 +383,8 @@ body{padding:20px;} h1{font-size:28px;} .card{padding:20px;}
 body{padding:8px;}
 .card{padding:10px;border-radius:12px;}
 .controls{gap:6px;}
-.controls button,.controls select,.controls input{min-height:44px;font-size:14px;padding:10px;}
+.controls button{min-height:44px;font-size:14px;padding:10px;}
+.controls select,.controls input{min-height:44px;font-size:16px;padding:10px;}
 .controls label{width:100%;font-size:12px;}
 .row{grid-template-columns:repeat(2,minmax(140px,1fr));min-width:0;}
 .bar{min-height:92px;}
@@ -382,7 +392,7 @@ body{padding:8px;}
 .meta-item{font-size:10px;padding:4px 8px;}
 .lib-grid{grid-template-columns:1fr;}
 }
-@media print{body>*{display:none!important;}}
+/* superseded by the .card-preserving print block at ~893 — this line matched .card too and defeated ⌘P */
 
 /* =====================================================
    RESONANCE ENGINE OVERLAY STYLES
@@ -507,7 +517,7 @@ body{padding:8px;}
   border-color: var(--accent2);
   box-shadow: var(--focus-ring);
 }
-.search-input::placeholder { color: #555; }
+.search-input::placeholder { color: var(--ink-dim); }
 .search-count {
   color: var(--ink-dim);
   font-size: 11px;
@@ -586,7 +596,7 @@ body{padding:8px;}
   flex-wrap: wrap;
   gap: 10px;
   font-size: 10px;
-  color: #555;
+  color: var(--ink-dim);
   font-family: var(--font-mono);
   padding: 4px 2px 0;
 }
@@ -636,8 +646,13 @@ body{padding:8px;}
   .search-row { flex-direction: column; align-items: stretch; }
   .search-count { text-align: center; min-width: auto; }
   .shortcut-hint { display: none; }
-  .controls button, .controls select, .controls input {
+  .controls button {
     font-size: 12px;
+    padding: 8px 10px;
+  }
+  /* keep inputs/selects >=16px so iOS Safari does not zoom on focus */
+  .controls select, .controls input {
+    font-size: 16px;
     padding: 8px 10px;
   }
 }
@@ -773,7 +788,7 @@ body{padding:8px;}
   margin: 3px 0;
 }
 .vl-from  { min-width: 52px; }
-.vl-arrow { color: #444; }
+.vl-arrow { color: var(--ink-dim); }
 .vl-to    { min-width: 52px; }
 .vl-tag   {
   font-size: 9px;
@@ -792,7 +807,7 @@ body{padding:8px;}
   display: inline-block; padding: 3px 10px; border-radius: 12px;
   font-size: 12px; margin-right: 8px;
 }
-.vl-gt-pill.vl-third   { background: #3d006e; color: #e040fb; border: 1px solid #7b1fa2; }
+.vl-gt-pill.vl-third   { background: #3d006e; color: #e040fb; border: 1px solid var(--legacy-purple); }
 .vl-gt-pill.vl-seventh { background: #00363a; color: #26c6da; border: 1px solid #00838f; }
 
 /* Voice leading motion section */
@@ -800,14 +815,14 @@ body{padding:8px;}
 .vl-motion-item    { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: var(--font-mono); }
 .vl-from-label     { color: #aaa; }
 .vl-to-label       { color: #aaa; }
-.vl-arrow          { color: #555; }
+.vl-arrow          { color: var(--ink-dim); }
 .vl-dot {
   display: inline-block; width: 8px; height: 8px;
   border-radius: 50%; flex-shrink: 0;
 }
 .vl-third-dot   { background: #e040fb; }
 .vl-seventh-dot { background: #26c6da; }
-.vl-hint { font-size: 11px; color: #555; font-style: italic; margin: 4px 0 0; }
+.vl-hint { font-size: 11px; color: var(--ink-dim); font-style: italic; margin: 4px 0 0; }
 
 /* ── Practice Journal Panel ───────────────────────────────────────────── */
 details.panel.practice-panel summary { color: #ffb74d; }
@@ -827,7 +842,7 @@ details.panel.practice-panel summary { color: #ffb74d; }
 }
 .prac-chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .prac-tune-chip {
-  background: #1e1430; border: 1px solid #7b1fa2; color: #ce93d8;
+  background: #1e1430; border: 1px solid var(--legacy-purple); color: var(--legacy-purple-lt);
   border-radius: 10px; padding: 2px 9px; font-size: 11px;
   cursor: pointer; transition: background var(--transition);
 }
@@ -846,7 +861,7 @@ details.panel.practice-panel summary { color: #ffb74d; }
 .prac-table tr:hover td { background: #1a1a2e; }
 .prac-td-tune { color: var(--sym); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .prac-td-when { color: var(--ink-dim); font-size: 10px; white-space: nowrap; }
-.prac-empty { font-size: 11px; color: #444; font-style: italic; margin: 4px 0; }
+.prac-empty { font-size: 11px; color: var(--ink-dim); font-style: italic; margin: 4px 0; }
 .prac-controls { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 
 /* ── Import Panel ─────────────────────────────────────────────────────── */
@@ -887,7 +902,7 @@ details.panel.import-panel summary { color: var(--green); }
 .imported-name  { flex: 1; font-size: 12px; color: var(--sym); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .imported-meta  { font-size: 10px; color: var(--ink-dim); font-family: var(--font-mono); white-space: nowrap; }
 .import-del     { padding: 1px 6px !important; font-size: 11px !important; min-width: 0 !important; }
-.import-empty   { font-size: 11px; color: #444; font-style: italic; margin: 4px 0; }
+.import-empty   { font-size: 11px; color: var(--ink-dim); font-style: italic; margin: 4px 0; }
 
 /* Improved print support */
 @media print {
@@ -901,37 +916,37 @@ details.panel.import-panel summary { color: var(--green); }
 }
 
 /* ── Parker Heads Library ─────────────────────────────────────────────── */
-details.panel.heads-panel summary { color: #ce93d8; }
+details.panel.heads-panel summary { color: var(--legacy-purple-lt); }
 .heads-search-row { display:flex; gap:8px; margin:10px 0 6px; align-items:center; }
-.heads-search { flex:1; background:#252525; color:var(--sym); border:1px solid #7b1fa2;
+.heads-search { flex:1; background:#252525; color:var(--sym); border:1px solid var(--legacy-purple);
   border-radius:5px; padding:7px 10px; font-family:var(--font-mono); font-size:12px; }
 .heads-count { font-size:11px; color:var(--ink-dim); white-space:nowrap; }
 .heads-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
   gap:5px; margin-top:8px; max-height:270px; overflow-y:auto; }
-.head-btn { background:#1a0d2e; border:1px solid #7b1fa2; color:#ce93d8; padding:7px 10px;
+.head-btn { background:var(--legacy-purple-dark); border:1px solid var(--legacy-purple); color:var(--legacy-purple-lt); padding:7px 10px;
   border-radius:6px; cursor:pointer; font-size:11px; font-family:var(--font-mono);
   text-align:left; transition:.15s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.head-btn:hover { background:#2a1a42; border-color:#ce93d8; }
+.head-btn:hover { background:#2a1a42; border-color:var(--legacy-purple-lt); }
 .head-btn.hd-loading { opacity:.6; cursor:wait; }
 .head-btn.hd-loaded { border-color:var(--green); color:#81c784; background:#0a2a0a; }
 .head-btn.hd-error { border-color:var(--red); color:#ef9a9a; }
-.head-melody-bar { margin-top:10px; background:#0c0818; border:1px solid #7b1fa2;
+.head-melody-bar { margin-top:10px; background:#0c0818; border:1px solid var(--legacy-purple);
   border-radius:8px; padding:10px; display:none; }
 .head-melody-bar.hd-visible { display:block; }
-.head-melody-title { font-size:12px; color:#ce93d8; font-weight:bold; margin-bottom:8px; }
+.head-melody-title { font-size:12px; color:var(--legacy-purple-lt); font-weight:bold; margin-bottom:8px; }
 .head-melody-controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; }
 .head-note-display { display:flex; gap:12px; align-items:center; background:#111;
   border:1px solid #4a0060; border-radius:6px; padding:8px 12px; margin:8px 0; min-height:48px; }
-.hd-note-name { font-size:24px; color:#ce93d8; font-weight:bold; min-width:40px; text-align:center; }
+.hd-note-name { font-size:24px; color:var(--legacy-purple-lt); font-weight:bold; min-width:40px; text-align:center; }
 .hd-note-info { display:flex; flex-direction:column; gap:2px; }
 .hd-note-interval { font-size:12px; color:#9fa8da; }
 .hd-note-type { font-size:10px; color:var(--ink-dim); }
 .hd-note-measure { font-size:11px; color:var(--ink-dim); margin-left:auto; }
 .hd-progress { height:6px; background:#222; border-radius:999px; overflow:hidden; margin:6px 0; }
-.hd-progress-fill { height:100%; background:linear-gradient(90deg,#7b1fa2,#ce93d8); width:0; transition:width .1s linear; }
+.hd-progress-fill { height:100%; background:linear-gradient(90deg,var(--legacy-purple),var(--legacy-purple-lt)); width:0; transition:width .1s linear; }
 .hd-loop-row { display:flex; gap:8px; align-items:center; font-size:11px; color:var(--ink-dim); flex-wrap:wrap; }
 .hd-loop-row input[type=number] { width:58px; background:#252525; color:var(--sym);
-  border:1px solid #7b1fa2; border-radius:4px; padding:4px 6px; font-size:11px;
+  border:1px solid var(--legacy-purple); border-radius:4px; padding:4px 6px; font-size:11px;
   font-family:var(--font-mono); }
 .fret.hd-active { background:rgba(206,147,216,0.30)!important; color:#fff!important;
   box-shadow:0 0 6px rgba(206,147,216,0.5)!important; }
@@ -960,40 +975,40 @@ details.panel.heads-panel summary { color: #ce93d8; }
   justify-content:center; background:rgba(10,5,20,0.88); flex-direction:column;
   gap:8px; z-index:10; }
 .at-loading-overlay.at-hidden { display:none; }
-.at-load-spinner { width:22px; height:22px; border:2px solid #7b1fa2;
-  border-top-color:#ce93d8; border-radius:50%; animation:atSpin .65s linear infinite; }
-.at-load-msg { font-size:11px; color:#ce93d8; }
+.at-load-spinner { width:22px; height:22px; border:2px solid var(--legacy-purple);
+  border-top-color:var(--legacy-purple-lt); border-radius:50%; animation:atSpin .65s linear infinite; }
+.at-load-msg { font-size:11px; color:var(--legacy-purple-lt); }
 @keyframes atSpin { to { transform:rotate(360deg); } }
 
 /* Speed + note info row */
 .hd-speed-row { display:flex; gap:8px; align-items:center; font-size:11px;
   color:var(--ink-dim); flex-wrap:wrap; margin-top:8px; }
-.hd-speed-row input[type=range] { flex:1; min-width:80px; accent-color:#ce93d8;
+.hd-speed-row input[type=range] { flex:1; min-width:80px; accent-color:var(--legacy-purple-lt);
   cursor:pointer; }
-.hd-speed-val { min-width:34px; color:#ce93d8; font-weight:bold; }
+.hd-speed-val { min-width:34px; color:var(--legacy-purple-lt); font-weight:bold; }
 
 /* Speed preset quick-tap buttons — shared by Heads Library and Notation viewer */
 .hd-sp-presets { display:flex; gap:4px; flex-wrap:wrap; margin-top:6px; }
 .hd-sp-btn {
-  background:#1a0d2e; border:1px solid #7b1fa2; color:#ce93d8;
+  background:var(--legacy-purple-dark); border:1px solid var(--legacy-purple); color:var(--legacy-purple-lt);
   border-radius:14px; padding:4px 11px; font-size:10px; cursor:pointer;
   font-family:inherit; transition:background .12s, color .12s, border-color .12s;
   touch-action:manipulation; -webkit-tap-highlight-color:transparent;
   white-space:nowrap; line-height:1.4;
 }
-.hd-sp-btn:hover { background:#2a1a42; border-color:#ce93d8; }
-.hd-sp-btn.hd-sp-active { background:#7b1fa2; color:#fff; border-color:#ce93d8; font-weight:bold; }
+.hd-sp-btn:hover { background:#2a1a42; border-color:var(--legacy-purple-lt); }
+.hd-sp-btn.hd-sp-active { background:var(--legacy-purple); color:#fff; border-color:var(--legacy-purple-lt); font-weight:bold; }
 
-.hd-gp-badge { background:#1a0d2e; border:1px solid #7b1fa2; color:#ce93d8;
+.hd-gp-badge { background:var(--legacy-purple-dark); border:1px solid var(--legacy-purple); color:var(--legacy-purple-lt);
   border-radius:20px; padding:3px 12px; font-size:11px; cursor:pointer;
   -webkit-tap-highlight-color:transparent; white-space:nowrap; }
 .hd-track-row { display:none; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px;
   font-size:11px; color:var(--ink-dim); }
 .hd-track-btns { display:flex; flex-wrap:wrap; gap:4px; }
-.hd-track-btn { background:#1a0d2e; border:1px solid #7b1fa2; color:#ce93d8;
+.hd-track-btn { background:var(--legacy-purple-dark); border:1px solid var(--legacy-purple); color:var(--legacy-purple-lt);
   border-radius:4px; padding:3px 10px; font-size:10px; cursor:pointer;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
-.hd-track-btn.hd-tb-active { background:#7b1fa2; color:#fff; border-color:#ce93d8; }
+.hd-track-btn.hd-tb-active { background:var(--legacy-purple); color:#fff; border-color:var(--legacy-purple-lt); }
 
 /* ── Main lead-sheet view tabs (Chord Grid / Notation / Tab) ─────────────── */
 .at-view-tabs { display:flex; gap:5px; margin-bottom:6px; flex-wrap:wrap; }
@@ -1004,8 +1019,8 @@ details.panel.heads-panel summary { color: #ce93d8; }
   transition:background .15s, color .15s, border-color .15s;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
 }
-.at-view-tab:hover  { background:#252545; color:var(--ink); border-color:#7b1fa2; }
-.at-view-tab.active { background:#3d1a6e; border-color:#ce93d8; color:#fff; font-weight:700; }
+.at-view-tab:hover  { background:#252545; color:var(--ink); border-color:var(--legacy-purple); }
+.at-view-tab.active { background:#3d1a6e; border-color:var(--legacy-purple-lt); color:#fff; font-weight:700; }
 .at-view-tab:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
 
 /* ── Notation / Tab viewer container ────────────────────────────────────── */
@@ -1029,7 +1044,7 @@ details.panel.heads-panel summary { color: #ce93d8; }
   background:#111; border-radius:6px 6px 0 0;
 }
 .at-main-empty small {
-  display:block; font-size:11px; color:#555; margin-top:6px; line-height:1.65;
+  display:block; font-size:11px; color:var(--ink-dim); margin-top:6px; line-height:1.65;
 }
 .at-main-overlay {
   position:absolute; inset:0; display:flex; align-items:center;
@@ -1063,7 +1078,7 @@ details.panel.heads-panel summary { color: #ce93d8; }
   width:0; transition:width .1s, background .1s; min-width:0; max-width:100%;
 }
 .pitch-score { font-size:11px; color:var(--ink-dim); white-space:nowrap; }
-.pitch-privacy { font-size:10px; color:#555; margin-top:4px; }
+.pitch-privacy { font-size:10px; color:var(--ink-dim); margin-top:4px; }
 .btn-pitch-on { background:#1a3a00 !important; border-color:#4caf50 !important; color:#76ff03 !important; }
 
 /* ── Practice Journal ────────────────────────────────────────────────────── */
@@ -1077,7 +1092,7 @@ details.panel.heads-panel summary { color: #ce93d8; }
 }
 .pj-stat { color:var(--ink-dim); }
 .pj-stat strong { color:var(--ink); font-size:14px; }
-.pj-streak { color:#ce93d8; font-weight:700; }
+.pj-streak { color:var(--legacy-purple-lt); font-weight:700; }
 .pj-table { width:100%; border-collapse:collapse; font-size:12px; }
 .pj-table th {
   padding:5px 8px; border-bottom:1px solid #2a2a3e;
@@ -1085,13 +1100,13 @@ details.panel.heads-panel summary { color: #ce93d8; }
 }
 .pj-table td { padding:5px 8px; border-bottom:1px solid #1a1a2e; }
 .pj-table tr:last-child td { border-bottom:none; }
-.pj-table tbody tr:hover td { background:#1a0d2e; }
+.pj-table tbody tr:hover td { background:var(--legacy-purple-dark); }
 .pj-empty { text-align:center; color:var(--ink-dim); padding:20px !important; font-style:italic; }
 
 /* ── Offline banner ───────────────────────────────────────────────────────── */
 #offlineBanner {
   display:none; position:fixed; top:0; left:0; right:0; z-index:9999;
-  background:#7b1fa2; color:#fff; text-align:center;
+  background:var(--legacy-purple); color:#fff; text-align:center;
   padding:6px 12px; font-size:12px; font-weight:600; letter-spacing:.04em;
 }
 #offlineBanner.offline-visible { display:block; }
@@ -1167,6 +1182,15 @@ body[data-active-mode="improvise"] [data-modes~="improvise"],
 body[data-active-mode="journal"]   [data-modes~="journal"],
 [data-modes~="all"] { display: revert; }
 
+/* ── is-armed / is-disarmed: JS-driven visibility without touching inline style ──
+   Previously fbSection, resonancePanel, voiceLeadPanel, and sectionLickPanel were
+   toggled with element.style.display='block'/'none'. Inline styles beat the
+   [data-modes] cascade at any specificity, so once shown they leaked across
+   modes forever (P0-3 in the audit). Class-based state at (0,2,0) beats the
+   (0,1,0) [data-modes] hide rule without ever writing to element.style. */
+[data-modes].is-armed    { display: revert; }
+[data-modes].is-disarmed { display: none !important; }
+
 /* Restore flex/grid displays for containers that use them */
 body[data-active-mode] .playback-bar[data-modes]:not([hidden]),
 body[data-active-mode] .fb-section[data-modes]:not([hidden]) { }
@@ -1180,7 +1204,9 @@ body[data-active-mode] .fb-section[data-modes]:not([hidden]) { }
   border-top: 2px solid var(--indigo);
   border-radius: 12px 12px 0 0;
   padding: 10px 14px;
-  margin: 16px -14px -14px;
+  /* Match .card padding (16px) so the transport bar hits the card edges cleanly
+     — was -14px, which left a 2px sliver of card background bleeding down each side. */
+  margin: 16px -16px -16px;
   box-shadow: 0 -6px 20px rgba(0,0,0,.55);
   display: flex;
   flex-wrap: wrap;
@@ -1778,7 +1804,7 @@ body:not([data-active-mode]) .global-transport { display: none; }
   </div>
 
   <!-- ── AlphaTab main notation/tab viewer (replaces chord grid when active) ── -->
-  <div id="alphatab-container" data-modes="practice" style="display:none;"
+  <div id="alphatab-container" class="is-disarmed" data-modes="practice"
        role="tabpanel" aria-labelledby="atTabNotation atTabTab">
     <div id="atMainScore"></div>
     <div class="at-main-overlay at-hidden" id="atMainOverlay">
@@ -1794,9 +1820,9 @@ body:not([data-active-mode]) .global-transport { display: none; }
       <button class="controls btn-stop" id="atMainStopBtn">■ Stop</button>
       <label for="atMainSpeedSlider" style="color:var(--ink-dim);font-size:11px;white-space:nowrap;">Speed:</label>
       <input  type="range" id="atMainSpeedSlider" min="25" max="150" value="100" step="5"
-              style="width:90px;accent-color:#ce93d8;cursor:pointer;"
+              style="width:90px;accent-color:var(--legacy-purple-lt);cursor:pointer;"
               aria-label="Playback speed percentage">
-      <span id="atMainSpeedLabel" style="color:#ce93d8;font-size:11px;min-width:32px;">100%</span>
+      <span id="atMainSpeedLabel" style="color:var(--legacy-purple-lt);font-size:11px;min-width:32px;">100%</span>
       <div class="hd-sp-presets at-sp-presets" role="group" aria-label="Speed presets">
         <button class="hd-sp-btn" data-speed="50">50%</button>
         <button class="hd-sp-btn" data-speed="75">75%</button>
@@ -1807,7 +1833,7 @@ body:not([data-active-mode]) .global-transport { display: none; }
     </div>
   </div>
 
-  <div class="fb-section" id="fbSection" data-modes="learn practice improvise" style="display:none;">
+  <div class="fb-section is-disarmed" id="fbSection" data-modes="learn practice improvise">
     <div class="fb-title h-panel" id="fbTitle">Select a bar to view chord / scale tones</div>
     <div class="controls" style="justify-content:center;margin-bottom:6px;flex-wrap:wrap;">
       <button id="toggleMode" class="btn-sec" aria-label="Cycle fretboard display mode">Fretboard: Chord Tones</button>
@@ -1844,7 +1870,7 @@ body:not([data-active-mode]) .global-transport { display: none; }
       <span class="gt-third">■ 3rd — Color Tone</span>
       <span class="gt-seventh">■ 7th — Guide Tone</span>
       <span class="gt-root-ref">○ Root (reference)</span>
-      <span style="color:#555;font-size:10px;">Ghosted frets = prev chord position</span>
+      <span style="color:var(--ink-dim);font-size:10px;">Ghosted frets = prev chord position</span>
     </div>
     <div id="fretboardWrap">
       <div class="fretboard" id="fretboard"></div>
@@ -1854,7 +1880,7 @@ body:not([data-active-mode]) .global-transport { display: none; }
   </div>
 
   <!-- ===== Voice Leading Panel (Guide Tone mode) ===== -->
-  <div id="voiceLeadPanel" class="voice-lead-panel" data-modes="learn practice improvise" style="display:none;" aria-live="polite" aria-label="Voice leading analysis">
+  <div id="voiceLeadPanel" class="voice-lead-panel is-disarmed" data-modes="learn practice improvise" aria-live="polite" aria-label="Voice leading analysis">
     <div class="vl-header">
       <span class="vl-title">♩ Guide Tone Voice Leading</span>
       <span class="vl-chord-label" id="vlChordLabel"></span>
@@ -1875,7 +1901,7 @@ body:not([data-active-mode]) .global-transport { display: none; }
     <button type="button" class="btn-ok" id="resonanceLockedAction"></button>
   </div>
 
-  <div id="resonancePanel" class="resonance-panel" data-modes="improvise" style="display:none;">
+  <div id="resonancePanel" class="resonance-panel is-disarmed" data-modes="improvise">
     <h3 class="h-panel">🎸 Resonance Engine</h3>
     <div id="resonancePrereq" class="prerequisite-hint" style="margin:0 0 10px;display:none;">
       Select a bar in Learn mode to unlock lick generation.
@@ -1903,7 +1929,7 @@ body:not([data-active-mode]) .global-transport { display: none; }
   </div>
 
   <!-- ===== Section Lick Generator Panel ===== -->
-  <div id="sectionLickPanel" class="resonance-panel" data-modes="improvise" style="display:none;margin-top:8px;">
+  <div id="sectionLickPanel" class="resonance-panel is-disarmed" data-modes="improvise" style="margin-top:8px;">
     <h3 class="h-panel">🎼 Section Lick Generator</h3>
     <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;">
       <select id="sectionSelect" style="padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--card);color:var(--ink);font-size:13px;cursor:pointer;">
@@ -2858,6 +2884,28 @@ let audioContext = null;
 let audioReady = false;
 let audioUnlockAttempted = false;
 
+// ── Master audio bus (P1-9) ────────────────────────────────────────────────
+// Every voice used to connect straight to ctx.destination. Chord (0.15 × 4)
+// plus scale (0.22 × 8) plus metronome (0.08) plus bebop backing already sums
+// past unity into hard clipping, and there was no UI volume control anywhere.
+// A single gain node feeding a compressor gives headroom + a hard ceiling and
+// exposes one point to tap for a future master-volume slider.
+let masterGain = null;
+function getMasterBus(ctx) {
+  if (masterGain && masterGain.context === ctx) return masterGain;
+  masterGain = ctx.createGain();
+  masterGain.gain.value = 0.7;                          // headroom against summed voices
+  const limiter = ctx.createDynamicsCompressor();
+  limiter.threshold.value = -6;
+  limiter.ratio.value     = 12;
+  limiter.attack.value    = 0.003;
+  limiter.release.value   = 0.15;
+  masterGain.connect(limiter);
+  limiter.connect(ctx.destination);
+  return masterGain;
+}
+window.getMasterBus = getMasterBus;
+
 function initAudio() {
   if (audioContext) {
     if (audioContext.state === 'suspended') {
@@ -2897,7 +2945,7 @@ function playTestTone() {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(getMasterBus(ctx));
     osc.type = 'sine';
     osc.frequency.value = 440;
 
@@ -2964,10 +3012,10 @@ function playChordVoicing(root, chordSym, dur = 1.0) {
   else                               ivs = [0,4,7,10];
 
   initAudio().then(ctx => {
-    console.log(`🎵 Playing ${root}${chordSym}:`, ivs);
+    // P2-14: was console.log per bar — expensive in the audio path at high BPM.
     ivs.forEach((semi, i) => {
       const osc = ctx.createOscillator(), gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
+      osc.connect(gain); gain.connect(getMasterBus(ctx));
       osc.type = 'sine'; osc.frequency.value = base * Math.pow(2, semi / 12);
       const t0 = ctx.currentTime + i * 0.015;
       gain.gain.setValueAtTime(0, t0);
@@ -2997,7 +3045,7 @@ function playScaleRun(root, scaleName) {
   initAudio().then(ctx => {
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator(), gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
+      osc.connect(gain); gain.connect(getMasterBus(ctx));
       osc.type = 'sine'; osc.frequency.value = freq;
       const t0 = ctx.currentTime + i * dur;
       gain.gain.setValueAtTime(0.22, t0);
@@ -3022,7 +3070,7 @@ function playLibraryScale(noteNames) {
   initAudio().then(ctx => {
     freqs.forEach((freq, i) => {
       const osc = ctx.createOscillator(), gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
+      osc.connect(gain); gain.connect(getMasterBus(ctx));
       osc.type = 'sine'; osc.frequency.value = freq;
       const t0 = ctx.currentTime + i * dur;
       gain.gain.setValueAtTime(0.22, t0);
@@ -3045,7 +3093,7 @@ function _bbRide(ctx, t, vol) {
   [[3700, 0.35], [5600, 0.22], [8100, 0.13]].forEach(([f, decay]) => {
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = 'sine'; o.frequency.value = f;
-    o.connect(g); g.connect(ctx.destination);
+    o.connect(g); g.connect(getMasterBus(ctx));
     g.gain.setValueAtTime(vol * 0.055, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
     o.start(t); o.stop(t + decay + 0.01);
@@ -3070,7 +3118,7 @@ function _bbHihat(ctx, t, vol) {
     const g = ctx.createGain();
     g.gain.setValueAtTime(gv * vol, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
-    src.connect(bpf); bpf.connect(g); g.connect(ctx.destination);
+    src.connect(bpf); bpf.connect(g); g.connect(getMasterBus(ctx));
     src.start(t); src.stop(t + decay + 0.01);
   });
 }
@@ -3080,7 +3128,7 @@ function _bbKick(ctx, t, vol) {
   o.type = 'sine';
   o.frequency.setValueAtTime(110, t);
   o.frequency.exponentialRampToValueAtTime(42, t + 0.1);
-  o.connect(g); g.connect(ctx.destination);
+  o.connect(g); g.connect(getMasterBus(ctx));
   g.gain.setValueAtTime(vol * 0.38, t);
   g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
   o.start(t); o.stop(t + 0.22);
@@ -3089,7 +3137,7 @@ function _bbKick(ctx, t, vol) {
 function _bbBassNote(ctx, t, freq, dur) {
   const o = ctx.createOscillator(), g = ctx.createGain();
   o.type = 'triangle'; o.frequency.value = freq;
-  o.connect(g); g.connect(ctx.destination);
+  o.connect(g); g.connect(getMasterBus(ctx));
   g.gain.setValueAtTime(0, t);
   g.gain.linearRampToValueAtTime(0.32, t + 0.014);
   g.gain.setValueAtTime(0.32, t + dur * 0.72);
@@ -3109,7 +3157,7 @@ function _bbComp(ctx, t, root, chordSym, dur) {
   ivs.forEach((semi, i) => {
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = 'sine'; o.frequency.value = base * Math.pow(2, semi / 12);
-    o.connect(g); g.connect(ctx.destination);
+    o.connect(g); g.connect(getMasterBus(ctx));
     const nt = t + i * 0.007;
     g.gain.setValueAtTime(0, nt);
     g.gain.linearRampToValueAtTime(0.075, nt + 0.011);
@@ -3241,7 +3289,7 @@ function playLickNoteByMidi(midi, duration) {
   const freq     = baseFreq * Math.pow(2, octave - 4);
   const osc  = audioContext.createOscillator();
   const gain = audioContext.createGain();
-  osc.connect(gain); gain.connect(audioContext.destination);
+  osc.connect(gain); gain.connect(getMasterBus(audioContext));
   osc.type = 'triangle';
   osc.frequency.value = freq;
   const t0 = audioContext.currentTime;
@@ -3490,9 +3538,13 @@ function applyResonanceOverlays(root, scaleName) {
 /* ---- Mode on/off ---- */
 function activateResonanceMode() {
   resonanceModeEnabled = true;
-  document.getElementById('resonancePanel').style.display = 'block';
+  // Class-based arm state: revert display via [data-modes].is-armed rather than
+  // inline style.display='block' (which used to override the mode cascade forever).
+  const rp = document.getElementById('resonancePanel');
+  rp.classList.add('is-armed'); rp.classList.remove('is-disarmed');
   window.updateResonanceLock?.();
-  document.getElementById('fbSection').style.display      = 'block';
+  const fb = document.getElementById('fbSection');
+  fb.classList.add('is-armed'); fb.classList.remove('is-disarmed');
   if (lastBarData) {
     showFretboard(lastBarData.root, lastBarData.scale, lastBarData.chord);
   } else {
@@ -3515,7 +3567,8 @@ function deactivateResonanceMode() {
   });
   const svg = document.getElementById('gravityArrowsSvg');
   if (svg) { svg.innerHTML = ''; svg.setAttribute('width', 0); svg.setAttribute('height', 0); }
-  document.getElementById('resonancePanel').style.display = 'none';
+  const rpOff = document.getElementById('resonancePanel');
+  rpOff.classList.add('is-disarmed'); rpOff.classList.remove('is-armed');
   window.updateResonanceLock?.();
   setResonanceStatus('');
 }
@@ -3928,7 +3981,10 @@ function updateSectionDropdown() {
   if (pre) { pre.textContent = ''; pre.style.display = 'none'; }
   if (saveBtn) saveBtn.style.display = 'none';
 
-  if (!tune) { panel.style.display = 'none'; return; }
+  if (!tune) {
+    panel.classList.add('is-disarmed'); panel.classList.remove('is-armed');
+    return;
+  }
   const sections = getSectionsForSong(tune);
   sections.forEach(function(s, i) {
     const opt = document.createElement('option');
@@ -3936,7 +3992,11 @@ function updateSectionDropdown() {
     opt.textContent = s.name + ' (bars ' + s.startBar + '\u2013' + s.endBar + ')';
     sel.appendChild(opt);
   });
-  panel.style.display = sections.length ? 'block' : 'none';
+  if (sections.length) {
+    panel.classList.add('is-armed'); panel.classList.remove('is-disarmed');
+  } else {
+    panel.classList.add('is-disarmed'); panel.classList.remove('is-armed');
+  }
 }
 
 /* ---- ResizeObserver for gravity arrows ---- */
@@ -4172,7 +4232,9 @@ function updateFuncLegend() {
   const vl = document.getElementById('voiceLeadPanel');
   if (fl) fl.style.display = (fbMode === 'function')    ? 'flex'  : 'none';
   if (gl) gl.style.display = (fbMode === 'guide-tones') ? 'flex'  : 'none';
-  if (vl && fbMode !== 'guide-tones') vl.style.display = 'none';
+  if (vl && fbMode !== 'guide-tones') {
+    vl.classList.add('is-disarmed'); vl.classList.remove('is-armed');
+  }
 }
 
 // Guide tone intervals by chord quality [3rd, 7th] in semitones from root
@@ -4180,7 +4242,8 @@ const GT_IVLS = { maj7:[4,11], m7:[3,10], dom7:[4,10], halfdim:[3,10], dim:[3,9]
 
 function showFretboard(root, scaleName, chordSym) {
   clearFretboard();
-  document.getElementById('fbSection').style.display = 'block';
+  const fbEl = document.getElementById('fbSection');
+  fbEl.classList.add('is-armed'); fbEl.classList.remove('is-disarmed');
   updateFuncLegend();
   const uf   = FLAT_KEYS.includes(root) || root.endsWith('b');
   const nKey = uf ? 'nf' : 'ns';
@@ -4274,7 +4337,8 @@ function showFretboard(root, scaleName, chordSym) {
 // Scale Library fretboard display — always functional coloring in C reference
 function showLibraryScale(scaleName, noteNames, rootName) {
   clearFretboard();
-  document.getElementById('fbSection').style.display = 'block';
+  const fbLib = document.getElementById('fbSection');
+  fbLib.classList.add('is-armed'); fbLib.classList.remove('is-disarmed');
   document.getElementById('funcLegend').style.display = 'flex';
   document.getElementById('fbTitle').textContent = `📖 ${scaleName}  (C reference — functional harmony)`;
   const rootIdx = NOTE_IDX[rootName] || 0;
@@ -4378,7 +4442,8 @@ function renderLeadSheet(tuneName, targetKey) {
   stopPlayback();
   stopResonanceLick(); // ST4: cancel in-flight lick timers — they reference fret cells we're about to rebuild
   lastBarData = null;
-  document.getElementById('fbSection').style.display = 'none';
+  const fbHide = document.getElementById('fbSection');
+  fbHide.classList.add('is-disarmed'); fbHide.classList.remove('is-armed');
   document.getElementById('funcLegend').style.display = 'none';
 
   const sheet = document.getElementById('sheet');
@@ -4555,7 +4620,7 @@ function updateVoiceLeadingPanel(root, chordSym, third, seventh) {
     motionSec.innerHTML = '<p class="vl-hint">← Click adjacent chords to see voice leading motion</p>';
   }
 
-  panel.style.display = 'block';
+  panel.classList.add('is-armed'); panel.classList.remove('is-disarmed');
 }
 
 function updateChordScaleAnalysis(bar) {
@@ -4615,7 +4680,7 @@ function playMetronomeClick() {
   ctx.resume().then(() => {
     const osc = ctx.createOscillator(), gain = ctx.createGain();
     osc.type = 'square'; osc.frequency.value = 1200;
-    osc.connect(gain); gain.connect(ctx.destination);
+    osc.connect(gain); gain.connect(getMasterBus(ctx));
     const t0 = ctx.currentTime;
     gain.gain.setValueAtTime(0.0001, t0);
     gain.gain.exponentialRampToValueAtTime(0.08, t0 + 0.01);
@@ -4725,7 +4790,7 @@ async function startPlayback() {
       else if (metronomeEnabled) playMetronomeClick(); // keep visual flash when metro is on
       lastBarData = { root, scale, chord };
       updateChordScaleAnalysis(bar);
-      if (document.getElementById('fbSection').style.display !== 'none') showFretboard(root, scale, chord);
+      if (document.getElementById('fbSection').classList.contains('is-armed')) showFretboard(root, scale, chord);
     } catch (err) {
       console.error('Playback tick failed on bar', playIdx + 1, err);
     }
@@ -5276,19 +5341,23 @@ _loadAndApplyPrefs();
 
 // ── Keyboard shortcuts ─────────────────────────────────────
 document.addEventListener('keydown', function kbShortcuts(e) {
-  // Ignore when typing in form fields or using modifier keys
-  const tag = (e.target || {}).tagName;
-  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  // Ignore when typing in form fields, or when the focused element handles the key itself.
+  // Summary/[role=button]/[role=tab] and the file drop-zone all have their own Enter/Space
+  // handlers — the previous tagName-only guard let Space double-fire (P1-4 in the audit).
+  const t = e.target;
+  if (t && t.closest && t.closest('input, select, textarea, [contenteditable="true"], summary, [role="button"], [role="tab"]')) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
 
   switch (e.key) {
     case ' ':
       e.preventDefault();
-      if (isPlaying) stopPlayback();
-      else startPlayback();
+      // Route through the global transport so the correct mode's player is targeted
+      // (P1-5). The v7.3 capture-phase handler normally catches this first; if it
+      // ever bails, this fallback still avoids the chord-grid-only bug.
+      document.getElementById('gtPlayBtn')?.click();
       break;
     case 'Escape':
-      stopPlayback();
+      document.getElementById('gtStopBtn')?.click();
       stopResonanceLick();
       break;
     case 'r':
@@ -6022,9 +6091,16 @@ function drillTune(name) {
   showToast(`Drilling: ${name}`, 'info', 2500);
 }
 
-// ── Weighted random (replaces the existing random button handler) ──────────────
+// ── Weighted random ────────────────────────────────────────────────────────────
+// Runs as an *addition* to the base random handler, not a replacement (P1-6).
+// The old code cloneNode()+replaceWith()'d the button, which silently discarded
+// the original random pick, the toast patch, and updateGpBadge() — leaving the
+// GP badge stale and making Random a no-op when cp_practice_v1 was empty.
+// Now: base handler always fires, and if we have practice data we re-pick
+// on top of it with the weighted algorithm.
 async function weightedRandom() {
   const sessions = await dbGetAll().catch(() => []);
+  if (!sessions.length) return; // no data → let the base random handler stand
   const counts   = {};
   sessions.forEach(s => { counts[s.tune] = (counts[s.tune] || 0) + 1; });
 
@@ -6046,6 +6122,8 @@ async function weightedRandom() {
   if (typeof buildFretboard     === 'function') buildFretboard();
   if (typeof renderLeadSheet    === 'function') renderLeadSheet(name, t.key);
   if (typeof updateSectionDropdown === 'function') updateSectionDropdown();
+  // Keep the GP badge fresh — the cloneNode-based implementation used to drop this.
+  if (typeof updateGpBadge      === 'function') updateGpBadge();
   practiceStart(name, t.key, currentBpm());
   const msg = (counts[name] || 0) === 0 ? `"${name}" — never practiced!` : `"${name}"`;
   showToast(`🎲 ${msg}`, 'info', 2000);
@@ -6069,13 +6147,13 @@ async function suggestNext() {
 
 // ── Wire up ───────────────────────────────────────────────────────────────────
 (function init() {
-  // Replace random button to swap out existing listener
-  const oldRnd = document.getElementById('randomTune');
-  if (oldRnd) {
-    const newRnd = oldRnd.cloneNode(true);
-    oldRnd.replaceWith(newRnd);
-    newRnd.addEventListener('click', weightedRandom);
-  }
+  // P1-6 fix: attach weightedRandom as an *addition*, never replacing the
+  // button. cloneNode(true)+replaceWith() used to nuke the original random
+  // handler (base pick + updateGpBadge) plus the toast patch. weightedRandom
+  // itself now bails when there is no cp_practice_v1 data, so the base
+  // handler's pick stands and the GP badge stays fresh.
+  const rnd = document.getElementById('randomTune');
+  if (rnd) rnd.addEventListener('click', weightedRandom);
 
   // Suggest & clear buttons
   document.getElementById('pracSuggest')?.addEventListener('click', suggestNext);
@@ -7338,10 +7416,16 @@ async function suggestNext() {
 
     if (view === 'grid') {
       if (sheet)     sheet.style.display     = '';
-      if (container) container.style.display = 'none';
+      if (container) {
+        container.classList.add('is-disarmed');
+        container.classList.remove('is-armed');
+      }
     } else {
       if (sheet)     sheet.style.display     = 'none';
-      if (container) container.style.display = '';
+      if (container) {
+        container.classList.add('is-armed');
+        container.classList.remove('is-disarmed');
+      }
 
       if (api && atScore) {
         // Score already loaded — just switch the rendering profile
@@ -7758,6 +7842,13 @@ async function suggestNext() {
 
   function sessionStart(tune, key, bpm) {
     sessionEnd(); // save any in-flight session first
+    // Canonicalize the tune title so this DB (cp_practice_db) agrees with the
+    // other one (cp_practice_v1) on keys — otherwise an aliased tune (e.g.
+    // "Au Private 1" vs "Au Privave") splits into two rows across the two
+    // dashboards, and "never practiced" sets diverge (P0-2 in the audit).
+    if (typeof canonicalTuneTitle === 'function' && tune) {
+      tune = canonicalTuneTitle(tune);
+    }
     _tune = tune; _key = key; _bpm = bpm; _start = Date.now();
     const activeEl = document.getElementById('pjActive');
     const tuneEl   = document.getElementById('pjActiveTune');
@@ -8368,7 +8459,10 @@ async function suggestNext() {
   // Capture-phase + stopImmediatePropagation prevents the older learn-only kbShortcuts
   // (index.html:5132) from double-firing chord-grid playback in Practice/Improvise modes.
   document.addEventListener('keydown', e => {
-    if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    const t = e.target;
+    // Same widened guard as legacy kbShortcuts — anything with its own Enter/Space
+    // handler (details summary, drop-zone role=button, tab list) must own the key.
+    if (t && t.closest && t.closest('input, select, textarea, [contenteditable="true"], summary, [role="button"], [role="tab"]')) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.code === 'Space') {
       e.preventDefault();
