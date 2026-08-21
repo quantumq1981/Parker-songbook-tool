@@ -1081,6 +1081,72 @@ details.panel.heads-panel summary { color: var(--legacy-purple-lt); }
 .pitch-privacy { font-size:10px; color:var(--ink-dim); margin-top:4px; }
 .btn-pitch-on { background:#1a3a00 !important; border-color:#4caf50 !important; color:#76ff03 !important; }
 
+/* ── Silent Bars (muted bars keep metronome, lose audio) ──────────────── */
+#sheet .bar.playing.bar-muted {
+  background: repeating-linear-gradient(135deg,
+    transparent 0 6px, rgba(178,107,196,.10) 6px 12px);
+  border-color: var(--indigo);
+}
+#sheet .bar.bar-muted .chord { opacity: .35; }
+
+/* ── Look-ahead guide tones (next chord) ──────────────────────────────── */
+.fret.gt-next circle { fill: rgba(79,182,173,.22); stroke: var(--accent2); stroke-dasharray: 2 2; }
+.fret.gt-next text { fill: var(--accent2); opacity: .7; }
+
+/* ── Beat pulse on playing bar ────────────────────────────────────────── */
+@keyframes barPulse {
+  0%   { box-shadow: inset 0 0 0 2px var(--accent); }
+  50%  { box-shadow: inset 0 0 8px 2px rgba(230,169,75,.35); }
+  100% { box-shadow: inset 0 0 0 2px var(--accent); }
+}
+#sheet .bar.playing.bar-beat { animation: barPulse .5s ease; }
+
+/* ── Stand Mode ───────────────────────────────────────────────────────── */
+body.stand-mode { --stand-scale: 1.45; }
+body.stand-mode .chord      { font-size: calc(22px * var(--stand-scale)); }
+body.stand-mode .bar        { min-height: 120px; }
+body.stand-mode .roman,
+body.stand-mode .scale-sug,
+body.stand-mode .bar-number { display: none; }
+body.stand-mode .gt-btn     { min-height: 64px; font-size: 18px; padding: 16px 22px; }
+body.stand-mode details,
+body.stand-mode .tips-card,
+body.stand-mode .analysis-panel,
+body.stand-mode .stats-bar,
+body.stand-mode .search-row { display: none !important; }
+body.stand-mode .filter-panel { display: none !important; }
+body.stand-mode .import-panel { display: none !important; }
+body.stand-mode .mode-hint   { display: none; }
+body.stand-mode .playback-bar { flex-wrap: wrap; }
+body.stand-mode .playback-bar label,
+body.stand-mode .playback-bar select,
+body.stand-mode .playback-bar input[type="number"]:not(#bpmInput) { display: none; }
+body.stand-mode .global-transport .gt-btn { min-height: 54px; font-size: 16px; }
+
+/* ── Tempo Ramp controls ──────────────────────────────────────────────── */
+.ramp-controls {
+  display: none; gap: 6px; align-items: center; font-size: 11px; color: var(--ink-dim);
+  flex-wrap: wrap; margin-top: 4px;
+}
+.ramp-controls.active { display: flex; }
+.ramp-controls input[type="number"] { width: 54px; }
+.ramp-controls label { white-space: nowrap; }
+
+/* ── Playback options row (enhanced) ──────────────────────────────────── */
+.playback-options-row {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  font-size: 12px; margin-top: 6px;
+}
+.playback-options-row select { max-width: 160px; }
+
+/* ── Call & Response status ───────────────────────────────────────────── */
+.cr-status {
+  font-size: 12px; padding: 4px 10px; border-radius: 4px;
+  background: var(--panel-2); color: var(--ink-dim); display: none;
+  margin-top: 6px; text-align: center;
+}
+.cr-status.active { display: block; }
+
 /* ── Practice Journal ────────────────────────────────────────────────────── */
 .pj-active {
   font-size:12px; color:#81c784; padding:5px 10px; margin-bottom:8px;
@@ -1756,6 +1822,37 @@ body:not([data-active-mode]) .global-transport { display: none; }
         <span class="toggle-label">Metronome</span>
       </button>
     </div>
+    <div class="playback-options-row" data-modes="learn practice improvise">
+      <label>Sound:</label>
+      <select id="silentBarMode" aria-label="Silent bar mode">
+        <option value="off">All bars</option>
+        <option value="alternate">Every other 2</option>
+        <option value="lastHalf">Second half</option>
+        <option value="random">Random</option>
+        <option value="progressive">Progressive</option>
+      </select>
+      <button id="tempoRampBtn" class="toggle-pill" aria-pressed="false" data-toggle-label="Tempo Ramp">
+        <span class="toggle-label">Tempo Ramp</span>
+      </button>
+      <button id="lookAheadBtn" class="toggle-pill" aria-pressed="false" data-toggle-label="Look Ahead">
+        <span class="toggle-label">Look Ahead</span>
+      </button>
+      <button id="modulateBtn" class="toggle-pill" aria-pressed="false" data-toggle-label="Modulate">
+        <span class="toggle-label">Modulate</span>
+      </button>
+      <select id="modulateCycle" aria-label="Modulation cycle" style="max-width:120px;display:none;">
+        <option value="fourths">Cycle of 4ths</option>
+        <option value="minor3rd">Minor 3rds</option>
+        <option value="halfStep">Half Steps</option>
+        <option value="random">Random</option>
+      </select>
+    </div>
+    <div class="ramp-controls" id="rampControls">
+      <label>Start:</label><input type="number" id="rampStart" value="80" min="40" max="320" step="5" aria-label="Ramp start BPM"/>
+      <label>Target:</label><input type="number" id="rampTarget" value="200" min="40" max="320" step="5" aria-label="Ramp target BPM"/>
+      <label>Step +</label><input type="number" id="rampStep" value="4" min="1" max="40" step="1" aria-label="BPM step per advance"/>
+      <label>every</label><input type="number" id="rampPasses" value="2" min="1" max="10" step="1" aria-label="Clean passes before advance"/> <span>passes</span>
+    </div>
     <div class="metro-indicator" id="metroIndicator">🕒 Metronome click</div>
     <div class="playback-progress"><div class="playback-progress-fill" id="playbackProgressFill"></div></div>
     <div class="play-status" id="playStatus" role="status" aria-live="polite" aria-atomic="true">Ready — generate a lead sheet to begin</div>
@@ -1870,7 +1967,7 @@ body:not([data-active-mode]) .global-transport { display: none; }
       <span class="gt-third">■ 3rd — Color Tone</span>
       <span class="gt-seventh">■ 7th — Guide Tone</span>
       <span class="gt-root-ref">○ Root (reference)</span>
-      <span style="color:var(--ink-dim);font-size:10px;">Ghosted frets = prev chord position</span>
+      <span style="color:var(--ink-dim);font-size:10px;">Ghosted frets = prev chord · Dashed = next chord</span>
     </div>
     <div id="fretboardWrap">
       <div class="fretboard" id="fretboard"></div>
@@ -2004,6 +2101,10 @@ body:not([data-active-mode]) .global-transport { display: none; }
             aria-pressed="false" data-toggle-label="Loop">
       <span class="toggle-label">Loop</span>
     </button>
+    <button class="gt-btn" id="gtCallResponseBtn"
+            aria-pressed="false" aria-label="Call and Response mode">C&amp;R</button>
+    <button class="gt-btn" id="gtStandModeBtn"
+            aria-pressed="false" aria-label="Stand mode — large display for music stand">Stand</button>
     <div class="gt-speed">
       <label for="gtBpm" class="gt-label" style="margin:0;">BPM</label>
       <input type="number" id="gtBpm" class="gt-bpm" value="120" min="40" max="320" step="5"
@@ -2014,6 +2115,7 @@ body:not([data-active-mode]) .global-transport { display: none; }
       <span class="gt-speed-val" id="gtSpeedVal">100%</span>
     </div>
   </div>
+  <div class="cr-status" id="crStatus" aria-live="polite"></div>
 </main>
 
 <!-- Downgraded from assertive to polite; individual error toasts elevate themselves at runtime. -->
@@ -2033,6 +2135,10 @@ body:not([data-active-mode]) .global-transport { display: none; }
 <script defer src="js/chordDiagram.js?v=7.2"></script>
 <script defer src="js/chordVoicingsModal.js?v=7.2"></script>
 <script defer src="js/chordVoicingsInit.js?v=7.2"></script>
+<script defer src="js/pitchScoring.js?v=7.4"></script>
+<script defer src="js/tempoRamp.js?v=7.4"></script>
+<script defer src="js/silentBars.js?v=7.4"></script>
+<script defer src="js/callResponse.js?v=7.4"></script>
 <script>
 /* ============================================================
    SONGBOOK DATA — 22 TUNES (v6.0 data model preserved)
@@ -4327,6 +4433,21 @@ function showFretboard(root, scaleName, chordSym) {
     });
   }
 
+  // ── Look-ahead: next bar's guide tones ──
+  if (showLookAhead && nextBarData && nextBarData.root) {
+    const nq = normalizeChordQuality(nextBarData.chord || '');
+    const [n3, n7] = GT_IVLS[nq] || [4, 10];
+    const nRI = NOTE_IDX[nextBarData.root] || 0;
+    const nextGT = new Set([(nRI + n3) % 12, (nRI + n7) % 12]);
+    const nUF = FLAT_KEYS.includes(nextBarData.root) || nextBarData.root.endsWith('b');
+    _fretGrid.forEach(fr => {
+      const idx = parseInt(fr.dataset.idx, 10);
+      if (isNaN(idx) || fr.classList.contains('hl') || fr.classList.contains('gt-ghost') || !nextGT.has(idx)) return;
+      fr.classList.add('gt-next');
+      fr.textContent = (fr.dataset[nUF ? 'nf' : 'ns'] || fr.dataset.nf) + '\n→';
+    });
+  }
+
   // Apply resonance overlays if mode is active
   if (resonanceModeEnabled) applyResonanceOverlays(root, scaleName);
 
@@ -4542,6 +4663,29 @@ let tempoTrainerEnabled = false, metronomeEnabled = false;
 let currentTrainerTier = 0;
 const tempoTrainerTiers = [80,120,160];
 
+// ── v7.4 Real-Time Enhancement State ──────────────────────────────────
+let _ramp = null;
+let _lastPassClean = true;
+let _barMask = null;
+let _silentMode = 'off';
+let nextBarData = null;
+let showLookAhead = false;
+let modulateEnabled = false;
+let _keyStep = 0;
+let _crState = 0; // 0=IDLE, 1=CALLING, 2=LISTENING, 3=JUDGING
+let _crMatcher = null;
+let _crSpeed = 1.0;
+let _crEnabled = false;
+let _crTimer = null;
+let _barGrades = []; // pitch grades for current bar
+
+const MOD_CYCLES = {
+  fourths:  ['C','F','Bb','Eb','Ab','Db','Gb','B','E','A','D','G'],
+  minor3rd: ['C','Eb','Gb','A'],
+  halfStep: ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'],
+  random:   null
+};
+
 function normalizeChordQuality(chordSym) {
   if (/m7b5|ø/.test(chordSym)) return 'halfdim';
   if (/dim/.test(chordSym)) return 'dim';
@@ -4722,10 +4866,16 @@ function stopPlayback() {
   if (playTimer) { clearTimeout(playTimer); playTimer = null; }
   document.querySelectorAll('#sheet .bar.playing').forEach(b => b.classList.remove('playing'));
   document.querySelectorAll('#sheet .bar.loop-target').forEach(b => b.classList.remove('loop-target'));
+  document.querySelectorAll('#sheet .bar.bar-muted').forEach(b => b.classList.remove('bar-muted'));
+  document.querySelectorAll('#sheet .bar.bar-beat').forEach(b => b.classList.remove('bar-beat'));
   document.getElementById('playStatus').textContent = 'Stopped';
   document.getElementById('playBtn').textContent = '▶ Play';
   window.reportTransportState?.(false, 'learn');
   updatePlaybackProgress(0, 1);
+  _ramp = null;
+  _barMask = null;
+  nextBarData = null;
+  _barGrades = [];
 }
 
 async function runCountIn(beats, bpm) {
@@ -4739,7 +4889,7 @@ async function runCountIn(beats, bpm) {
 }
 
 async function startPlayback() {
-  const bars = Array.from(document.querySelectorAll('#sheet .bar'));
+  let bars = Array.from(document.querySelectorAll('#sheet .bar'));
   if (!bars.length) { document.getElementById('playStatus').textContent = 'Generate a lead sheet first.'; return; }
   const audioEnabled = await enableAudio();
   if (!audioEnabled) {
@@ -4754,6 +4904,33 @@ async function startPlayback() {
   stopResonanceLick(); // ST4: don't let a still-running standalone/auto lick overlap the sequencer
   isPlaying = true; playIdx = 0;
   loopSection.currentLoop = 0;
+  _lastPassClean = true;
+  _barGrades = [];
+  _keyStep = 0;
+
+  // ── Tempo Ramp: init if enabled ──
+  const rampBtn = document.getElementById('tempoRampBtn');
+  if (rampBtn && rampBtn.getAttribute('aria-pressed') === 'true' && loopEnabled && typeof TempoRamp !== 'undefined') {
+    const rCfg = {
+      start:  parseInt(document.getElementById('rampStart').value) || 80,
+      target: parseInt(document.getElementById('rampTarget').value) || 200,
+      step:   parseInt(document.getElementById('rampStep').value) || 4,
+      passesPerStep: parseInt(document.getElementById('rampPasses').value) || 2
+    };
+    _ramp = TempoRamp.createRamp(rCfg);
+    bpmInput.value = rCfg.start;
+    document.getElementById('gtBpm').value = rCfg.start;
+  } else {
+    _ramp = null;
+  }
+
+  // ── Silent Bars: build initial mask ──
+  _silentMode = (document.getElementById('silentBarMode') || {}).value || 'off';
+  if (_silentMode !== 'off' && typeof SilentBars !== 'undefined') {
+    _barMask = SilentBars.buildMask(bars.length, _silentMode, 0.4, 0);
+  } else {
+    _barMask = null;
+  }
   document.getElementById('playBtn').textContent = '⏸ Pause';
   window.reportTransportState?.(true, 'learn');
   const { start, end } = resolveLoopRange(bars);
@@ -4766,12 +4943,43 @@ async function startPlayback() {
   playIdx = loopEnabled ? start : 0;
   function tick() {
     if (!isPlaying) return;
-    bars.forEach(b => b.classList.remove('playing'));
+    bars.forEach(b => { b.classList.remove('playing'); b.classList.remove('bar-beat'); });
     const loopEnd = loopEnabled ? loopSection.endBar : bars.length - 1;
     if (playIdx > loopEnd) {
       if (loopEnabled) {
         playIdx = loopSection.startBar;
         loopSection.currentLoop++;
+        // ── Tempo Ramp: advance BPM on each loop pass ──
+        if (_ramp) {
+          const r = _ramp.pass(_lastPassClean);
+          document.getElementById('bpmInput').value = r.bpm;
+          document.getElementById('gtBpm').value    = r.bpm;
+          if (r.event === 'advance') showToast('↑ ' + r.bpm + ' BPM', 'info', 900);
+          if (r.event === 'target')  showToast('✓ ' + r.bpm + ' BPM — target hit', 'success');
+          if (r.event === 'backoff') showToast('↓ ' + r.bpm + ' BPM — back off', 'warn', 900);
+          _lastPassClean = true;
+        }
+        // ── Silent Bars: rebuild mask on each loop pass (progressive mode ramps) ──
+        if (_silentMode !== 'off' && typeof SilentBars !== 'undefined') {
+          _barMask = SilentBars.buildMask(bars.length, _silentMode, 0.4, loopSection.currentLoop);
+        }
+        // ── Per-chorus Modulation: rotate key at loop boundary ──
+        if (modulateEnabled) {
+          const cycleSel = document.getElementById('modulateCycle');
+          const cycleKey = cycleSel ? cycleSel.value : 'fourths';
+          let cycle = MOD_CYCLES[cycleKey];
+          if (!cycle) {
+            const keys = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+            cycle = [keys[Math.floor(Math.random() * keys.length)]];
+            _keyStep = -1;
+          }
+          _keyStep = (_keyStep + 1) % cycle.length;
+          const nextKey = cycle[_keyStep];
+          keySel.value = nextKey;
+          renderLeadSheet(tuneSel.value, nextKey);
+          bars = Array.from(document.querySelectorAll('#sheet .bar'));
+          showToast('🔑 Now in ' + nextKey, 'info', 1500);
+        }
       }
       else { stopPlayback(); return; }
     }
@@ -4779,23 +4987,51 @@ async function startPlayback() {
     bar.classList.add('playing');
     bar.scrollIntoView({behavior:'smooth',block:'nearest'});
     const { root, chord, scale } = bar.dataset;
-    // ST2 error boundary: keep the transport advancing even if one bar's audio
-    // or render throws (a throw here would otherwise leave playTimer unset and
-    // silently kill playback).
+
+    // ── Silent Bars: check mask before playing audio ──
+    const audible = !_barMask || _barMask[playIdx] !== false;
+    bar.classList.toggle('bar-muted', !audible);
+
+    // ── Beat Pulse: flash the playing bar ──
+    bar.classList.add('bar-beat');
+
     try {
-      if (audioMode === 'bebop') playBebopBackingBar(root, chord, parseInt(document.getElementById('bpmInput').value) || 120);
-      else if (audioMode === 'voicing') playChordVoicing(root, chord);
-      else playScaleRun(root, scale);
-      if (audioMode !== 'bebop') playMetronomeClick();
-      else if (metronomeEnabled) playMetronomeClick(); // keep visual flash when metro is on
+      if (audible) {
+        if (audioMode === 'bebop') playBebopBackingBar(root, chord, parseInt(document.getElementById('bpmInput').value) || 120);
+        else if (audioMode === 'voicing') playChordVoicing(root, chord);
+        else playScaleRun(root, scale);
+      }
+      // Metronome always fires — silent bars must still have time
+      if (metronomeEnabled || audioMode !== 'bebop') playMetronomeClick();
+      else if (audioMode === 'bebop' && metronomeEnabled) playMetronomeClick();
+
+      prevBarData = lastBarData;
       lastBarData = { root, scale, chord };
+
+      // ── Look-Ahead: compute next bar data ──
+      if (showLookAhead) {
+        const nextIdx = playIdx + 1;
+        const nextBar = bars[nextIdx] || (loopEnabled ? bars[loopSection.startBar] : bars[0]);
+        nextBarData = nextBar ? { root: nextBar.dataset.root, scale: nextBar.dataset.scale, chord: nextBar.dataset.chord } : null;
+        // Next-chord banner in transport
+        const gtTgt = document.getElementById('gtTarget');
+        if (gtTgt && nextBarData && nextBarData.chord) {
+          gtTgt.textContent = (chord || root) + ' → ' + (nextBarData.chord || nextBarData.root);
+        }
+      } else {
+        nextBarData = null;
+      }
+
+      // ── Pitch Scoring: reset per-bar grades ──
+      _barGrades = [];
+
       updateChordScaleAnalysis(bar);
       if (document.getElementById('fbSection').classList.contains('is-armed')) showFretboard(root, scale, chord);
     } catch (err) {
       console.error('Playback tick failed on bar', playIdx + 1, err);
     }
     document.getElementById('playStatus').textContent =
-      `♩ Bar ${playIdx + 1} / ${bars.length}${loopEnabled ? ` · Loop ${loopSection.currentLoop + 1}` : ''} · ${audioMode === 'voicing' ? 'Chord Audio' : audioMode === 'bebop' ? 'Bebop Groove 🥁' : 'Scale Audio'}`;
+      `♩ Bar ${playIdx + 1} / ${bars.length}${loopEnabled ? ` · Loop ${loopSection.currentLoop + 1}` : ''}${!audible ? ' · [silent]' : ''} · ${audioMode === 'voicing' ? 'Chord Audio' : audioMode === 'bebop' ? 'Bebop Groove 🥁' : 'Scale Audio'}`;
     updatePlaybackProgress(playIdx + 1, bars.length);
     playIdx++;
     const bpm = Math.max(40, Math.min(320, parseInt(document.getElementById('bpmInput').value) || 120));
@@ -7678,6 +7914,35 @@ async function suggestNext() {
 
     // Fretboard highlight
     highlightPc(note.pc);
+
+    // ── Pitch Scoring: grade each detected note against bar context ──
+    if (typeof PitchScoring !== 'undefined' && typeof lastBarData !== 'undefined' && lastBarData) {
+      try {
+        const bd = lastBarData;
+        const ri = (typeof NOTE_IDX !== 'undefined' && NOTE_IDX[bd.root]) ?? 0;
+        const sk = (bd.scale || '').split('/')[0].trim();
+        const sivs = (typeof SCALE_IVS !== 'undefined' && SCALE_IVS[sk]) || [0,2,4,5,7,9,11];
+        const sSet = new Set(sivs.map(function(i) { return (ri + i) % 12; }));
+        const cq = typeof normalizeChordQuality === 'function' ? normalizeChordQuality(bd.chord || '') : 'dom7';
+        const CHORD_IVS = { maj7: [0,4,7,11], m7: [0,3,7,10], dom7: [0,4,7,10], halfdim: [0,3,6,10], dim: [0,3,6,9] };
+        const civs = CHORD_IVS[cq] || [0,4,7,10];
+        const cSet = new Set(civs.map(function(i) { return (ri + i) % 12; }));
+        var GT_MAP = { maj7: [4,11], m7: [3,10], dom7: [4,10], halfdim: [3,10], dim: [3,9] };
+        var givs = GT_MAP[cq] || [4,10];
+        var gSet = new Set(givs.map(function(i) { return (ri + i) % 12; }));
+        var grade = PitchScoring.gradeNote(note.pc, note.cents, cSet, sSet, gSet);
+        if (typeof _barGrades !== 'undefined') _barGrades.push(grade);
+        if (!grade.weight && typeof _lastPassClean !== 'undefined') _lastPassClean = false;
+      } catch (e) {}
+    }
+
+    // ── Call & Response: feed detected pitch to matcher ──
+    if (typeof _crState !== 'undefined' && _crState === 2 && _crMatcher) {
+      var crResult = _crMatcher.feed(note.pc);
+      if (crResult === 'complete') {
+        _crState = 3;
+      }
+    }
   }
 
   // ── Start microphone + AudioWorklet ───────────────────────────────────
@@ -8032,6 +8297,132 @@ async function suggestNext() {
   window.addEventListener('online',  updateOnlineStatus, { passive: true });
   window.addEventListener('offline', updateOnlineStatus, { passive: true });
   updateOnlineStatus(); // set correct state on initial load
+})();
+
+/* ============================================================
+   v7.4 REAL-TIME PRACTICE ENHANCEMENTS
+   - Tempo Ramp toggle + UI
+   - Silent Bars mode select
+   - Look-ahead guide tones toggle
+   - Per-chorus Modulation toggle
+   - Stand Mode toggle + wake lock
+   - Call & Response state machine
+   ============================================================ */
+(function practiceEnhancements() {
+  'use strict';
+
+  // ── Tempo Ramp toggle ──
+  const rampBtn = document.getElementById('tempoRampBtn');
+  const rampCtrl = document.getElementById('rampControls');
+  if (rampBtn) {
+    rampBtn.addEventListener('click', function () {
+      const on = rampBtn.getAttribute('aria-pressed') !== 'true';
+      rampBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      if (rampCtrl) rampCtrl.classList.toggle('active', on);
+    });
+  }
+
+  // ── Look-ahead toggle ──
+  const laBtn = document.getElementById('lookAheadBtn');
+  if (laBtn) {
+    laBtn.addEventListener('click', function () {
+      showLookAhead = !showLookAhead;
+      laBtn.setAttribute('aria-pressed', showLookAhead ? 'true' : 'false');
+      if (lastBarData && document.getElementById('fbSection').classList.contains('is-armed')) {
+        showFretboard(lastBarData.root, lastBarData.scale, lastBarData.chord);
+      }
+    });
+  }
+
+  // ── Modulation toggle ──
+  const modBtn = document.getElementById('modulateBtn');
+  const modCycle = document.getElementById('modulateCycle');
+  if (modBtn) {
+    modBtn.addEventListener('click', function () {
+      modulateEnabled = !modulateEnabled;
+      modBtn.setAttribute('aria-pressed', modulateEnabled ? 'true' : 'false');
+      if (modCycle) modCycle.style.display = modulateEnabled ? '' : 'none';
+      _keyStep = 0;
+    });
+  }
+
+  // ── Stand Mode ──
+  let _wakeLock = null;
+  const standBtn = document.getElementById('gtStandModeBtn');
+  async function enterStandMode() {
+    document.body.classList.add('stand-mode');
+    standBtn.setAttribute('aria-pressed', 'true');
+    standBtn.textContent = 'Exit Stand';
+    try { _wakeLock = await navigator.wakeLock?.request('screen'); } catch (e) {}
+    document.addEventListener('visibilitychange', async function standVis() {
+      if (!document.hidden && document.body.classList.contains('stand-mode')) {
+        try { _wakeLock = await navigator.wakeLock?.request('screen'); } catch (e) {}
+      }
+    });
+  }
+  function exitStandMode() {
+    document.body.classList.remove('stand-mode');
+    standBtn.setAttribute('aria-pressed', 'false');
+    standBtn.textContent = 'Stand';
+    if (_wakeLock) { try { _wakeLock.release(); } catch (e) {} _wakeLock = null; }
+  }
+  if (standBtn) {
+    standBtn.addEventListener('click', function () {
+      if (document.body.classList.contains('stand-mode')) exitStandMode();
+      else enterStandMode();
+    });
+  }
+
+  // ── Call & Response ──
+  const crBtn = document.getElementById('gtCallResponseBtn');
+  const crStatusEl = document.getElementById('crStatus');
+  function setCrStatus(msg) {
+    if (crStatusEl) {
+      crStatusEl.textContent = msg;
+      crStatusEl.classList.toggle('active', !!msg);
+    }
+  }
+
+  async function crCycle() {
+    if (!_crEnabled || typeof resonanceLick === 'undefined' || !resonanceLick || !resonanceLick.length) {
+      setCrStatus('Generate a lick first (Improvise mode)');
+      return;
+    }
+    _crState = 1; // CALLING
+    setCrStatus('Listen…');
+    if (typeof playResonanceLick === 'function') await playResonanceLick();
+
+    _crMatcher = CallResponse.createMatcher(resonanceLick.map(function(n) { return ((n.midi % 12) + 12) % 12; }));
+    _crState = 2; // LISTENING
+    setCrStatus('Your turn…');
+
+    var windowMs = resonanceLick.length * 420 + 1500;
+    _crTimer = setTimeout(function () {
+      if (_crState !== 2) return;
+      var ok = _crMatcher.progress() >= 0.75;
+      _lastPassClean = ok;
+      if (typeof showToast === 'function') showToast(ok ? '✓ Got it' : '↻ Again, slower', ok ? 'success' : 'warn');
+      if (!ok && _crSpeed > 0.5) _crSpeed -= 0.1;
+      _crState = 0;
+      if (_crEnabled) crCycle();
+    }, windowMs);
+  }
+
+  if (crBtn) {
+    crBtn.addEventListener('click', function () {
+      _crEnabled = !_crEnabled;
+      crBtn.setAttribute('aria-pressed', _crEnabled ? 'true' : 'false');
+      if (_crEnabled) {
+        crCycle();
+      } else {
+        _crState = 0;
+        if (_crTimer) { clearTimeout(_crTimer); _crTimer = null; }
+        setCrStatus('');
+      }
+    });
+  }
+
+  console.log('✅ v7.4 practice enhancements initialised');
 })();
 
 /* ============================================================

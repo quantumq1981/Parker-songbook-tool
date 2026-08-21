@@ -195,6 +195,61 @@ Resolves the four highest-priority UX gaps identified in the ISO 9241-11 / ISO 2
 - Resonance Engine panel gets a "Select a bar in Learn mode to unlock lick generation" hint that toggles from the shared `lastBarData` state on every bar click.
 - Toast container downgraded from `role="alert"` / `aria-live="assertive"` → `role="status"` / `aria-live="polite"`; a wrapper around `showToast()` re-elevates the container to `assertive` only for `type === 'error'`.
 
+### 8. Real-Time Practice Enhancements v7.4
+
+Seven real-time practice features plus pitch scoring, implemented as four pure JS modules (`js/pitchScoring.js`, `js/tempoRamp.js`, `js/silentBars.js`, `js/callResponse.js`) with UI integration in the `practiceEnhancements()` IIFE in `index.html`.
+
+#### 8a. Tempo Ramp in Loop
+- `TempoRamp.createRamp({ start, target, step, passesPerStep })` tracks clean loop passes
+- On each loop boundary `_ramp.pass(clean)` returns `{ bpm, event, passes }`: `hold` (counting), `advance` (+step BPM), `backoff` (−step on fail), `target` (reached goal)
+- UI: `#tempoRampBtn` toggle pill + `#rampControls` div (start/target/step/passes inputs)
+- Ramp only activates when looping is enabled; toasts report advances/backoffs/target reached
+- `_lastPassClean` flag set `false` by any outside-note detection in `onFrequency()`
+
+#### 8b. Silent Bars (Ear Training)
+- `SilentBars.buildMask(barCount, mode, density, pass)` returns `boolean[]` (true = audible)
+- 5 modes: `off`, `alternate` (pairs), `lastHalf`, `random` (density param), `progressive` (ramps with loop pass)
+- UI: `#silentBarMode` select in playback options row
+- `tick()` checks `_barMask[playIdx]`; muted bars get `.bar-muted` CSS class (striped gradient)
+- Metronome always fires regardless of `audible` flag — the core ear-training mechanic
+
+#### 8c. Look-Ahead Guide Tones
+- `tick()` computes `nextBarData` from `bars[playIdx+1]` on every bar advance
+- `showFretboard()` overlays next bar's guide tones with `.gt-next` class (dashed cyan stroke, `→` glyph)
+- `#gtTarget` banner shows "Cm7 → F7" voice-leading direction
+- UI: `#lookAheadBtn` toggle pill; `showLookAhead` state variable
+
+#### 8d. Beat Pulse on Bar
+- Active bar receives `.bar-beat` class with `@keyframes barPulse` (scale 1→1.04→1, box-shadow glow)
+- Animation duration set to bar duration (`(60/bpm)*4` seconds) for tempo-synced pulse
+- Class cleared on `stopPlayback()` along with `.bar-muted`
+
+#### 8e. Call & Response
+- `CallResponse.createMatcher(targetPcs, { skipTolerance })` — streaming pitch matcher
+- `feed(pc)` returns `'progress'|'ignore'|'complete'`; skip tolerance allows one missed note
+- `crCycle()` async state machine: `CALLING` (app plays lick via resonance) → `LISTENING` (mic captures player response) → `JUDGING` (compare via matcher accuracy) with timeout fallback
+- UI: `#gtCallResponseBtn` button + `#crStatus` display in global transport
+- Integrates with existing pitch detection: `onFrequency()` feeds detected PCs to `_crMatcher`
+
+#### 8f. Stand Mode
+- `body.stand-mode` CSS: hides detail panels, enlarges chord cells to 1.45×, 120px min bar height
+- `navigator.wakeLock.request('screen')` prevents display sleep; re-acquires on `visibilitychange`
+- UI: `#gtStandModeBtn` toggle in global transport
+- `enterStandMode()` / `exitStandMode()` functions with graceful fallback when Wake Lock API unavailable
+
+#### 8g. Per-Chorus Modulation
+- `MOD_CYCLES` map: `fourths` (+5), `minor3rd` (+3), `halfStep` (+1), `random`
+- `_keyStep` accumulates semitones at each loop boundary when `modulateEnabled`
+- Calls `renderLeadSheet()` with transposed root, then re-acquires `bars` (hence `let bars` in `startPlayback`)
+- UI: `#modulateBtn` toggle pill + `#modulateCycle` select (4 cycle options)
+
+#### 8h. Pitch Scoring Integration
+- `PitchScoring.gradeNote(pc, cents, chordPcs, scalePcs, guidePcs)` classifies each pitch
+- Categories: `guideTone` (1.25×), `chordTone` (1.0×), `scaleTone` (0.6×), `outside` (0×)
+- Intonation: linear 1→0 falloff from ±10¢ to ±50¢
+- `scoreBar(grades)` returns weighted 0–100 score or null for empty bars
+- `_barGrades[]` collects grades per bar; outside notes flag `_lastPassClean = false` for tempo ramp
+
 ---
 
 ## Files Modified / Added
@@ -203,9 +258,14 @@ Resolves the four highest-priority UX gaps identified in the ISO 9241-11 / ISO 2
 |------|-------------|
 | `index.html` | All features above; ~8,000 lines. Single entry point. |
 | `js/pitch-processor.js` | AudioWorklet YIN pitch detection processor |
+| `js/pitchScoring.js` | Pitch scoring model — grades detected notes against bar's harmonic context |
+| `js/tempoRamp.js` | Tempo ramp model — creeps BPM up/down per loop pass |
+| `js/silentBars.js` | Silent bars mask generator — 5 modes for ear training |
+| `js/callResponse.js` | Call & response matcher — streaming pitch matcher against target sequence |
 | `service-worker.js` | PWA cache-first service worker |
 | `manifest.json` | PWA manifest (name, icons, display mode) |
 | `icons/icon.svg` | Treble clef SVG app icon |
+| `tests/practiceEnhancements.test.js` | Unit tests for pitchScoring, tempoRamp, silentBars, callResponse |
 | `CLAUDE.md` | This file |
 
 ---
@@ -257,9 +317,10 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | 7.0 | 2026-04 | Baseline PRO Edition — 22 core SONGS, chord grid, fretboard, Resonance Engine |
 | 7.1 | 2026-05 | Accessibility & UX pass — skip link, ARIA live regions, toasts, keyboard shortcuts |
 | 7.2 | 2026-05 | AlphaTab notation + Guitar Pro loader; Parker Heads Library grows to 66 tunes; PWA + pitch detection |
-| **7.3** | **2026-07-21** | **UX refactor (PR #148)** — workflow modes, unified global transport, standardized `aria-pressed` toggles, duplicate-ID fix, prerequisite hints, toast aria-live tiering |
+| 7.3 | 2026-07-21 | UX refactor (PR #148) — workflow modes, unified global transport, standardized `aria-pressed` toggles, duplicate-ID fix, prerequisite hints, toast aria-live tiering |
+| **7.4** | **2026-08-21** | **Real-time practice enhancements** — tempo ramp, silent bars, look-ahead guide tones, beat pulse, call & response, stand mode, per-chorus modulation, pitch scoring |
 
 ---
 
-*Last updated: 2026-07-21*  
-*Active branch: `claude/ux-ui-audit-analysis-57f4db` (merged as PR #148)*
+*Last updated: 2026-08-21*  
+*Active branch: `claude/markdown-review-implementation-h2bejg`*
