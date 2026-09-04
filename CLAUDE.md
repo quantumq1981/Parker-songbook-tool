@@ -23,7 +23,7 @@
 - Web Audio API for synthesis + AudioWorklet for real-time pitch detection
 - IndexedDB for practice session storage
 - Service Worker for offline/PWA support
-- **66 total songs** (22 core SONGS object + 44 OMNIBOOK_ADDITIONS)
+- **67 total songs** (22 core SONGS object + 45 OMNIBOOK_ADDITIONS)
 
 ---
 
@@ -32,8 +32,8 @@
 ### Core SONGS (22)
 Anthropology, Au Privave, Barbados, Billie's Bounce, Bloomdido, Blues for Alice, Cheryl, Chi Chi, Confirmation, Dewey Square, Donna Lee, Ko-Ko, Moose the Mooche, Now's the Time, Ornithology, Relaxin' at Camarillo, Scrapple from the Apple, Yardbird Suite, Parker's Mood, Embraceable You, Oh, Lady Be Good, Crazeology
 
-### Omnibook Additions (44)
-An Oscar for Treadwell, Another Hairdo, Back Home Blues, Bird Gets the Worm, Blue Bird, Buzzy, Card Board, Celerity, Chasing the Bird, Cosmic Rays, Diverse, KC Blues, Kim, Laird Baird, Marmaduke, Mohawk, My Little Suede Shoes, Passport, Perhaps, Red Cross, Relaxing With Lee, Segment, Shawnuff, Si Si, Steeplechase, The Bird, Thriving From a Riff, Visa, Warming Up a Riff, Ah-Leu-Cha, Cool Blues, Constellation, Celebrity, Drifting on a Reed, Leap Frog, Little Willie Leaps, The Hymn, Stupendous, Bongo Bop, Lover Man, Quasimodo, Salt Peanuts, Tiny's Tempo, Meandering
+### Omnibook Additions (45)
+An Oscar for Treadwell, Another Hairdo, Back Home Blues, Bird Gets the Worm, Blue Bird, Buzzy, Card Board, Celerity, Chasing the Bird, Cosmic Rays, Diverse, KC Blues, Kim, Laird Baird, Marmaduke, Mohawk, My Little Suede Shoes, Passport, Perhaps, Red Cross, Relaxing With Lee, Segment, Shawnuff, Si Si, Steeplechase, The Bird, Thriving From a Riff, Visa, Warming Up a Riff, Ah-Leu-Cha, Cool Blues, Constellation, Celebrity, Drifting on a Reed, Leap Frog, Little Willie Leaps, The Hymn, Stupendous, Bongo Bop, Lover Man, Quasimodo, Salt Peanuts, Tiny's Tempo, Meandering, Bebop
 
 ### Source / Deduplication
 - 46 unique tunes sourced from `docs/omnibook_xml (1).zip` (AutoImprov MusicXML collection) — all are present  
@@ -84,6 +84,21 @@ An Oscar for Treadwell, Another Hairdo, Back Home Blues, Bird Gets the Worm, Blu
 ### 9. Confirmation Head Crashed alphaTab (`t.staves`)
 **Issue:** The bundled `docs/Charlie Parker - Confirmation.gp` was a 2-track GP7 file that threw `undefined is not an object (evaluating 't.staves')` in the alphaTab renderer — the head showed chords but never the melody.  
 **Fix:** Replaced it with the user-supplied single-track, alphaTab-authored GP8 transcription of the Confirmation head (clean melody track that loads and plays reliably). `OMNIBOOK_TUNES`'s `Confirmation` entry already points at this filename.
+
+### 11. Parker Heads Library — Blank Manuscript for 4 Tunes + "Bebop" Missing Entirely
+**Reported (2026-09-04):** A handful of Parker Heads library entries opened with an empty staff — time signature but zero notes — and the Dizzy Gillespie / Charlie Parker head "Bebop" was not in the library at all.
+
+**Root cause:**
+- `An Oscar for Treadwell` and `Passport` were mapped to `omnibook_xml/*.xml` chord-chart stubs (rhythm-slash notation, no melody data), and `Cool Blues` and `Tiny's Tempo` were mapped to `alphatex/*.alphatex` chord charts. In every case the underlying source file contains chords only — hence the blank staff.
+- `Bebop` had no entry anywhere: not in `OMNIBOOK_ADDITIONS`, not in either `OMNIBOOK_TUNES` array.
+
+**Fix:**
+- Added 5 user-supplied Guitar Pro transcriptions (full melody tracks) under `docs/`:
+  `Charlie Parker - An Oscar For Treadwell.gp`, `Charlie Parker - Cool Blues.gp`, `Charlie Parker - Passport.gp`, `Charlie Parker - Tinys Tempo.gp`, `Charlie Parker - Bebop.gp5`.
+- Repointed the four existing `OMNIBOOK_TUNES` entries (in BOTH the Heads Library array at `index.html:6443` AND the Notation Viewer array at `index.html:7302`) from the empty XML/alphatex stubs to the new `.gp/.gp5` files. AlphaTab auto-detects format from headers, so no format-specific loader code is needed.
+- Added a new `Bebop` entry to `OMNIBOOK_ADDITIONS` (F major, 32-bar AABA, Advanced) so the tune appears in the songbook dropdown, plus a matching `Bebop` entry in both `OMNIBOOK_TUNES` arrays so its melody loads in the Heads Library and Notation Viewer.
+
+Songbook total went from 66 → 67.
 
 ### 10. Duplicate `id="practicePanel"` — Invalid HTML, Silently Broken Dashboard Refresh
 **Location:** `index.html` lines ~1062 and ~1360 (v7.2)  
@@ -303,8 +318,8 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | Source | Count |
 |--------|-------|
 | Core SONGS object | 22 |
-| OMNIBOOK_ADDITIONS | 44 |
-| **Total unique tunes** | **66** |
+| OMNIBOOK_ADDITIONS | 45 |
+| **Total unique tunes** | **67** |
 
 ---
 
@@ -322,5 +337,5 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 
 ---
 
-*Last updated: 2026-08-21*  
-*Active branch: `claude/markdown-review-implementation-h2bejg`*
+*Last updated: 2026-09-04*  
+*Active branch: `claude/parker-heads-library-missing-hla4z1`*

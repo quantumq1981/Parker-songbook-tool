@@ -2827,7 +2827,18 @@ const OMNIBOOK_ADDITIONS = [
     progression:[
       [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"F7",roman:"I7",scale:"Mixolydian"}],
       [{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},{chord:"Bdim7",roman:"#IVdim7",scale:"Diminished"},{chord:"F7",roman:"I7",scale:"Mixolydian"},{chord:"D7",roman:"VI7",scale:"Altered"}],
-      [{chord:"Gm7",roman:"IIm7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Gm7/C7",roman:"IIm7",scale:"Dorian"}]]}
+      [{chord:"Gm7",roman:"IIm7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Gm7/C7",roman:"IIm7",scale:"Dorian"}]]},
+  {title:'Bebop', key:'F', form:'AABA', bars:32, difficulty:'Advanced', style:'Bebop', structure:'Original',
+    description:"Dizzy Gillespie / Charlie Parker head in F; angular chromatic bebop line over a fast-moving harmonic framework — the tune that arguably named the movement",
+    progression:[
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Gm7/C7",roman:"IIm7",scale:"Dorian"},{chord:"Am7/D7",roman:"IIIm7",scale:"Dorian"},{chord:"Gm7/C7",roman:"IIm7",scale:"Dorian"}],
+      [{chord:"FΔ7/A7",roman:"IΔ7",scale:"Ionian"},{chord:"Dm7/G7",roman:"VIm7",scale:"Dorian"},{chord:"Gm7/C7",roman:"IIm7",scale:"Dorian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"}],
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Gm7/C7",roman:"IIm7",scale:"Dorian"},{chord:"Am7/D7",roman:"IIIm7",scale:"Dorian"},{chord:"Gm7/C7",roman:"IIm7",scale:"Dorian"}],
+      [{chord:"FΔ7/A7",roman:"IΔ7",scale:"Ionian"},{chord:"Dm7/G7",roman:"VIm7",scale:"Dorian"},{chord:"Gm7/C7",roman:"IIm7",scale:"Dorian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"}],
+      [{chord:"Am7",roman:"IIIm7",scale:"Dorian"},{chord:"D7",roman:"VI7",scale:"Altered"},{chord:"Gm7",roman:"IIm7",scale:"Dorian"},{chord:"C7",roman:"V7",scale:"Mixolydian"}],
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Bb7",roman:"IV7",scale:"Mixolydian"},{chord:"Am7/D7",roman:"IIIm7",scale:"Dorian"},{chord:"Gm7/C7",roman:"IIm7",scale:"Dorian"}],
+      [{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"},{chord:"Gm7/C7",roman:"IIm7",scale:"Dorian"},{chord:"Am7/D7",roman:"IIIm7",scale:"Dorian"},{chord:"Gm7/C7",roman:"IIm7",scale:"Dorian"}],
+      [{chord:"FΔ7/A7",roman:"IΔ7",scale:"Ionian"},{chord:"Dm7/G7",roman:"VIm7",scale:"Dorian"},{chord:"Gm7/C7",roman:"IIm7",scale:"Dorian"},{chord:"FΔ7",roman:"IΔ7",scale:"Ionian"}]]}
 ];
 
 function buildAdditionalTune(spec) {
@@ -6444,6 +6455,7 @@ async function suggestNext() {
     // ── GP transcriptions (full notation + tablature) ──────────────────
     { name: 'Anthropology',           file: 'Charlie Parker - Anthropology.gp5' },
     { name: 'Au Privave',             file: 'Charlie Parker - Au Privave.gp5' },
+    { name: 'Bebop',                  file: 'Charlie Parker - Bebop.gp5' },
     { name: "Billie's Bounce",        file: 'Charlie Parker - Billies Bounce.gp4' },
     { name: 'Bloomdido',              file: 'Charlie Parker - Bloomdido.gp' },
     { name: 'Blues for Alice',        file: 'Charlie Parker - Blues For Alice (ver 2).gp5' },
@@ -6457,7 +6469,7 @@ async function suggestNext() {
     { name: "Parker's Mood",          file: 'Charlie Parker - Parkers Mood.gp4' },
     { name: 'Yardbird Suite',         file: 'Charlie Parker - Yardbird Suite.gpx' },
     // ── MusicXML transcriptions (AutoImprov Omnibook collection) ───────
-    { name: 'An Oscar for Treadwell', file: 'omnibook_xml/An_Oscar_For_Treadwell.xml' },
+    { name: 'An Oscar for Treadwell', file: 'Charlie Parker - An Oscar For Treadwell.gp' },
     { name: 'Another Hairdo',         file: 'omnibook_xml/Another_Hairdo.xml' },
     { name: 'Back Home Blues',        file: 'omnibook_xml/Back_Home_Blues.xml' },
     { name: 'Barbados',               file: 'omnibook_xml/Barbados.xml' },
@@ -6478,7 +6490,7 @@ async function suggestNext() {
     { name: 'Marmaduke',              file: 'omnibook_xml/Marmaduke.xml' },
     { name: 'Mohawk',                 file: 'omnibook_xml/Mohawk_1.xml' },
     { name: 'My Little Suede Shoes',  file: 'omnibook_xml/My_Little_Suede_Shoes.xml' },
-    { name: 'Passport',               file: 'omnibook_xml/Passport.xml' },
+    { name: 'Passport',               file: 'Charlie Parker - Passport.gp' },
     { name: 'Perhaps',                file: 'omnibook_xml/Perhaps.xml' },
     { name: 'Red Cross',              file: 'omnibook_xml/Red_Cross.xml' },
     { name: 'Relaxing With Lee',      file: 'omnibook_xml/Relaxing_With_Lee.xml' },
@@ -6497,7 +6509,7 @@ async function suggestNext() {
     { name: 'Oh, Lady Be Good',       file: 'alphatex/oh_lady_be_good.alphatex' },
     { name: 'Crazeology',             file: 'alphatex/crazeology.alphatex' },
     { name: 'Ah-Leu-Cha',            file: 'alphatex/ah_leu_cha.alphatex' },
-    { name: 'Cool Blues',             file: 'alphatex/cool_blues.alphatex' },
+    { name: 'Cool Blues',             file: 'Charlie Parker - Cool Blues.gp' },
     { name: 'Constellation',          file: 'alphatex/constellation.alphatex' },
     { name: 'Celebrity',              file: 'alphatex/celebrity.alphatex' },
     { name: 'Drifting on a Reed',     file: 'alphatex/drifting_on_a_reed.alphatex' },
@@ -6508,7 +6520,7 @@ async function suggestNext() {
     { name: 'Bongo Bop',              file: 'alphatex/bongo_bop.alphatex' },
     { name: 'Quasimodo',              file: 'alphatex/quasimodo.alphatex' },
     { name: 'Salt Peanuts',           file: 'alphatex/salt_peanuts.alphatex' },
-    { name: "Tiny's Tempo",           file: 'alphatex/tinys_tempo.alphatex' },
+    { name: "Tiny's Tempo",           file: 'Charlie Parker - Tinys Tempo.gp' },
     { name: 'Meandering',             file: 'alphatex/meandering.alphatex' },
   ];
 
@@ -7303,6 +7315,7 @@ async function suggestNext() {
     // ── GP transcriptions ──────────────────────────────────────────────
     { name: 'Anthropology',           file: 'Charlie Parker - Anthropology.gp5' },
     { name: 'Au Privave',             file: 'Charlie Parker - Au Privave.gp5' },
+    { name: 'Bebop',                  file: 'Charlie Parker - Bebop.gp5' },
     { name: "Billie's Bounce",        file: 'Charlie Parker - Billies Bounce.gp4' },
     { name: 'Bloomdido',              file: 'Charlie Parker - Bloomdido.gp' },
     { name: 'Blues for Alice',        file: 'Charlie Parker - Blues For Alice (ver 2).gp5' },
@@ -7316,7 +7329,7 @@ async function suggestNext() {
     { name: "Parker's Mood",          file: 'Charlie Parker - Parkers Mood.gp4' },
     { name: 'Yardbird Suite',         file: 'Charlie Parker - Yardbird Suite.gpx' },
     // ── MusicXML transcriptions (AutoImprov Omnibook collection) ───────
-    { name: 'An Oscar for Treadwell', file: 'omnibook_xml/An_Oscar_For_Treadwell.xml' },
+    { name: 'An Oscar for Treadwell', file: 'Charlie Parker - An Oscar For Treadwell.gp' },
     { name: 'Another Hairdo',         file: 'omnibook_xml/Another_Hairdo.xml' },
     { name: 'Back Home Blues',        file: 'omnibook_xml/Back_Home_Blues.xml' },
     { name: 'Barbados',               file: 'omnibook_xml/Barbados.xml' },
@@ -7337,7 +7350,7 @@ async function suggestNext() {
     { name: 'Marmaduke',              file: 'omnibook_xml/Marmaduke.xml' },
     { name: 'Mohawk',                 file: 'omnibook_xml/Mohawk_1.xml' },
     { name: 'My Little Suede Shoes',  file: 'omnibook_xml/My_Little_Suede_Shoes.xml' },
-    { name: 'Passport',               file: 'omnibook_xml/Passport.xml' },
+    { name: 'Passport',               file: 'Charlie Parker - Passport.gp' },
     { name: 'Perhaps',                file: 'omnibook_xml/Perhaps.xml' },
     { name: 'Red Cross',              file: 'omnibook_xml/Red_Cross.xml' },
     { name: 'Relaxing With Lee',      file: 'omnibook_xml/Relaxing_With_Lee.xml' },
@@ -7356,7 +7369,7 @@ async function suggestNext() {
     { name: 'Oh, Lady Be Good',       file: 'alphatex/oh_lady_be_good.alphatex' },
     { name: 'Crazeology',             file: 'alphatex/crazeology.alphatex' },
     { name: 'Ah-Leu-Cha',            file: 'alphatex/ah_leu_cha.alphatex' },
-    { name: 'Cool Blues',             file: 'alphatex/cool_blues.alphatex' },
+    { name: 'Cool Blues',             file: 'Charlie Parker - Cool Blues.gp' },
     { name: 'Constellation',          file: 'alphatex/constellation.alphatex' },
     { name: 'Celebrity',              file: 'alphatex/celebrity.alphatex' },
     { name: 'Drifting on a Reed',     file: 'alphatex/drifting_on_a_reed.alphatex' },
@@ -7367,7 +7380,7 @@ async function suggestNext() {
     { name: 'Bongo Bop',              file: 'alphatex/bongo_bop.alphatex' },
     { name: 'Quasimodo',              file: 'alphatex/quasimodo.alphatex' },
     { name: 'Salt Peanuts',           file: 'alphatex/salt_peanuts.alphatex' },
-    { name: "Tiny's Tempo",           file: 'alphatex/tinys_tempo.alphatex' },
+    { name: "Tiny's Tempo",           file: 'Charlie Parker - Tinys Tempo.gp' },
     { name: 'Meandering',             file: 'alphatex/meandering.alphatex' },
   ];
 
