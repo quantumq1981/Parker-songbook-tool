@@ -7695,6 +7695,10 @@ async function suggestNext() {
     } catch (e) {}
   }
 
+  // Expose the view switcher + current-view read for the deep-link router.
+  window.__cpApplyView = switchView;
+  window.__cpGetView   = function () { return currentView; };
+
   // ── Wire up all controls ───────────────────────────────────────────────
   function atNotInit() {
     // Tab navigation buttons
@@ -8523,6 +8527,10 @@ async function suggestNext() {
   let initialMode = 'learn';
   try { initialMode = localStorage.getItem('cp_active_mode_v73') || 'learn'; } catch (e) {}
   setActiveMode(initialMode);
+  // Expose the mode setter so the deep-link router (end of script) can drive it
+  // without reaching into this IIFE's scope — same window-hook pattern the
+  // AlphaTab loader (hdLoadArrayBuffer) and transport mirror (reportTransportState) use.
+  window.__cpApplyMode = setActiveMode;
 
   /* ── 3. Global transport router ───────────────────────────── */
   // Route the global Play/Stop/Loop to the correct legacy handler by mode.
@@ -8879,6 +8887,126 @@ async function suggestNext() {
   }, { capture: true });
 
   console.log('✅ v7.3 UX refactor initialised — mode:', initialMode);
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Deep-link router (R1) — serialize {mode, tune, key, view} into location.hash
+   so any app state is bookmarkable, refresh-durable, and shareable.
+
+   Design contract:
+   • Router-not-replacer: inbound state is applied by driving the SAME pipelines
+     the UI uses (tuneSel/keySel `change` events, window.__cpApplyMode/View),
+     never by reimplementing render/audio logic.
+   • Hash > localStorage: a shared link overrides the recipient's last session.
+     No hash → existing prefs restore is untouched, then the URL is seeded so it
+     is shareable even without hand-authored params.
+   • replaceState outbound (no history spam, does not fire `hashchange`);
+     `hashchange` inbound for manual URL edits / bookmark loads.
+   • _applyingHash guards the apply→change→write→apply re-entrancy loop.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function deepLinkRouter() {
+  const VIEWS = ['grid', 'notation', 'tab'];
+  let _applyingHash = false;
+  let _writeTimer   = null;
+
+  function parseHash() {
+    // Tolerate '#', '#/', or empty. URLSearchParams handles +/%xx decoding.
+    const raw = (location.hash || '').replace(/^#\/?/, '');
+    if (!raw) return null;
+    const p = new URLSearchParams(raw);
+    const out = {};
+    if (p.has('mode')) out.mode = p.get('mode');
+    if (p.has('tune')) out.tune = p.get('tune');
+    if (p.has('key'))  out.key  = p.get('key');
+    if (p.has('view')) out.view = p.get('view');
+    return out;
+  }
+
+  function keyIsValid(k) {
+    return !!k && Array.prototype.some.call(keySel.options, o => o.value === k);
+  }
+
+  function applyHash() {
+    const s = parseHash();
+    if (!s) return;
+    _applyingHash = true;
+    try {
+      // 1. Mode first — governs which panels the rest of the state renders into.
+      if (s.mode) window.__cpApplyMode && window.__cpApplyMode(s.mode);
+
+      // 2. Tune — canonicalize, verify it exists, then reuse the change pipeline.
+      if (s.tune) {
+        const canon = (typeof canonicalTuneTitle === 'function')
+          ? canonicalTuneTitle(s.tune) : s.tune;
+        if (SONGS[canon]) {
+          tuneSel.value = canon;
+          // Only dispatch if the option actually took (guards stale/foreign values).
+          if (tuneSel.value === canon) {
+            tuneSel.dispatchEvent(new Event('change'));
+          }
+        }
+      }
+
+      // 3. Key — the tune-change handler resets key to the tune's home key, so a
+      //    requested key is applied AFTER and only when it maps to a real option.
+      if (keyIsValid(s.key)) {
+        keySel.value = s.key;
+        keySel.dispatchEvent(new Event('change'));
+      }
+
+      // 4. View — grid/notation/tab; harmless in modes where the tabs are hidden.
+      if (s.view && VIEWS.indexOf(s.view) !== -1) {
+        window.__cpApplyView && window.__cpApplyView(s.view);
+      }
+    } catch (e) {
+      console.warn('[deep-link] apply failed:', e);
+    } finally {
+      _applyingHash = false;
+    }
+  }
+
+  function writeHash() {
+    if (_applyingHash) return; // never echo our own inbound apply back out
+    const p = new URLSearchParams();
+    const mode = document.body.getAttribute('data-active-mode');
+    if (mode) p.set('mode', mode);
+    if (tuneSel && tuneSel.value) p.set('tune', tuneSel.value);
+    if (keySel && keySel.value)   p.set('key', keySel.value);
+    const view = window.__cpGetView && window.__cpGetView();
+    if (view) p.set('view', view);
+    const next = '#' + p.toString();
+    if (next !== location.hash) {
+      try { history.replaceState(null, '', next); }
+      catch (e) { location.hash = next; } // file:// / sandbox fallback
+    }
+  }
+
+  // Coalesce bursts (e.g. tune-change also resets key) into one write next tick,
+  // after all synchronous change handlers have settled.
+  function scheduleWrite() {
+    if (_applyingHash) return;
+    clearTimeout(_writeTimer);
+    _writeTimer = setTimeout(writeHash, 0);
+  }
+
+  // Outbound: additive listeners — the existing handlers keep firing unchanged.
+  tuneSel.addEventListener('change', scheduleWrite, { passive: true });
+  keySel.addEventListener('change', scheduleWrite, { passive: true });
+  document.querySelectorAll('.mode-nav-btn').forEach(b =>
+    b.addEventListener('click', scheduleWrite, { passive: true }));
+  document.querySelectorAll('.at-view-tab').forEach(t =>
+    t.addEventListener('click', scheduleWrite, { passive: true }));
+
+  // Inbound: manual URL edits / bookmark loads. (replaceState does not fire this.)
+  window.addEventListener('hashchange', applyHash);
+
+  // Initial: hash wins over restored prefs; otherwise seed a shareable URL from
+  // whatever prefs restored. Run on `load` so mode init, _loadAndApplyPrefs, and
+  // all DOMContentLoaded wiring (view tabs) have already settled.
+  window.addEventListener('load', () => {
+    if (location.hash && location.hash.length > 1) applyHash();
+    else writeHash();
+  });
 })();
 
 </script>

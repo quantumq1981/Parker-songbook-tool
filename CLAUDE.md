@@ -265,6 +265,36 @@ Seven real-time practice features plus pitch scoring, implemented as four pure J
 - `scoreBar(grades)` returns weighted 0–100 score or null for empty bars
 - `_barGrades[]` collects grades per bar; outside notes flag `_lastPassClean = false` for tempo ramp
 
+### 9. Deep-Link Routing v7.5 (R1 — UX audit follow-up)
+
+Serializes the four navigation axes — `{mode, tune, key, view}` — into `location.hash`, so any app
+state is bookmarkable, refresh-durable, and shareable (the enabling feature for the README's
+"For Educators" link-sharing story). Single additive commit, `+128 / −0` in `index.html`; no audio
+or render logic touched.
+
+- **Hash format:** query-style `#mode=learn&tune=Now%27s+the+Time&key=Bb&view=grid`. Order-independent
+  and encoding-safe — `URLSearchParams` on both ends round-trips apostrophes/commas/spaces symmetrically
+  (verified against `Now's the Time`, `Oh, Lady Be Good`, `Relaxin' at Camarillo`), so no slug↔title map.
+- **Router-not-replacer:** inbound state drives the *existing* pipelines — set `tuneSel.value` + dispatch
+  `change`, set `keySel.value` + dispatch `change`, call `window.__cpApplyMode` / `window.__cpApplyView`.
+  No render/audio reimplementation, consistent with the v7.3 global-transport pattern.
+- **Two new window hooks** (same idiom as `hdLoadArrayBuffer` / `reportTransportState`): `__cpApplyMode`
+  (= `setActiveMode`, exposed from the v7.3 IIFE) and `__cpApplyView` / `__cpGetView` (= `switchView` /
+  `currentView`, exposed from the AlphaTab IIFE). The router IIFE lives at the end of the main script and
+  reaches these axes only through the hooks — no scope surgery.
+- **Precedence:** hash **wins** over `cp_songbook_v7_prefs` on load (a shared link overrides the
+  recipient's last session). No hash → existing prefs restore is untouched, then the URL is seeded from
+  restored state so it is always shareable.
+- **Outbound** writes use `history.replaceState` (no history spam, does not fire `hashchange`) via a
+  next-tick debounce, on additive `change`/`click` listeners. **Inbound** `applyHash` runs on `hashchange`
+  (manual edits / bookmarks) and once on `window.load` (after mode init, `_loadAndApplyPrefs`, and all
+  DOMContentLoaded wiring have settled).
+- **Edge cases:** invalid tune (not in `SONGS` after `canonicalTuneTitle`) → ignored; invalid key (no
+  matching `<option>`) → ignored; invalid mode → `setActiveMode` defaults to `learn`; invalid view →
+  guarded to `grid|notation|tab`; apply→change→write→apply re-entrancy → `_applyingHash` flag; all apply
+  work wrapped in `try/catch`. Back/forward is a deliberate non-goal (avoids a back-stack entry per
+  key-cycle).
+
 ---
 
 ## Files Modified / Added
@@ -334,8 +364,9 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | 7.2 | 2026-05 | AlphaTab notation + Guitar Pro loader; Parker Heads Library grows to 66 tunes; PWA + pitch detection |
 | 7.3 | 2026-07-21 | UX refactor (PR #148) — workflow modes, unified global transport, standardized `aria-pressed` toggles, duplicate-ID fix, prerequisite hints, toast aria-live tiering |
 | **7.4** | **2026-08-21** | **Real-time practice enhancements** — tempo ramp, silent bars, look-ahead guide tones, beat pulse, call & response, stand mode, per-chorus modulation, pitch scoring |
+| **7.5** | **2026-09-09** | **Deep-link routing (R1)** — `{mode, tune, key, view}` serialized to `location.hash`; bookmarkable, refresh-durable, shareable state; router-not-replacer, `+128 / −0` in `index.html` |
 
 ---
 
-*Last updated: 2026-09-04*  
-*Active branch: `claude/parker-heads-library-missing-hla4z1`*
+*Last updated: 2026-09-09*  
+*Active branch: `claude/parker-songbook-analysis-dn6g3m`*
