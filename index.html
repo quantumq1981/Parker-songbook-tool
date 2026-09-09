@@ -174,7 +174,7 @@ h1{text-align:center;color:var(--accent);margin:12px 0;font-size:22px;font-famil
 h2{color:var(--accent2);font-size:15px;margin:8px 0 6px 0;}
 .card{background:linear-gradient(180deg, rgba(31,25,39,.96), rgba(21,17,27,.96));
   border:1px solid rgba(230,169,75,.28);border-radius:var(--radius-lg);
-  padding:16px;max-width:1200px;margin:0 auto 16px auto;
+  padding:16px;max-width:1200px;margin:0 auto 16px auto;position:relative;
   box-shadow:var(--glow-brass), 0 18px 40px rgba(0,0,0,.45);}
 
 /* ── Hero ──────────────────────────────────────────────────── */
@@ -1607,6 +1607,51 @@ body:not([data-active-mode]) .global-transport { display: none; }
 
 /* Hide legacy transport-related controls superseded by global bar */
 
+/* ── First-run guided tour (R3) ───────────────────────────── */
+.tour-btn {
+  position: absolute; top: 12px; right: 12px; z-index: 6;
+  background: var(--bg-2); color: var(--ink-dim);
+  border: 1px solid var(--barline); border-radius: 20px;
+  padding: 4px 11px; font-family: var(--font-mono); font-size: 11px;
+  font-weight: 600; letter-spacing: .3px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.tour-btn:hover { background: var(--panel-2); color: var(--ink); }
+.tour-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.tour-backdrop {
+  position: fixed; inset: 0; z-index: 9998;
+  background: rgba(6,4,10,.72);
+}
+/* Target lift: a bright ring so the highlighted control reads through the dim. */
+.tour-lift { box-shadow: 0 0 0 3px var(--accent), 0 0 0 9px rgba(0,0,0,.45);
+  border-radius: 8px; transition: box-shadow .2s ease; }
+.tour-card {
+  position: fixed; z-index: 10001; left: 50%; transform: translateX(-50%);
+  width: min(430px, calc(100vw - 28px));
+  background: var(--panel); border: 1px solid var(--legacy-purple);
+  border-radius: 12px; padding: 16px 18px; box-shadow: 0 12px 40px rgba(0,0,0,.6);
+}
+.tour-card.at-bottom { bottom: 18px; }
+.tour-card.at-top    { top: 18px; }
+.tour-card h3 { margin: 0 0 8px; font-family: var(--font-mono); font-size: 15px; color: var(--accent); }
+.tour-card p  { margin: 0 0 14px; font-size: 13px; line-height: 1.5; color: var(--ink); }
+.tour-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tour-dots { display: flex; gap: 5px; }
+.tour-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--barline); }
+.tour-dot.on { background: var(--accent); }
+.tour-actions { display: flex; gap: 6px; }
+.tour-actions button {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  border-radius: 7px; padding: 7px 14px; cursor: pointer; border: 1px solid var(--barline);
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.tour-skip { background: transparent; color: var(--ink-dim); }
+.tour-back { background: var(--bg-2); color: var(--ink-dim); }
+.tour-next { background: var(--indigo); color: #fff; border-color: var(--indigo); }
+.tour-skip:hover { color: var(--ink); }
+.tour-back:hover { color: var(--ink); }
+@media (max-width: 480px) { .tour-card { width: calc(100vw - 20px); padding: 14px; } }
+
 </style>
 
 
@@ -1639,6 +1684,8 @@ body:not([data-active-mode]) .global-transport { display: none; }
   <p class="hero-tagline">66 Parker heads, a live guitar fretboard, and an AI resonance engine built for after-hours woodshedding.</p>
 </header>
 <main class="card" id="main-content" role="main" aria-label="Charlie Parker Songbook Trainer">
+  <button type="button" id="tourBtn" class="tour-btn" data-modes="all"
+          aria-haspopup="dialog" title="Take the guided tour">❓ Tour</button>
   <h2 id="main-heading" class="h-mode">Complete Bebop Songbook</h2>
   <div class="stats-bar" id="statsBar" data-modes="all" role="status" aria-live="polite" aria-label="Songbook statistics"></div>
 
@@ -8907,6 +8954,9 @@ async function suggestNext() {
   // (index.html:5132) from double-firing chord-grid playback in Practice/Improvise modes.
   document.addEventListener('keydown', e => {
     const t = e.target;
+    // While the guided tour is open, let it own Space/Escape (and don't start
+    // playback behind the dimmed overlay).
+    if (document.querySelector('.tour-backdrop')) return;
     // Same widened guard as legacy kbShortcuts — anything with its own Enter/Space
     // handler (details summary, drop-zone role=button, tab list) must own the key.
     if (t && t.closest && t.closest('input, select, textarea, [contenteditable="true"], summary, [role="button"], [role="tab"]')) return;
@@ -9042,6 +9092,116 @@ async function suggestNext() {
     if (location.hash && location.hash.length > 1) applyHash();
     else writeHash();
   });
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Guided tour (R3) — a first-run, localStorage-gated walkthrough of the four
+   workflow modes and the global transport. Additive: dims the page, lifts the
+   referenced control with a ring, and shows a stepper card. Auto-starts once
+   after the audio-consent gate clears; reopenable anytime via #tourBtn.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function guidedTour() {
+  const SEEN_KEY = 'cp_tour_seen_v76';
+  const STEPS = [
+    { title: 'Welcome to the Bebop Practice Studio',
+      body: '67 Charlie Parker heads with a live fretboard, notation, an AI resonance engine, and practice journaling. Here is the 20-second tour.' },
+    { title: '1 · Choose your workspace', sel: '.mode-nav',
+      body: 'Four modes — Learn, Practice, Improvise, Journal — each reveals only the tools that fit what you are doing. Switch anytime; the app remembers your last mode.' },
+    { title: '2 · Find a tune', sel: '.search-row',
+      body: 'Search all 67 tunes by name, or open Advanced Filters to narrow by form, difficulty, or style.' },
+    { title: '3 · Read it your way', sel: '.sheet-view-header', mode: 'learn',
+      body: 'This switcher flips the lead sheet between an interactive Chord Grid, standard Notation, and guitar Tab — for whatever tune and key you have selected.' },
+    { title: '4 · One transport for everything', sel: '.global-transport', cardPos: 'top',
+      body: 'Play, stop, loop, and set the tempo from the sticky bar at the bottom. It drives whichever mode you are in.' },
+    { title: "You're set",
+      body: 'Reopen this tour anytime with the ❓ button up top. Tip: your mode, tune, key, and view all live in the page URL — bookmark or share a link to land right back here.' }
+  ];
+
+  let idx = 0, backdrop = null, card = null, lifted = null, prevPos = '', prevZ = '', lastFocus = null;
+
+  function lift(el) {
+    unlift();
+    if (!el) return;
+    lifted = el; prevPos = el.style.position; prevZ = el.style.zIndex;
+    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+    el.style.zIndex = '10000';
+    el.classList.add('tour-lift');
+    try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+  }
+  function unlift() {
+    if (!lifted) return;
+    lifted.classList.remove('tour-lift');
+    lifted.style.position = prevPos;
+    lifted.style.zIndex = prevZ;
+    lifted = null;
+  }
+
+  function render() {
+    const step = STEPS[idx];
+    if (step.mode && window.__cpApplyMode) { try { window.__cpApplyMode(step.mode); } catch (e) {} }
+    lift(step.sel ? document.querySelector(step.sel) : null);
+    card.className = 'tour-card ' + (step.cardPos === 'top' ? 'at-top' : 'at-bottom');
+    const dots = STEPS.map((_, i) => `<span class="tour-dot${i === idx ? ' on' : ''}"></span>`).join('');
+    const last = idx === STEPS.length - 1;
+    card.innerHTML =
+      `<h3>${step.title}</h3><p>${step.body}</p>` +
+      `<div class="tour-foot"><div class="tour-dots">${dots}</div><div class="tour-actions">` +
+      (idx > 0 ? `<button type="button" class="tour-back">Back</button>`
+               : `<button type="button" class="tour-skip">Skip</button>`) +
+      `<button type="button" class="tour-next">${last ? 'Done' : 'Next'}</button>` +
+      `</div></div>`;
+    card.querySelector('.tour-next').addEventListener('click', () => { if (last) end(); else { idx++; render(); } });
+    const back = card.querySelector('.tour-back'); if (back) back.addEventListener('click', () => { idx--; render(); });
+    const skip = card.querySelector('.tour-skip'); if (skip) skip.addEventListener('click', end);
+    card.querySelector('.tour-next').focus();
+  }
+
+  function start() {
+    if (backdrop) return;                       // already open
+    lastFocus = document.activeElement;
+    idx = 0;
+    backdrop = document.createElement('div');
+    backdrop.className = 'tour-backdrop';
+    card = document.createElement('div');
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
+    card.setAttribute('aria-label', 'Guided tour');
+    document.body.appendChild(backdrop);
+    document.body.appendChild(card);
+    document.addEventListener('keydown', onKey, true);
+    render();
+  }
+  function end() {
+    unlift();
+    if (backdrop) { backdrop.remove(); backdrop = null; }
+    if (card) { card.remove(); card = null; }
+    document.removeEventListener('keydown', onKey, true);
+    try { localStorage.setItem(SEEN_KEY, '1'); } catch (e) {}
+    try { if (lastFocus && lastFocus.focus) lastFocus.focus(); } catch (e) {}
+  }
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); end(); }
+    else if (e.key === 'ArrowRight' && idx < STEPS.length - 1) { idx++; render(); }
+    else if (e.key === 'ArrowLeft'  && idx > 0)                { idx--; render(); }
+  }
+
+  // Restart affordance — always available.
+  const btn = document.getElementById('tourBtn');
+  if (btn) btn.addEventListener('click', start);
+
+  // First-run auto-start: only once the audio-consent gate has cleared, so the
+  // two overlays never stack.
+  function maybeAutoStart() {
+    let seen = false;
+    try { seen = !!localStorage.getItem(SEEN_KEY); } catch (e) {}
+    if (seen) return;
+    if (document.body.classList.contains('audio-ready')) { setTimeout(start, 450); return; }
+    const mo = new MutationObserver(() => {
+      if (document.body.classList.contains('audio-ready')) { mo.disconnect(); setTimeout(start, 450); }
+    });
+    mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
+  window.addEventListener('load', maybeAutoStart);
 })();
 
 </script>
