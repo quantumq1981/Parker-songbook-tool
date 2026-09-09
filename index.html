@@ -1769,6 +1769,13 @@ body:not([data-active-mode]) .global-transport { display: none; }
       <span class="pj-streak" id="pjStreak"></span>
       <button class="controls btn-sec" id="pjExportBtn"
               style="margin-left:auto;font-size:11px;padding:3px 10px;">⬇ Export CSV</button>
+      <button class="controls btn-sec" id="pjExportJsonBtn"
+              title="Download a JSON backup of your practice history"
+              style="font-size:11px;padding:3px 10px;">⬇ Backup</button>
+      <button class="controls btn-sec" id="pjImportJsonBtn"
+              title="Restore practice history from a JSON backup (merges, never overwrites)"
+              style="font-size:11px;padding:3px 10px;">⬆ Restore</button>
+      <input type="file" id="pjImportJsonInput" accept="application/json,.json" hidden>
     </div>
     <table class="pj-table">
       <thead><tr>
@@ -2221,6 +2228,7 @@ body:not([data-active-mode]) .global-transport { display: none; }
 <script defer src="js/tempoRamp.js?v=7.4"></script>
 <script defer src="js/silentBars.js?v=7.4"></script>
 <script defer src="js/callResponse.js?v=7.4"></script>
+<script defer src="js/practiceStore.js?v=7.7"></script>
 <script>
 /* ============================================================
    SONGBOOK DATA — 22 TUNES (v6.0 data model preserved)
@@ -6281,6 +6289,21 @@ function dbGetAll() {
     req.onerror   = () => rej(req.error);
   }));
 }
+// R4: reconcile the two historically-separate practice stores. Expose this
+// store's reader, and a unified reader that merges BOTH stores through the pure,
+// tested PracticeStore.mergeStores() so every dashboard shows one deduplicated
+// timeline instead of a store-specific slice. Reads lazily so it does not care
+// which module's globals were assigned first.
+window.__cpStoreA_getAll = dbGetAll;
+window.cpGetAllSessions = function () {
+  const read = fn => (typeof fn === 'function' ? Promise.resolve().then(fn) : Promise.resolve([]));
+  return Promise.all([
+    read(window.__cpStoreA_getAll).catch(() => []),
+    read(window.__cpStoreB_getAll).catch(() => [])
+  ]).then(([a, b]) => window.PracticeStore
+    ? window.PracticeStore.mergeStores(a || [], b || [])
+    : (a || []).concat(b || []));
+};
 function dbClear() {
   return openDB().then(db => new Promise((res, rej) => {
     const tx = db.transaction('sessions','readwrite');
@@ -6338,7 +6361,9 @@ function fmtDur(s) {
 
 // ── Dashboard renderer ────────────────────────────────────────────────────────
 async function refreshDashboard() {
-  const sessions = await dbGetAll().catch(() => []);
+  // Read the reconciled timeline across both stores (R4); the normalized record
+  // is a superset, so the s.startTime / s.duration reads below are unchanged.
+  const sessions = await (window.cpGetAllSessions ? window.cpGetAllSessions() : dbGetAll()).catch(() => []);
 
   // Aggregate
   const counts = {}, lastSeen = {};
@@ -8178,6 +8203,10 @@ async function suggestNext() {
       req.onerror   = e => reject(e.target.error);
     }));
   }
+  // R4: expose the canonical (journal) store so the unified reader and JSON
+  // restore can reach it. This DB carries the richer shape (date, ts, indexes).
+  window.__cpStoreB_getAll = dbGetAll;
+  window.__cpStoreB_add    = dbAdd;
 
   // ── Helpers ────────────────────────────────────────────────────────────
   function fmtDuration(secs) {
@@ -8240,7 +8269,9 @@ async function suggestNext() {
 
   // ── Journal rendering ──────────────────────────────────────────────────
   function refreshJournal() {
-    dbGetAll().then(sessions => {
+    // Reconciled read across both stores (R4). mergeStores already returns
+    // newest-first, but sort defensively in case the fallback path is taken.
+    (window.cpGetAllSessions ? window.cpGetAllSessions() : dbGetAll()).then(sessions => {
       sessions.sort((a, b) => (b.ts || 0) - (a.ts || 0));
 
       const totalSecs = sessions.reduce((s, r) => s + (r.duration || 0), 0);
@@ -8306,6 +8337,64 @@ async function suggestNext() {
     document.body.removeChild(a); URL.revokeObjectURL(url);
   }
 
+  // ── JSON backup / restore (R4 — cross-device continuity seam) ───────────
+  // Backup exports the reconciled timeline across both stores; restore merges a
+  // backup into the canonical (journal) store, adding only sessions not already
+  // present (idempotent — re-importing the same file is a no-op).
+  function exportJSON() {
+    (window.cpGetAllSessions ? window.cpGetAllSessions() : dbGetAll()).then(sessions => {
+      const payload = {
+        app: 'charlie-parker-songbook',
+        kind: 'practice-journal-backup',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        sessions: sessions
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'cp_practice_backup.json';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      if (typeof showToast === 'function') showToast('⬇ Backed up ' + sessions.length + ' sessions', 'success');
+    }).catch(() => { if (typeof showToast === 'function') showToast('Backup failed', 'error'); });
+  }
+
+  function importJSON(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let parsed;
+      try { parsed = JSON.parse(reader.result); }
+      catch (e) { if (typeof showToast === 'function') showToast('Restore failed — not valid JSON', 'error'); return; }
+      const incoming = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.sessions) ? parsed.sessions : null);
+      if (!incoming) { if (typeof showToast === 'function') showToast('Restore failed — no sessions found', 'error'); return; }
+      const PS = window.PracticeStore;
+      dbGetAll().then(existing => {
+        const existingNorm = PS ? PS.dedupe(existing) : existing.slice();
+        const toAdd = [];
+        incoming.forEach(rec => {
+          const n = PS ? PS.normalizeSession(rec) : rec;
+          if (!n || !(n.duration > 0)) return;
+          const dup = PS
+            ? existingNorm.some(e => PS.isSameSession(e, n))
+            : existingNorm.some(e => e.tune === n.tune && e.ts === n.ts);
+          if (!dup) {
+            toAdd.push({ tune: n.tune, key: n.key, bpm: n.bpm, duration: n.duration, date: n.date, ts: n.ts });
+            existingNorm.push(n);
+          }
+        });
+        return Promise.all(toAdd.map(r => dbAdd(r).catch(() => {}))).then(() => toAdd.length);
+      }).then(added => {
+        refreshJournal();
+        if (typeof showToast === 'function') {
+          showToast(added ? ('⬆ Restored ' + added + ' new session' + (added === 1 ? '' : 's')) : 'Nothing new to restore', added ? 'success' : 'info');
+        }
+      }).catch(() => { if (typeof showToast === 'function') showToast('Restore failed', 'error'); });
+    };
+    reader.readAsText(file);
+  }
+
   // ── Weighted random pick ───────────────────────────────────────────────
   // Under-practiced tunes (0 sessions) get 4× the weight of well-practised ones (6+).
   function weightedPick(entries) {
@@ -8322,9 +8411,19 @@ async function suggestNext() {
   function init() {
     refreshJournal();
 
-    // CSV export
+    // CSV export — reconciled across both stores (R4)
     document.getElementById('pjExportBtn')?.addEventListener('click', () => {
-      dbGetAll().then(exportCSV).catch(() => {});
+      (window.cpGetAllSessions ? window.cpGetAllSessions() : dbGetAll()).then(exportCSV).catch(() => {});
+    });
+
+    // JSON backup / restore (R4)
+    document.getElementById('pjExportJsonBtn')?.addEventListener('click', exportJSON);
+    const importInput = document.getElementById('pjImportJsonInput');
+    document.getElementById('pjImportJsonBtn')?.addEventListener('click', () => importInput?.click());
+    importInput?.addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0];
+      importJSON(f);
+      e.target.value = ''; // allow re-importing the same file
     });
 
     // Start a session on Generate (fires after the existing render listener)
