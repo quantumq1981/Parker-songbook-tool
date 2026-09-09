@@ -174,7 +174,7 @@ h1{text-align:center;color:var(--accent);margin:12px 0;font-size:22px;font-famil
 h2{color:var(--accent2);font-size:15px;margin:8px 0 6px 0;}
 .card{background:linear-gradient(180deg, rgba(31,25,39,.96), rgba(21,17,27,.96));
   border:1px solid rgba(230,169,75,.28);border-radius:var(--radius-lg);
-  padding:16px;max-width:1200px;margin:0 auto 16px auto;
+  padding:16px;max-width:1200px;margin:0 auto 16px auto;position:relative;
   box-shadow:var(--glow-brass), 0 18px 40px rgba(0,0,0,.45);}
 
 /* ── Hero ──────────────────────────────────────────────────── */
@@ -1607,6 +1607,69 @@ body:not([data-active-mode]) .global-transport { display: none; }
 
 /* Hide legacy transport-related controls superseded by global bar */
 
+/* ── First-run guided tour (R3) ───────────────────────────── */
+.tour-btn {
+  position: absolute; top: 12px; right: 12px; z-index: 6;
+  background: var(--bg-2); color: var(--ink-dim);
+  border: 1px solid var(--barline); border-radius: 20px;
+  padding: 4px 11px; font-family: var(--font-mono); font-size: 11px;
+  font-weight: 600; letter-spacing: .3px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.tour-btn:hover { background: var(--panel-2); color: var(--ink); }
+.tour-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.tour-backdrop {
+  position: fixed; inset: 0; z-index: 9998;
+  background: rgba(6,4,10,.72);
+}
+/* Target lift: a bright ring so the highlighted control reads through the dim. */
+.tour-lift { box-shadow: 0 0 0 3px var(--accent), 0 0 0 9px rgba(0,0,0,.45);
+  border-radius: 8px; transition: box-shadow .2s ease; }
+.tour-card {
+  position: fixed; z-index: 10001; left: 50%; transform: translateX(-50%);
+  width: min(430px, calc(100vw - 28px));
+  background: var(--panel); border: 1px solid var(--legacy-purple);
+  border-radius: 12px; padding: 16px 18px; box-shadow: 0 12px 40px rgba(0,0,0,.6);
+}
+.tour-card.at-bottom { bottom: 18px; }
+.tour-card.at-top    { top: 18px; }
+.tour-card h3 { margin: 0 0 8px; font-family: var(--font-mono); font-size: 15px; color: var(--accent); }
+.tour-card p  { margin: 0 0 14px; font-size: 13px; line-height: 1.5; color: var(--ink); }
+.tour-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tour-dots { display: flex; gap: 5px; }
+.tour-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--barline); }
+.tour-dot.on { background: var(--accent); }
+.tour-actions { display: flex; gap: 6px; }
+.tour-actions button {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  border-radius: 7px; padding: 7px 14px; cursor: pointer; border: 1px solid var(--barline);
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.tour-skip { background: transparent; color: var(--ink-dim); }
+.tour-back { background: var(--bg-2); color: var(--ink-dim); }
+.tour-next { background: var(--indigo); color: #fff; border-color: var(--indigo); }
+.tour-skip:hover { color: var(--ink); }
+.tour-back:hover { color: var(--ink); }
+@media (max-width: 480px) { .tour-card { width: calc(100vw - 20px); padding: 14px; } }
+
+/* ── Per-tune reference recordings (R5) ───────────────────────── */
+.ref-row {
+  align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 6px 0 0; font-size: 11px; color: var(--ink-dim);
+}
+/* Outrank the [data-modes] reveal's display:revert (see nav.mode-nav note). */
+body[data-active-mode] .ref-row[data-modes] { display: flex; }
+.ref-label { font-weight: 700; letter-spacing: .3px; }
+.ref-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 14px; text-decoration: none;
+  background: var(--bg-2); border: 1px solid var(--barline); color: var(--ink);
+  font-size: 11px; font-weight: 600;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.ref-link:hover { background: var(--panel-2); border-color: var(--legacy-purple); }
+.ref-link:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
 </style>
 
 
@@ -1639,6 +1702,8 @@ body:not([data-active-mode]) .global-transport { display: none; }
   <p class="hero-tagline">66 Parker heads, a live guitar fretboard, and an AI resonance engine built for after-hours woodshedding.</p>
 </header>
 <main class="card" id="main-content" role="main" aria-label="Charlie Parker Songbook Trainer">
+  <button type="button" id="tourBtn" class="tour-btn" data-modes="all"
+          aria-haspopup="dialog" title="Take the guided tour">❓ Tour</button>
   <h2 id="main-heading" class="h-mode">Complete Bebop Songbook</h2>
   <div class="stats-bar" id="statsBar" data-modes="all" role="status" aria-live="polite" aria-label="Songbook statistics"></div>
 
@@ -1722,6 +1787,13 @@ body:not([data-active-mode]) .global-transport { display: none; }
       <span class="pj-streak" id="pjStreak"></span>
       <button class="controls btn-sec" id="pjExportBtn"
               style="margin-left:auto;font-size:11px;padding:3px 10px;">⬇ Export CSV</button>
+      <button class="controls btn-sec" id="pjExportJsonBtn"
+              title="Download a JSON backup of your practice history"
+              style="font-size:11px;padding:3px 10px;">⬇ Backup</button>
+      <button class="controls btn-sec" id="pjImportJsonBtn"
+              title="Restore practice history from a JSON backup (merges, never overwrites)"
+              style="font-size:11px;padding:3px 10px;">⬆ Restore</button>
+      <input type="file" id="pjImportJsonInput" accept="application/json,.json" hidden>
     </div>
     <table class="pj-table">
       <thead><tr>
@@ -1929,6 +2001,17 @@ body:not([data-active-mode]) .global-transport { display: none; }
               role="tab" aria-selected="false" aria-controls="alphatab-container"
               title="Guitar tablature rendered by AlphaTab — available for Omnibook tunes">𝄩 Tab</button>
     </div>
+  </div>
+
+  <!-- ── Per-tune reference recordings (R5): CSP-safe external search link-outs ── -->
+  <div class="ref-row" data-modes="learn practice" role="group" aria-label="Reference recordings">
+    <span class="ref-label">🔊 Hear the head:</span>
+    <a id="refYouTube" class="ref-link" target="_blank" rel="noopener noreferrer"
+       href="https://www.youtube.com/results?search_query=Charlie+Parker"
+       title="Search YouTube for a reference recording">▶ YouTube</a>
+    <a id="refSpotify" class="ref-link" target="_blank" rel="noopener noreferrer"
+       href="https://open.spotify.com/search/Charlie%20Parker"
+       title="Search Spotify for a reference recording">♫ Spotify</a>
   </div>
 
   <div id="sheet" class="sheet" data-modes="learn practice" role="tabpanel" aria-labelledby="atTabGrid">
@@ -2174,6 +2257,7 @@ body:not([data-active-mode]) .global-transport { display: none; }
 <script defer src="js/tempoRamp.js?v=7.4"></script>
 <script defer src="js/silentBars.js?v=7.4"></script>
 <script defer src="js/callResponse.js?v=7.4"></script>
+<script defer src="js/practiceStore.js?v=7.7"></script>
 <script>
 /* ============================================================
    SONGBOOK DATA — 22 TUNES (v6.0 data model preserved)
@@ -6234,6 +6318,21 @@ function dbGetAll() {
     req.onerror   = () => rej(req.error);
   }));
 }
+// R4: reconcile the two historically-separate practice stores. Expose this
+// store's reader, and a unified reader that merges BOTH stores through the pure,
+// tested PracticeStore.mergeStores() so every dashboard shows one deduplicated
+// timeline instead of a store-specific slice. Reads lazily so it does not care
+// which module's globals were assigned first.
+window.__cpStoreA_getAll = dbGetAll;
+window.cpGetAllSessions = function () {
+  const read = fn => (typeof fn === 'function' ? Promise.resolve().then(fn) : Promise.resolve([]));
+  return Promise.all([
+    read(window.__cpStoreA_getAll).catch(() => []),
+    read(window.__cpStoreB_getAll).catch(() => [])
+  ]).then(([a, b]) => window.PracticeStore
+    ? window.PracticeStore.mergeStores(a || [], b || [])
+    : (a || []).concat(b || []));
+};
 function dbClear() {
   return openDB().then(db => new Promise((res, rej) => {
     const tx = db.transaction('sessions','readwrite');
@@ -6291,7 +6390,9 @@ function fmtDur(s) {
 
 // ── Dashboard renderer ────────────────────────────────────────────────────────
 async function refreshDashboard() {
-  const sessions = await dbGetAll().catch(() => []);
+  // Read the reconciled timeline across both stores (R4); the normalized record
+  // is a superset, so the s.startTime / s.duration reads below are unchanged.
+  const sessions = await (window.cpGetAllSessions ? window.cpGetAllSessions() : dbGetAll()).catch(() => []);
 
   // Aggregate
   const counts = {}, lastSeen = {};
@@ -8131,6 +8232,10 @@ async function suggestNext() {
       req.onerror   = e => reject(e.target.error);
     }));
   }
+  // R4: expose the canonical (journal) store so the unified reader and JSON
+  // restore can reach it. This DB carries the richer shape (date, ts, indexes).
+  window.__cpStoreB_getAll = dbGetAll;
+  window.__cpStoreB_add    = dbAdd;
 
   // ── Helpers ────────────────────────────────────────────────────────────
   function fmtDuration(secs) {
@@ -8193,7 +8298,9 @@ async function suggestNext() {
 
   // ── Journal rendering ──────────────────────────────────────────────────
   function refreshJournal() {
-    dbGetAll().then(sessions => {
+    // Reconciled read across both stores (R4). mergeStores already returns
+    // newest-first, but sort defensively in case the fallback path is taken.
+    (window.cpGetAllSessions ? window.cpGetAllSessions() : dbGetAll()).then(sessions => {
       sessions.sort((a, b) => (b.ts || 0) - (a.ts || 0));
 
       const totalSecs = sessions.reduce((s, r) => s + (r.duration || 0), 0);
@@ -8259,6 +8366,64 @@ async function suggestNext() {
     document.body.removeChild(a); URL.revokeObjectURL(url);
   }
 
+  // ── JSON backup / restore (R4 — cross-device continuity seam) ───────────
+  // Backup exports the reconciled timeline across both stores; restore merges a
+  // backup into the canonical (journal) store, adding only sessions not already
+  // present (idempotent — re-importing the same file is a no-op).
+  function exportJSON() {
+    (window.cpGetAllSessions ? window.cpGetAllSessions() : dbGetAll()).then(sessions => {
+      const payload = {
+        app: 'charlie-parker-songbook',
+        kind: 'practice-journal-backup',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        sessions: sessions
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'cp_practice_backup.json';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      if (typeof showToast === 'function') showToast('⬇ Backed up ' + sessions.length + ' sessions', 'success');
+    }).catch(() => { if (typeof showToast === 'function') showToast('Backup failed', 'error'); });
+  }
+
+  function importJSON(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let parsed;
+      try { parsed = JSON.parse(reader.result); }
+      catch (e) { if (typeof showToast === 'function') showToast('Restore failed — not valid JSON', 'error'); return; }
+      const incoming = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.sessions) ? parsed.sessions : null);
+      if (!incoming) { if (typeof showToast === 'function') showToast('Restore failed — no sessions found', 'error'); return; }
+      const PS = window.PracticeStore;
+      dbGetAll().then(existing => {
+        const existingNorm = PS ? PS.dedupe(existing) : existing.slice();
+        const toAdd = [];
+        incoming.forEach(rec => {
+          const n = PS ? PS.normalizeSession(rec) : rec;
+          if (!n || !(n.duration > 0)) return;
+          const dup = PS
+            ? existingNorm.some(e => PS.isSameSession(e, n))
+            : existingNorm.some(e => e.tune === n.tune && e.ts === n.ts);
+          if (!dup) {
+            toAdd.push({ tune: n.tune, key: n.key, bpm: n.bpm, duration: n.duration, date: n.date, ts: n.ts });
+            existingNorm.push(n);
+          }
+        });
+        return Promise.all(toAdd.map(r => dbAdd(r).catch(() => {}))).then(() => toAdd.length);
+      }).then(added => {
+        refreshJournal();
+        if (typeof showToast === 'function') {
+          showToast(added ? ('⬆ Restored ' + added + ' new session' + (added === 1 ? '' : 's')) : 'Nothing new to restore', added ? 'success' : 'info');
+        }
+      }).catch(() => { if (typeof showToast === 'function') showToast('Restore failed', 'error'); });
+    };
+    reader.readAsText(file);
+  }
+
   // ── Weighted random pick ───────────────────────────────────────────────
   // Under-practiced tunes (0 sessions) get 4× the weight of well-practised ones (6+).
   function weightedPick(entries) {
@@ -8275,9 +8440,19 @@ async function suggestNext() {
   function init() {
     refreshJournal();
 
-    // CSV export
+    // CSV export — reconciled across both stores (R4)
     document.getElementById('pjExportBtn')?.addEventListener('click', () => {
-      dbGetAll().then(exportCSV).catch(() => {});
+      (window.cpGetAllSessions ? window.cpGetAllSessions() : dbGetAll()).then(exportCSV).catch(() => {});
+    });
+
+    // JSON backup / restore (R4)
+    document.getElementById('pjExportJsonBtn')?.addEventListener('click', exportJSON);
+    const importInput = document.getElementById('pjImportJsonInput');
+    document.getElementById('pjImportJsonBtn')?.addEventListener('click', () => importInput?.click());
+    importInput?.addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0];
+      importJSON(f);
+      e.target.value = ''; // allow re-importing the same file
     });
 
     // Start a session on Generate (fires after the existing render listener)
@@ -8907,6 +9082,9 @@ async function suggestNext() {
   // (index.html:5132) from double-firing chord-grid playback in Practice/Improvise modes.
   document.addEventListener('keydown', e => {
     const t = e.target;
+    // While the guided tour is open, let it own Space/Escape (and don't start
+    // playback behind the dimmed overlay).
+    if (document.querySelector('.tour-backdrop')) return;
     // Same widened guard as legacy kbShortcuts — anything with its own Enter/Space
     // handler (details summary, drop-zone role=button, tab list) must own the key.
     if (t && t.closest && t.closest('input, select, textarea, [contenteditable="true"], summary, [role="button"], [role="tab"]')) return;
@@ -9042,6 +9220,150 @@ async function suggestNext() {
     if (location.hash && location.hash.length > 1) applyHash();
     else writeHash();
   });
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Guided tour (R3) — a first-run, localStorage-gated walkthrough of the four
+   workflow modes and the global transport. Additive: dims the page, lifts the
+   referenced control with a ring, and shows a stepper card. Auto-starts once
+   after the audio-consent gate clears; reopenable anytime via #tourBtn.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function guidedTour() {
+  const SEEN_KEY = 'cp_tour_seen_v76';
+  const STEPS = [
+    { title: 'Welcome to the Bebop Practice Studio',
+      body: '67 Charlie Parker heads with a live fretboard, notation, an AI resonance engine, and practice journaling. Here is the 20-second tour.' },
+    { title: '1 · Choose your workspace', sel: '.mode-nav',
+      body: 'Four modes — Learn, Practice, Improvise, Journal — each reveals only the tools that fit what you are doing. Switch anytime; the app remembers your last mode.' },
+    { title: '2 · Find a tune', sel: '.search-row',
+      body: 'Search all 67 tunes by name, or open Advanced Filters to narrow by form, difficulty, or style.' },
+    { title: '3 · Read it your way', sel: '.sheet-view-header', mode: 'learn',
+      body: 'This switcher flips the lead sheet between an interactive Chord Grid, standard Notation, and guitar Tab — for whatever tune and key you have selected.' },
+    { title: '4 · One transport for everything', sel: '.global-transport', cardPos: 'top',
+      body: 'Play, stop, loop, and set the tempo from the sticky bar at the bottom. It drives whichever mode you are in.' },
+    { title: "You're set",
+      body: 'Reopen this tour anytime with the ❓ button up top. Tip: your mode, tune, key, and view all live in the page URL — bookmark or share a link to land right back here.' }
+  ];
+
+  let idx = 0, backdrop = null, card = null, lifted = null, prevPos = '', prevZ = '', lastFocus = null;
+
+  function lift(el) {
+    unlift();
+    if (!el) return;
+    lifted = el; prevPos = el.style.position; prevZ = el.style.zIndex;
+    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+    el.style.zIndex = '10000';
+    el.classList.add('tour-lift');
+    try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+  }
+  function unlift() {
+    if (!lifted) return;
+    lifted.classList.remove('tour-lift');
+    lifted.style.position = prevPos;
+    lifted.style.zIndex = prevZ;
+    lifted = null;
+  }
+
+  function render() {
+    const step = STEPS[idx];
+    if (step.mode && window.__cpApplyMode) { try { window.__cpApplyMode(step.mode); } catch (e) {} }
+    lift(step.sel ? document.querySelector(step.sel) : null);
+    card.className = 'tour-card ' + (step.cardPos === 'top' ? 'at-top' : 'at-bottom');
+    const dots = STEPS.map((_, i) => `<span class="tour-dot${i === idx ? ' on' : ''}"></span>`).join('');
+    const last = idx === STEPS.length - 1;
+    card.innerHTML =
+      `<h3>${step.title}</h3><p>${step.body}</p>` +
+      `<div class="tour-foot"><div class="tour-dots">${dots}</div><div class="tour-actions">` +
+      (idx > 0 ? `<button type="button" class="tour-back">Back</button>`
+               : `<button type="button" class="tour-skip">Skip</button>`) +
+      `<button type="button" class="tour-next">${last ? 'Done' : 'Next'}</button>` +
+      `</div></div>`;
+    card.querySelector('.tour-next').addEventListener('click', () => { if (last) end(); else { idx++; render(); } });
+    const back = card.querySelector('.tour-back'); if (back) back.addEventListener('click', () => { idx--; render(); });
+    const skip = card.querySelector('.tour-skip'); if (skip) skip.addEventListener('click', end);
+    card.querySelector('.tour-next').focus();
+  }
+
+  function start() {
+    if (backdrop) return;                       // already open
+    lastFocus = document.activeElement;
+    idx = 0;
+    backdrop = document.createElement('div');
+    backdrop.className = 'tour-backdrop';
+    card = document.createElement('div');
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
+    card.setAttribute('aria-label', 'Guided tour');
+    document.body.appendChild(backdrop);
+    document.body.appendChild(card);
+    document.addEventListener('keydown', onKey, true);
+    render();
+  }
+  function end() {
+    unlift();
+    if (backdrop) { backdrop.remove(); backdrop = null; }
+    if (card) { card.remove(); card = null; }
+    document.removeEventListener('keydown', onKey, true);
+    try { localStorage.setItem(SEEN_KEY, '1'); } catch (e) {}
+    try { if (lastFocus && lastFocus.focus) lastFocus.focus(); } catch (e) {}
+  }
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); end(); }
+    else if (e.key === 'ArrowRight' && idx < STEPS.length - 1) { idx++; render(); }
+    else if (e.key === 'ArrowLeft'  && idx > 0)                { idx--; render(); }
+  }
+
+  // Restart affordance — always available.
+  const btn = document.getElementById('tourBtn');
+  if (btn) btn.addEventListener('click', start);
+
+  // First-run auto-start: only once the audio-consent gate has cleared, so the
+  // two overlays never stack.
+  function maybeAutoStart() {
+    let seen = false;
+    try { seen = !!localStorage.getItem(SEEN_KEY); } catch (e) {}
+    if (seen) return;
+    if (document.body.classList.contains('audio-ready')) { setTimeout(start, 450); return; }
+    const mo = new MutationObserver(() => {
+      if (document.body.classList.contains('audio-ready')) { mo.disconnect(); setTimeout(start, 450); }
+    });
+    mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
+  window.addEventListener('load', maybeAutoStart);
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Reference recordings (R5) — keep the YouTube / Spotify search links pointed at
+   the currently selected tune. CSP-safe by design: these are external
+   <a target="_blank"> navigations, not embeds — no CSP loosening, nothing
+   fetched into the page, and the app's "audio stays local" posture is intact.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function referenceLinks() {
+  const yt = document.getElementById('refYouTube');
+  const sp = document.getElementById('refSpotify');
+  if (!yt && !sp) return;
+  const tuneSelEl = document.getElementById('tuneSel');
+
+  function currentName() {
+    const raw = tuneSelEl ? tuneSelEl.value : '';
+    return (typeof canonicalTuneTitle === 'function' && raw) ? canonicalTuneTitle(raw) : raw;
+  }
+  function update() {
+    const name = currentName();
+    const q = encodeURIComponent('Charlie Parker ' + (name || '')).trim();
+    if (yt) {
+      yt.href = 'https://www.youtube.com/results?search_query=' + q;
+      yt.title = name ? ('Search YouTube for “' + name + '”') : 'Search YouTube for a reference recording';
+    }
+    if (sp) {
+      sp.href = 'https://open.spotify.com/search/' + q;
+      sp.title = name ? ('Search Spotify for “' + name + '”') : 'Search Spotify for a reference recording';
+    }
+  }
+
+  if (tuneSelEl) tuneSelEl.addEventListener('change', update, { passive: true });
+  window.addEventListener('load', update);
+  update();
 })();
 
 </script>

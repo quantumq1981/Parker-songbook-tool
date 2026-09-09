@@ -326,6 +326,70 @@ no JS logic touched.
   (`__cpGetView` / `__cpApplyView` + `.at-view-tab` click listeners) keep working
   untouched. Verified by headless Chromium screenshot.
 
+### 11. First-Run Guided Tour v7.7 (R3 — UX audit follow-up)
+
+A dismissible, six-step walkthrough that orients new users to the four workflow
+modes, tune search, the lead-sheet view switcher, and the global transport.
+Additive overlay only (CSS + one markup button + one JS IIFE); no pipeline JS
+touched.
+
+- Auto-starts once — gated on `localStorage` key `cp_tour_seen_v76` — and only
+  after the audio-consent gate clears (a `MutationObserver` on `body.audio-ready`)
+  so the two overlays never stack. Reopenable anytime via the `#tourBtn` (❓ Tour,
+  anchored top-right of the now-`position:relative` `.card`).
+- Built in JS at runtime: a `.tour-backdrop` dims the page, the referenced control
+  is "lifted" with a ring (`.tour-lift`, save/restore of inline `position`+`zIndex`
+  so sticky elements like `.mode-nav` / `.global-transport` are not disturbed),
+  and a `.tour-card` shows step title/body + progress dots + Back/Next/Skip.
+- Accessibility: `role="dialog"` + `aria-modal`, `Esc` closes, `←/→` navigate,
+  focus moves to the primary button and is restored on close. A one-line guard in
+  the v7.3 Space/Escape transport handler yields those keys while the tour is open.
+- All copy is static (no dynamic `innerHTML`). Step 4 references `.sheet-view-header`
+  and switches to Learn mode first (`window.__cpApplyMode`).
+
+### 12. Practice-Journal Store Reconciliation v7.7 (R4 — UX audit follow-up)
+
+Resolves the long-standing two-database divergence (`cp_practice_v1` drills vs
+`cp_practice_db` journal) that made the two dashboards disagree, and adds a
+cross-device continuity seam.
+
+- **Pure, headless-tested core** `js/practiceStore.js`: `normalizeSession()`
+  coerces both record shapes into one superset (keeps drills' `startTime` AND
+  journal's `ts`/`date`), and `mergeStores()`/`dedupe()` collapse a session logged
+  in both stores into one via **interval-overlap** matching (same tune +
+  overlapping `[startTime, ts]`), keeping the longer-duration record. "Migrate,
+  don't drop": a session in only one store survives; idempotent. Covered by
+  `tests/practiceStore.test.js`.
+- **Unified read model** `window.cpGetAllSessions()` merges both stores through
+  the tested merger; both `refreshDashboard` (drills) and `refreshJournal`
+  (journal) — and CSV export — now read it, so every view shows one reconciled
+  timeline. Live write paths are deliberately left untouched (lower risk than a
+  physical migration); the normalized superset keeps every existing field read
+  working, and both stores expose their reader (`__cpStoreA_getAll` /
+  `__cpStoreB_getAll` + `__cpStoreB_add`) on `window`.
+- **JSON Backup / Restore** (`#pjExportJsonBtn` / `#pjImportJsonBtn`): backup dumps
+  the reconciled timeline; restore merges a backup into the canonical journal
+  store, adding only sessions not already present (idempotent). Download reuses the
+  existing proven `Blob` + `a.download` path — **no CSP change**.
+
+### 13. Per-Tune Reference Recordings v7.7 (R5 — UX audit follow-up)
+
+A "🔊 Hear the head" affordance under the lead sheet (Learn / Practice) with
+YouTube and Spotify search link-outs for the current tune.
+
+- **CSP-safe by design**: external `<a target="_blank" rel="noopener noreferrer">`
+  navigations, not embeds. The app's locked-down CSP (`default-src 'self'`, no
+  `frame-src`) and "audio stays local" posture are untouched — nothing is fetched
+  into the page and no CSP directive is loosened. (An embedded player would require
+  both CSP loosening and curated per-tune IDs; deliberately not done — noted as a
+  future option.)
+- Needs no curated data: `referenceLinks()` rebuilds each `href` from
+  `canonicalTuneTitle(tuneSel.value)` on load and on every tune change
+  (`…/results?search_query=` and `open.spotify.com/search/` with an
+  `encodeURIComponent`d query), so it works for all 67 tunes.
+- `.ref-row` uses the same `body[data-active-mode] .ref-row[data-modes]{display:flex}`
+  specificity trick as R2's header to survive the progressive-disclosure cascade.
+
 ---
 
 ## Files Modified / Added
@@ -342,6 +406,8 @@ no JS logic touched.
 | `manifest.json` | PWA manifest (name, icons, display mode) |
 | `icons/icon.svg` | Treble clef SVG app icon |
 | `tests/practiceEnhancements.test.js` | Unit tests for pitchScoring, tempoRamp, silentBars, callResponse |
+| `js/practiceStore.js` | Pure practice-session reconciliation — normalizes both store shapes, merges + dedupes into one timeline (R4) |
+| `tests/practiceStore.test.js` | Unit tests for practiceStore normalize/merge/dedupe/idempotency |
 | `CLAUDE.md` | This file |
 
 ---
@@ -397,6 +463,7 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | **7.4** | **2026-08-21** | **Real-time practice enhancements** — tempo ramp, silent bars, look-ahead guide tones, beat pulse, call & response, stand mode, per-chorus modulation, pitch scoring |
 | **7.5** | **2026-09-09** | **Deep-link routing (R1)** — `{mode, tune, key, view}` serialized to `location.hash`; bookmarkable, refresh-durable, shareable state; router-not-replacer, `+128 / −0` in `index.html` |
 | **7.6** | **2026-09-09** | **Two-tier nav disambiguation (R2)** — lead-sheet view tabs demoted to a labeled segmented control subordinate to the mode nav; `#sheet` given `role="tabpanel"`; CSS + markup only |
+| **7.7** | **2026-09-09** | **R3+R4+R5** — first-run guided tour; practice-journal store reconciliation (`js/practiceStore.js`) + JSON backup/restore; per-tune YouTube/Spotify reference link-outs (CSP-safe) |
 
 ---
 
