@@ -390,6 +390,33 @@ YouTube and Spotify search link-outs for the current tune.
 - `.ref-row` uses the same `body[data-active-mode] .ref-row[data-modes]{display:flex}`
   specificity trick as R2's header to survive the progressive-disclosure cascade.
 
+### 14. Uploaded Reference Audio v7.8 (R5.1 — user request)
+
+Extends R5 so a user can attach **their own MP3** as a tune's reference recording
+and play it inline — not just search external services.
+
+- **Per-tune, persistent, device-local:** an "⬆ Upload MP3" control stores the
+  picked file (as a Blob) in a dedicated IndexedDB database `cp_reference_audio`
+  (store `clips`, keyed by canonical tune name — one clip per tune, replace on
+  re-upload). On tune change (including R1 deep-link / prefs restore, which
+  dispatch `change`) the clip for that tune is loaded and shown in a native
+  `<audio controls>`; a ✕ Remove button deletes it. Nothing is uploaded anywhere.
+- **CSP-safe:** playback uses a `blob:` object URL, already permitted by the
+  page CSP's `media-src 'self' blob:` — **no CSP change**. `data:` URLs are
+  deliberately avoided (not in `media-src`). Object URLs are revoked on every
+  swap/clear to avoid leaks; a stale async read is ignored via a `_loadedTune`
+  guard.
+- **Graceful degradation:** if IndexedDB is unavailable (e.g. private mode) the
+  clip still plays for the session, with a toast that it could not be saved.
+- **Pure, tested validation:** `js/referenceAudio.js` `isAcceptableAudio()` gates
+  by MIME type *or* extension (empty-type `.mp3` accepted), rejects non-audio,
+  empty, and oversized (>30 MB) files. `tests/referenceAudio.test.js` covers all
+  branches. DOM + IndexedDB wiring stays inline (matching the practiceStore
+  pure-core / inline-IDB split).
+- `.ref-player-row` is revealed only in-mode AND when a clip exists via
+  `body[data-active-mode] .ref-player-row[data-modes]:not(.ra-empty){display:flex}`,
+  so an empty player never occupies space.
+
 ---
 
 ## Files Modified / Added
@@ -407,6 +434,8 @@ YouTube and Spotify search link-outs for the current tune.
 | `icons/icon.svg` | Treble clef SVG app icon |
 | `tests/practiceEnhancements.test.js` | Unit tests for pitchScoring, tempoRamp, silentBars, callResponse |
 | `js/practiceStore.js` | Pure practice-session reconciliation — normalizes both store shapes, merges + dedupes into one timeline (R4) |
+| `js/referenceAudio.js` | Pure validation for user-uploaded reference audio (accept/reject by type, extension, size) (R5.1) |
+| `tests/referenceAudio.test.js` | Unit tests for referenceAudio.isAcceptableAudio |
 | `tests/practiceStore.test.js` | Unit tests for practiceStore normalize/merge/dedupe/idempotency |
 | `CLAUDE.md` | This file |
 
@@ -464,6 +493,7 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | **7.5** | **2026-09-09** | **Deep-link routing (R1)** — `{mode, tune, key, view}` serialized to `location.hash`; bookmarkable, refresh-durable, shareable state; router-not-replacer, `+128 / −0` in `index.html` |
 | **7.6** | **2026-09-09** | **Two-tier nav disambiguation (R2)** — lead-sheet view tabs demoted to a labeled segmented control subordinate to the mode nav; `#sheet` given `role="tabpanel"`; CSS + markup only |
 | **7.7** | **2026-09-09** | **R3+R4+R5** — first-run guided tour; practice-journal store reconciliation (`js/practiceStore.js`) + JSON backup/restore; per-tune YouTube/Spotify reference link-outs (CSP-safe) |
+| **7.8** | **2026-09-09** | **R5.1** — upload your own MP3 as a per-tune reference recording; stored device-local per tune in IndexedDB, played inline via `blob:` (`js/referenceAudio.js`) |
 
 ---
 

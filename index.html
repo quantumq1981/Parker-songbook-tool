@@ -1670,6 +1670,16 @@ body[data-active-mode] .ref-row[data-modes] { display: flex; }
 .ref-link:hover { background: var(--panel-2); border-color: var(--legacy-purple); }
 .ref-link:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
+/* Uploaded reference-audio player row (R5.1). Shown only in-mode AND when a clip
+   exists — JS toggles .ra-empty, so an empty row never occupies space. */
+.ref-player-row { align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 0; }
+body[data-active-mode] .ref-player-row[data-modes]:not(.ra-empty) { display: flex; }
+#refPlayer { height: 34px; max-width: 100%; vertical-align: middle; }
+.ref-clip-name {
+  font-size: 11px; color: var(--ink-dim); max-width: 200px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
 </style>
 
 
@@ -2012,6 +2022,18 @@ body[data-active-mode] .ref-row[data-modes] { display: flex; }
     <a id="refSpotify" class="ref-link" target="_blank" rel="noopener noreferrer"
        href="https://open.spotify.com/search/Charlie%20Parker"
        title="Search Spotify for a reference recording">♫ Spotify</a>
+    <button id="refUploadBtn" class="ref-link" type="button"
+            title="Attach your own MP3 as this tune's reference recording (kept on this device)">⬆ Upload MP3</button>
+    <input type="file" id="refAudioInput" accept="audio/*,.mp3,.m4a,.aac,.ogg,.wav,.flac" hidden>
+  </div>
+
+  <!-- ── Uploaded per-tune reference audio player (R5.1); hidden until a clip exists ── -->
+  <div class="ref-player-row ra-empty" id="refPlayerRow" data-modes="learn practice"
+       role="group" aria-label="Uploaded reference recording">
+    <audio id="refPlayer" controls preload="metadata" aria-label="Reference recording playback"></audio>
+    <span class="ref-clip-name" id="refClipName"></span>
+    <button id="refRemoveBtn" class="ref-link" type="button"
+            title="Remove this tune's uploaded reference audio">✕ Remove</button>
   </div>
 
   <div id="sheet" class="sheet" data-modes="learn practice" role="tabpanel" aria-labelledby="atTabGrid">
@@ -2257,6 +2279,7 @@ body[data-active-mode] .ref-row[data-modes] { display: flex; }
 <script defer src="js/tempoRamp.js?v=7.4"></script>
 <script defer src="js/silentBars.js?v=7.4"></script>
 <script defer src="js/callResponse.js?v=7.4"></script>
+<script defer src="js/referenceAudio.js?v=7.8"></script>
 <script defer src="js/practiceStore.js?v=7.7"></script>
 <script>
 /* ============================================================
@@ -9364,6 +9387,130 @@ async function suggestNext() {
   if (tuneSelEl) tuneSelEl.addEventListener('change', update, { passive: true });
   window.addEventListener('load', update);
   update();
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Uploaded reference audio (R5.1) — attach your own MP3 as a tune's reference
+   recording. The clip is stored per-tune in IndexedDB (as a Blob) and replayed
+   through a blob: object URL, which the page CSP already permits
+   (media-src 'self' blob:). Nothing leaves the device.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function referenceAudio() {
+  const uploadBtn = document.getElementById('refUploadBtn');
+  const input     = document.getElementById('refAudioInput');
+  const row       = document.getElementById('refPlayerRow');
+  const player    = document.getElementById('refPlayer');
+  const nameEl    = document.getElementById('refClipName');
+  const removeBtn = document.getElementById('refRemoveBtn');
+  if (!uploadBtn || !input || !row || !player) return;
+
+  const DB_NAME = 'cp_reference_audio', DB_VER = 1, STORE = 'clips';
+  const tuneSelEl = document.getElementById('tuneSel');
+  let _db = null, _url = null, _loadedTune = null;
+
+  function currentTune() {
+    const raw = tuneSelEl ? tuneSelEl.value : '';
+    return (typeof canonicalTuneTitle === 'function' && raw) ? canonicalTuneTitle(raw) : raw;
+  }
+  function toast(msg, kind) { if (typeof showToast === 'function') showToast(msg, kind || 'info'); }
+
+  function dbOpen() {
+    if (_db) return Promise.resolve(_db);
+    return new Promise((resolve, reject) => {
+      let req;
+      try { req = indexedDB.open(DB_NAME, DB_VER); }
+      catch (e) { return reject(e); }
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'tune' });
+      };
+      req.onsuccess = e => { _db = e.target.result; resolve(_db); };
+      req.onerror   = () => reject(req.error);
+    });
+  }
+  function dbGet(tune) {
+    return dbOpen().then(db => new Promise((res, rej) => {
+      const r = db.transaction(STORE, 'readonly').objectStore(STORE).get(tune);
+      r.onsuccess = () => res(r.result || null);
+      r.onerror   = () => rej(r.error);
+    }));
+  }
+  function dbPut(rec) {
+    return dbOpen().then(db => new Promise((res, rej) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put(rec);
+      tx.oncomplete = () => res();
+      tx.onerror    = () => rej(tx.error);
+    }));
+  }
+  function dbDelete(tune) {
+    return dbOpen().then(db => new Promise((res, rej) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).delete(tune);
+      tx.oncomplete = () => res();
+      tx.onerror    = () => rej(tx.error);
+    }));
+  }
+
+  function clearPlayer() {
+    if (_url) { try { URL.revokeObjectURL(_url); } catch (e) {} _url = null; }
+    try { player.pause(); } catch (e) {}
+    player.removeAttribute('src');
+    try { player.load(); } catch (e) {}
+    if (nameEl) nameEl.textContent = '';
+    row.classList.add('ra-empty');
+  }
+  function showClip(blob, name) {
+    if (_url) { try { URL.revokeObjectURL(_url); } catch (e) {} }
+    _url = URL.createObjectURL(blob);
+    player.src = _url;
+    if (nameEl) nameEl.textContent = name || 'Reference recording';
+    row.classList.remove('ra-empty');
+  }
+
+  function loadForTune(tune) {
+    _loadedTune = tune;
+    if (!tune) { clearPlayer(); return; }
+    dbGet(tune).then(rec => {
+      if (_loadedTune !== tune) return;         // tune changed again mid-read
+      if (rec && rec.blob) showClip(rec.blob, rec.name);
+      else clearPlayer();
+    }).catch(() => clearPlayer());
+  }
+
+  // Upload
+  uploadBtn.addEventListener('click', () => input.click());
+  input.addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';                         // allow re-picking the same file
+    if (!file) return;
+    const check = window.ReferenceAudio
+      ? window.ReferenceAudio.isAcceptableAudio(file)
+      : { ok: /^audio\//.test(file.type || '') || /\.mp3$/i.test(file.name || '') };
+    if (!check.ok) { toast(check.reason || 'Unsupported file.', 'error'); return; }
+    const tune = currentTune();
+    if (!tune) { toast('Select a tune first.', 'error'); return; }
+    const rec = { tune, name: file.name, type: file.type || 'audio/mpeg', blob: file, addedAt: Date.now() };
+    dbPut(rec).then(() => {
+      if (currentTune() === tune) showClip(file, file.name);
+      toast('🔊 Reference audio saved for “' + tune + '”', 'success');
+    }).catch(() => {
+      if (currentTune() === tune) showClip(file, file.name);   // still play this session
+      toast('Playing this session only — could not save to this device.', 'info');
+    });
+  });
+
+  // Remove
+  if (removeBtn) removeBtn.addEventListener('click', () => {
+    const tune = currentTune();
+    clearPlayer();
+    if (tune) dbDelete(tune).then(() => toast('Removed reference audio for “' + tune + '”', 'info')).catch(() => {});
+  });
+
+  // Follow tune selection (also covers R1 deep-link + prefs, which dispatch 'change').
+  if (tuneSelEl) tuneSelEl.addEventListener('change', () => loadForTune(currentTune()), { passive: true });
+  window.addEventListener('load', () => loadForTune(currentTune()));
+  loadForTune(currentTune());
 })();
 
 </script>
