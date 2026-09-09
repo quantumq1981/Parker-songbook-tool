@@ -295,6 +295,37 @@ or render logic touched.
   work wrapped in `try/catch`. Back/forward is a deliberate non-goal (avoids a back-stack entry per
   key-cycle).
 
+### 10. Two-Tier Navigation Disambiguation v7.6 (R2 — UX audit follow-up)
+
+Resolves the "is this a fifth mode?" ambiguity between the workflow `mode-nav`
+(Learn / Practice / Improvise / Journal) and the lead-sheet view tabs
+(Chord Grid / Notation / Tab), which previously rendered as visual peers — both
+`role="tablist"`, both rounded-pill rows at similar altitude. CSS + markup only,
+no JS logic touched.
+
+- **Segmented control, not a peer tablist:** the view tabs are wrapped in a new
+  `.sheet-view-header` bar carrying a `"Lead sheet view"` label + a compact
+  connected `.seg-control` (single bordered track, dividers between buttons,
+  squared bottom to fuse into the panel below). Deliberately quieter and smaller
+  than the large uppercase gradient mode pills, so it reads as a subordinate of
+  the active mode.
+- **Cascade correctness:** `data-modes="learn practice"` moved from the inner
+  `#atViewTabs` to the `.sheet-view-header` wrapper, freeing the inner control
+  from the progressive-disclosure cascade (its `display:inline-flex` now applies
+  unconditionally). The header's in-mode `display:flex` is set via
+  `body[data-active-mode] .sheet-view-header[data-modes]` (~0,3,1) to outrank the
+  `[data-modes]` reveal's `display:revert` (~0,2,1) — the same specificity trick
+  documented for `nav.mode-nav` and the `.playback-bar[data-modes]` stub.
+- **ARIA:** `#sheet` is now a proper `role="tabpanel"` (`aria-labelledby="atTabGrid"`)
+  — both view-tab targets are tabpanels (`#alphatab-container` already was); the
+  view `role="tablist"` is labelled by the visible `#sheetViewLabel`. The
+  `mode-nav` remains a landmark-scoped tablist over `#main-content` (progressive
+  disclosure across one shared region, not classic swappable panels), left as-is.
+- **Compatibility:** all button ids / `data-view` / `.at-view-tab` classes are
+  unchanged, so `switchView`, `atNotInit`, and the R1 deep-link router
+  (`__cpGetView` / `__cpApplyView` + `.at-view-tab` click listeners) keep working
+  untouched. Verified by headless Chromium screenshot.
+
 ---
 
 ## Files Modified / Added
@@ -365,6 +396,7 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | 7.3 | 2026-07-21 | UX refactor (PR #148) — workflow modes, unified global transport, standardized `aria-pressed` toggles, duplicate-ID fix, prerequisite hints, toast aria-live tiering |
 | **7.4** | **2026-08-21** | **Real-time practice enhancements** — tempo ramp, silent bars, look-ahead guide tones, beat pulse, call & response, stand mode, per-chorus modulation, pitch scoring |
 | **7.5** | **2026-09-09** | **Deep-link routing (R1)** — `{mode, tune, key, view}` serialized to `location.hash`; bookmarkable, refresh-durable, shareable state; router-not-replacer, `+128 / −0` in `index.html` |
+| **7.6** | **2026-09-09** | **Two-tier nav disambiguation (R2)** — lead-sheet view tabs demoted to a labeled segmented control subordinate to the mode nav; `#sheet` given `role="tabpanel"`; CSS + markup only |
 
 ---
 
