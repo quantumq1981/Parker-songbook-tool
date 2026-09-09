@@ -703,8 +703,8 @@ body{padding:8px;}
   .at-ctrl-hint { display: none; }
   .at-main-ctrl input[type=range] { width: 70px; }
 
-  /* View tabs — slightly smaller padding */
-  .at-view-tab { padding: 5px 12px; font-size: 11px; }
+  /* View switcher — slightly tighter on phones */
+  .seg-control .at-view-tab { padding: 5px 11px; font-size: 11px; }
 
   /* Notation score — shorter on phones to leave room for chord grid */
   #atMainScore { min-height: 180px; }
@@ -1010,18 +1010,48 @@ details.panel.heads-panel summary { color: var(--legacy-purple-lt); }
   -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
 .hd-track-btn.hd-tb-active { background:var(--legacy-purple); color:#fff; border-color:var(--legacy-purple-lt); }
 
-/* ── Main lead-sheet view tabs (Chord Grid / Notation / Tab) ─────────────── */
-.at-view-tabs { display:flex; gap:5px; margin-bottom:6px; flex-wrap:wrap; }
-.at-view-tab {
-  padding:5px 15px; font-size:12px; border-radius:20px; cursor:pointer;
-  border:1px solid #444; background:#1a1a2e; color:var(--ink-dim);
-  font-family:inherit; font-weight:500; letter-spacing:.01em;
-  transition:background .15s, color .15s, border-color .15s;
-  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+/* ── Lead-sheet view switcher (Chord Grid / Notation / Tab) ───────────────
+   R2: this is a SUBORDINATE control of the active workflow mode, not a second
+   mode-nav. It is rendered as a small labeled header bar carrying a compact
+   segmented control, so it can never be mistaken for a fifth mode tab. */
+.sheet-view-header {
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 4px 0 0;
+  padding: 5px 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--barline);
+  border-bottom: none;            /* fuse visually into the panel below */
+  border-radius: 8px 8px 0 0;
 }
-.at-view-tab:hover  { background:#252545; color:var(--ink); border-color:var(--legacy-purple); }
-.at-view-tab.active { background:#3d1a6e; border-color:var(--legacy-purple-lt); color:#fff; font-weight:700; }
-.at-view-tab:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+/* Outrank the [data-modes] reveal's `display:revert` (specificity ~0,2,1) so the
+   header lays out as flex in-mode — same trick the nav.mode-nav note documents
+   and the .playback-bar[data-modes] stub below uses. */
+body[data-active-mode] .sheet-view-header[data-modes] { display: flex; }
+.sheet-view-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-dim); white-space: nowrap;
+}
+/* Segmented control: connected buttons in one bordered track — deliberately
+   quieter and smaller than the large uppercase mode pills above it. */
+.at-view-tabs.seg-control {
+  display: inline-flex; gap: 0; flex-wrap: nowrap; margin: 0;
+  border: 1px solid var(--barline); border-radius: 7px; overflow: hidden;
+  background: var(--panel);
+}
+.seg-control .at-view-tab {
+  padding: 5px 14px; font-size: 11px; cursor: pointer;
+  border: none; border-right: 1px solid var(--barline); border-radius: 0;
+  background: transparent; color: var(--ink-dim);
+  font-family: inherit; font-weight: 500; letter-spacing: .01em;
+  transition: background .15s, color .15s;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.seg-control .at-view-tab:last-child { border-right: none; }
+.seg-control .at-view-tab:hover { background: var(--panel-2); color: var(--ink); }
+.seg-control .at-view-tab.active { background: var(--indigo); color: #fff; font-weight: 700; }
+.seg-control .at-view-tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 
 /* ── Notation / Tab viewer container ────────────────────────────────────── */
 #alphatab-container {
@@ -1883,20 +1913,25 @@ body:not([data-active-mode]) .global-transport { display: none; }
 
   <div class="legend" data-modes="learn">Tap any bar to hear the chord or scale · Use the global transport to sequence at tempo · Switch to <strong>Improvise</strong> mode for Scale Library</div>
 
-  <!-- ── View mode tabs: Chord Grid | Notation | Tab ──────────────────── -->
-  <div class="at-view-tabs" id="atViewTabs" data-modes="learn practice" role="tablist" aria-label="Lead sheet view mode">
-    <button class="at-view-tab active" data-view="grid" id="atTabGrid"
-            role="tab" aria-selected="true" aria-controls="sheet"
-            title="Interactive chord grid with Roman numerals, scale suggestions, and bar click-to-play">📋 Chord Grid</button>
-    <button class="at-view-tab" data-view="notation" id="atTabNotation"
-            role="tab" aria-selected="false" aria-controls="alphatab-container"
-            title="Standard music notation rendered by AlphaTab — available for Omnibook tunes">♩ Notation</button>
-    <button class="at-view-tab" data-view="tab" id="atTabTab"
-            role="tab" aria-selected="false" aria-controls="alphatab-container"
-            title="Guitar tablature rendered by AlphaTab — available for Omnibook tunes">𝄩 Tab</button>
+  <!-- ── Lead-sheet view switcher (subordinate to the active mode) ─────────
+       A labeled header bar + segmented control, so Chord Grid / Notation / Tab
+       reads as a view of the current mode, never as a fifth workflow mode. -->
+  <div class="sheet-view-header" data-modes="learn practice">
+    <span class="sheet-view-label" id="sheetViewLabel">Lead sheet view</span>
+    <div class="at-view-tabs seg-control" id="atViewTabs" role="tablist" aria-labelledby="sheetViewLabel">
+      <button class="at-view-tab active" data-view="grid" id="atTabGrid"
+              role="tab" aria-selected="true" aria-controls="sheet"
+              title="Interactive chord grid with Roman numerals, scale suggestions, and bar click-to-play">📋 Chord Grid</button>
+      <button class="at-view-tab" data-view="notation" id="atTabNotation"
+              role="tab" aria-selected="false" aria-controls="alphatab-container"
+              title="Standard music notation rendered by AlphaTab — available for Omnibook tunes">♩ Notation</button>
+      <button class="at-view-tab" data-view="tab" id="atTabTab"
+              role="tab" aria-selected="false" aria-controls="alphatab-container"
+              title="Guitar tablature rendered by AlphaTab — available for Omnibook tunes">𝄩 Tab</button>
+    </div>
   </div>
 
-  <div id="sheet" class="sheet" data-modes="learn practice">
+  <div id="sheet" class="sheet" data-modes="learn practice" role="tabpanel" aria-labelledby="atTabGrid">
     <div style="text-align:center;color:var(--ink-dim);padding:30px;">Select a tune and click Generate to begin.</div>
   </div>
 
