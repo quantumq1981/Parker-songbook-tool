@@ -1652,6 +1652,24 @@ body:not([data-active-mode]) .global-transport { display: none; }
 .tour-back:hover { color: var(--ink); }
 @media (max-width: 480px) { .tour-card { width: calc(100vw - 20px); padding: 14px; } }
 
+/* ── Per-tune reference recordings (R5) ───────────────────────── */
+.ref-row {
+  align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 6px 0 0; font-size: 11px; color: var(--ink-dim);
+}
+/* Outrank the [data-modes] reveal's display:revert (see nav.mode-nav note). */
+body[data-active-mode] .ref-row[data-modes] { display: flex; }
+.ref-label { font-weight: 700; letter-spacing: .3px; }
+.ref-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 14px; text-decoration: none;
+  background: var(--bg-2); border: 1px solid var(--barline); color: var(--ink);
+  font-size: 11px; font-weight: 600;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.ref-link:hover { background: var(--panel-2); border-color: var(--legacy-purple); }
+.ref-link:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
 </style>
 
 
@@ -1983,6 +2001,17 @@ body:not([data-active-mode]) .global-transport { display: none; }
               role="tab" aria-selected="false" aria-controls="alphatab-container"
               title="Guitar tablature rendered by AlphaTab — available for Omnibook tunes">𝄩 Tab</button>
     </div>
+  </div>
+
+  <!-- ── Per-tune reference recordings (R5): CSP-safe external search link-outs ── -->
+  <div class="ref-row" data-modes="learn practice" role="group" aria-label="Reference recordings">
+    <span class="ref-label">🔊 Hear the head:</span>
+    <a id="refYouTube" class="ref-link" target="_blank" rel="noopener noreferrer"
+       href="https://www.youtube.com/results?search_query=Charlie+Parker"
+       title="Search YouTube for a reference recording">▶ YouTube</a>
+    <a id="refSpotify" class="ref-link" target="_blank" rel="noopener noreferrer"
+       href="https://open.spotify.com/search/Charlie%20Parker"
+       title="Search Spotify for a reference recording">♫ Spotify</a>
   </div>
 
   <div id="sheet" class="sheet" data-modes="learn practice" role="tabpanel" aria-labelledby="atTabGrid">
@@ -9301,6 +9330,40 @@ async function suggestNext() {
     mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
   }
   window.addEventListener('load', maybeAutoStart);
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Reference recordings (R5) — keep the YouTube / Spotify search links pointed at
+   the currently selected tune. CSP-safe by design: these are external
+   <a target="_blank"> navigations, not embeds — no CSP loosening, nothing
+   fetched into the page, and the app's "audio stays local" posture is intact.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function referenceLinks() {
+  const yt = document.getElementById('refYouTube');
+  const sp = document.getElementById('refSpotify');
+  if (!yt && !sp) return;
+  const tuneSelEl = document.getElementById('tuneSel');
+
+  function currentName() {
+    const raw = tuneSelEl ? tuneSelEl.value : '';
+    return (typeof canonicalTuneTitle === 'function' && raw) ? canonicalTuneTitle(raw) : raw;
+  }
+  function update() {
+    const name = currentName();
+    const q = encodeURIComponent('Charlie Parker ' + (name || '')).trim();
+    if (yt) {
+      yt.href = 'https://www.youtube.com/results?search_query=' + q;
+      yt.title = name ? ('Search YouTube for “' + name + '”') : 'Search YouTube for a reference recording';
+    }
+    if (sp) {
+      sp.href = 'https://open.spotify.com/search/' + q;
+      sp.title = name ? ('Search Spotify for “' + name + '”') : 'Search Spotify for a reference recording';
+    }
+  }
+
+  if (tuneSelEl) tuneSelEl.addEventListener('change', update, { passive: true });
+  window.addEventListener('load', update);
+  update();
 })();
 
 </script>
