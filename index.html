@@ -160,13 +160,20 @@ body{margin:0;min-height:100vh;min-height:100dvh;color:var(--ink);
   font-family:var(--font-mono);padding:10px;line-height:1.4;
   background:#0b090e;}
 /* Fixed backdrop on a GPU-composited layer instead of background-attachment:fixed,
-   which repaints the whole gradient on every scroll frame and janks iOS Safari. */
+   which repaints the whole gradient on every scroll frame and janks iOS Safari.
+   Layer order (topmost first): brass/orchid/teal signature glows → dark tint for
+   text readability → the Charlie Parker photo (cover) → the original opaque
+   gradient, kept as the very bottom layer so it renders identically if the photo
+   ever fails to load (offline first-visit, 404, CSP). The tint keeps the photo
+   atmospheric behind the ~96%-opaque .card panels rather than competing with UI. */
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   transform:translateZ(0);
   background:
     radial-gradient(1100px 600px at 50% -8%, rgba(230,169,75,.12), transparent 60%),
     radial-gradient(900px 720px at 92% 8%, rgba(178,107,196,.11), transparent 55%),
     radial-gradient(820px 820px at 2% 100%, rgba(79,182,173,.08), transparent 55%),
+    linear-gradient(180deg, rgba(16,13,20,.52) 0%, rgba(13,10,17,.60) 45%, rgba(11,9,14,.82) 100%),
+    url('images/bg-parker.jpg') center top / cover no-repeat,
     linear-gradient(180deg,#141019 0%, #100d14 45%, #0b090e 100%);}
 select option{background:var(--bg-2);color:var(--sym);}
 
