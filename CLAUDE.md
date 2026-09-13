@@ -461,6 +461,37 @@ no binary, no CSP change, no build step.
   0.646@120 → 0.58@280 BPM, and beat-4 bass resolves a half-step into the next
   root. Service-worker shell updated (`bebopGroove.js` added; cache `v7`→`v8`).
 
+### 16. "After Hours" Photo Backdrop v7.10 (user request — app background image)
+
+Adds a Charlie Parker performance photo as the app's ambient background, folded
+into the *existing* fixed backdrop layer rather than bolted on as a new one.
+CSS + one asset + SW shell only; no pipeline JS touched.
+
+- **Asset discipline:** the source upload was an 8.1 MB / 2160×3840 PNG — a
+  non-starter as a web background. Downscaled to 1080×1920 and re-encoded as a
+  progressive JPEG (`images/bg-parker.jpg`, **224 KB**, ~36× smaller; no alpha
+  channel needed). One asset, `cover`-scaled, serves every viewport.
+- **Router-not-replacer for the backdrop:** the photo is added as a layer inside
+  the pre-existing `body::before` fixed, GPU-composited backdrop (the one that
+  deliberately avoids `background-attachment:fixed` to dodge iOS scroll jank), not
+  a new stacking layer. Layer order (topmost first): the signature brass/orchid/
+  teal radial glows → a dark tint gradient `rgba(16,13,20,.52)→(11,9,14,.82)` for
+  text readability → `url('images/bg-parker.jpg') center top / cover` → **the
+  original opaque gradient, retained as the bottom layer** so the backdrop renders
+  byte-identically to v7.9 if the photo ever fails to load (offline first-visit,
+  404, CSP) — zero-regression graceful degradation.
+- **Readability by construction:** `.card` panels are ~96% opaque and
+  `.global-transport` carries its own opaque gradient, so the only text sitting
+  directly on the backdrop is the hero (large shadowed title, pilled kicker,
+  light-on-dark tagline). The tint is tuned so the sax player reads clearly in the
+  hero and gutters while all hero text stays legible.
+- **CSP-safe:** same-origin CSS `url()` is already covered by the page CSP's
+  `img-src 'self'` — **no CSP change**. Added to the SW `SHELL` and bumped cache
+  `v8`→`v9` so the backdrop is offline-durable.
+- Verified headlessly (Chromium, desktop 1280×900 + mobile 390×844): image serves
+  200, zero console errors, no failed requests; the figure is visible behind the
+  hero/gutters with hero copy still readable.
+
 ---
 
 ## Files Modified / Added
@@ -468,6 +499,7 @@ no binary, no CSP change, no build step.
 | File | Description |
 |------|-------------|
 | `index.html` | All features above; ~8,000 lines. Single entry point. |
+| `images/bg-parker.jpg` | Optimized (1080×1920, 224 KB) Charlie Parker photo used as the app background backdrop (v7.10) |
 | `js/pitch-processor.js` | AudioWorklet YIN pitch detection processor |
 | `js/pitchScoring.js` | Pitch scoring model — grades detected notes against bar's harmonic context |
 | `js/tempoRamp.js` | Tempo ramp model — creeps BPM up/down per loop pass |
@@ -541,8 +573,9 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | **7.7** | **2026-09-09** | **R3+R4+R5** — first-run guided tour; practice-journal store reconciliation (`js/practiceStore.js`) + JSON backup/restore; per-tune YouTube/Spotify reference link-outs (CSP-safe) |
 | **7.8** | **2026-09-09** | **R5.1** — upload your own MP3 as a per-tune reference recording; stored device-local per tune in IndexedDB, played inline via `blob:` (`js/referenceAudio.js`) |
 | **7.9** | **2026-09-13** | **Bebop swing groove engine** — data-driven `js/bebopGroove.js`: walking bass with chromatic approach to the next root, tempo-adaptive swing, humanized/varied comping, feel selector (Medium/Up-tempo/Ballad). Native, CSP-safe analogue of werckmeister styles |
+| **7.10** | **2026-09-13** | **"After Hours" photo backdrop** — Charlie Parker performance photo (`images/bg-parker.jpg`, 1080×1920, 224 KB) folded into the existing fixed `body::before` backdrop under a readability tint; original gradient retained as load-failure fallback. CSS + asset + SW shell (`v8`→`v9`) only; no CSP change |
 
 ---
 
 *Last updated: 2026-09-13*  
-*Active branch: `claude/bebop-chord-grid-midi-9i5hfd`*
+*Active branch: `claude/app-background-image-g0aqkx`*

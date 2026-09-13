@@ -1,7 +1,7 @@
 'use strict';
 
 // Bump this string whenever the app shell changes to force cache refresh.
-const CACHE = 'cp-songbook-v8';
+const CACHE = 'cp-songbook-v9';
 
 // Core app shell — pre-cached at install so the page works offline from the
 // very first load after the SW is installed.
@@ -20,6 +20,7 @@ const SHELL = [
   './index.html',
   './manifest.json',
   './icons/icon.svg',
+  './images/bg-parker.jpg',
   './js/chordDataService.js',
   './js/chordDiagram.js',
   './js/chordParser.js',
