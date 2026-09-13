@@ -417,6 +417,50 @@ and play it inline — not just search external services.
   `body[data-active-mode] .ref-player-row[data-modes]:not(.ra-empty){display:flex}`,
   so an empty player never occupies space.
 
+### 15. Bebop Swing Groove Engine v7.9 (user request — "make it swing")
+
+Replaces the naïve `audioMode === 'bebop'` backing track with a data-driven,
+headless rhythm-section engine so the generated chord grid / MIDI chord player
+actually swings. **werckmeister / Scaler / ChordPrism cannot be embedded** (C++
+standalone / commercial VST — neither loads in a zero-build vanilla-JS SPA under
+`default-src 'self'`); what's portable is the *concept* — a "feel" (style) table
+that maps a chord → rhythmically-placed events — reimplemented natively. No CDN,
+no binary, no CSP change, no build step.
+
+- **Pure, tested core** `js/bebopGroove.js`: `buildBarPlan({root, chord, nextRoot,
+  bpm, barIndex, feel, prevBassMidi, prevCompTop, seed})` returns a typed event
+  plan `{swing, events[]}` where each event is
+  `{voice, beat, eighth, midi, dur, vel, micro}` (positions in beats; renderer
+  converts to seconds). Zero audio code → 100% headless-testable
+  (`tests/bebopGroove.test.js`).
+- **Three authenticity wins over the old fixed engine:**
+  1. **Walking bass that leads.** Beats 1–3 are root/fifth/bridging chord tone;
+     **beat 4 is a chromatic half-step approach into the *next* bar's root** — the
+     defining move of a walking line, structurally impossible before because the
+     old engine had no look-ahead. Octaves are placed nearest the previous note
+     for a tight contour (`_bbPrevBassMidi` carried bar-to-bar).
+  2. **Tempo-adaptive swing.** `swingRatio(bpm, feel)` interpolates a triplet-ish
+     ~0.66 at slow tempos toward ~0.54 as tempo climbs (bebop straightens when
+     fast) — replaces the fixed `sw = 0.64`.
+  3. **Varied, humanized comping.** Guide-tone (3rd/7th/9th) rootless voicings,
+     voice-led near the previous top note; a weighted pick among comp rhythm
+     patterns (sparse / and-2-and-4 / Charleston / push / anticipate); per-hit
+     velocity + behind-the-beat micro-timing from a **seeded PRNG** (mulberry32)
+     so output is reproducible → testable.
+- **Feel selector (the werckmeister "style" analogue):** `#bebopFeel` (Medium
+  Swing / Up-tempo / Ballad) in the playback-options row drives swing curve, ride
+  pattern (spang-a-lang vs sparse), comp density and kick feel. Persisted
+  device-local to `localStorage` key `cp_bebop_feel_v79`.
+- **Router-not-replacer integration:** `playBebopBackingBar()` is now a dumb
+  renderer that dispatches plan events to the existing `_bbRide/_bbHihat/_bbKick/
+  _bbBassNote` synths + a new per-voice `_bbCompNote`; the `tick()` loop feeds
+  `bars[playIdx+1]` as `nextRoot/nextChord` (loop-aware) plus a bar counter. State
+  (`_bbPrevBassMidi`, `_bbPrevCompTop`, `_bbBarCounter`, `_bbSeed`) resets in
+  `startPlayback`/`stopPlayback`. Events scheduled in the past are dropped.
+- Verified headlessly (Chromium): page loads with zero console errors, swing
+  0.646@120 → 0.58@280 BPM, and beat-4 bass resolves a half-step into the next
+  root. Service-worker shell updated (`bebopGroove.js` added; cache `v7`→`v8`).
+
 ---
 
 ## Files Modified / Added
@@ -429,6 +473,8 @@ and play it inline — not just search external services.
 | `js/tempoRamp.js` | Tempo ramp model — creeps BPM up/down per loop pass |
 | `js/silentBars.js` | Silent bars mask generator — 5 modes for ear training |
 | `js/callResponse.js` | Call & response matcher — streaming pitch matcher against target sequence |
+| `js/bebopGroove.js` | Pure bebop rhythm-section engine — swing/walking-bass/comp event plan per bar (v7.9) |
+| `tests/bebopGroove.test.js` | Unit tests for bebopGroove (swing, approach tone, guide tones, determinism) |
 | `service-worker.js` | PWA cache-first service worker |
 | `manifest.json` | PWA manifest (name, icons, display mode) |
 | `icons/icon.svg` | Treble clef SVG app icon |
@@ -494,8 +540,9 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | **7.6** | **2026-09-09** | **Two-tier nav disambiguation (R2)** — lead-sheet view tabs demoted to a labeled segmented control subordinate to the mode nav; `#sheet` given `role="tabpanel"`; CSS + markup only |
 | **7.7** | **2026-09-09** | **R3+R4+R5** — first-run guided tour; practice-journal store reconciliation (`js/practiceStore.js`) + JSON backup/restore; per-tune YouTube/Spotify reference link-outs (CSP-safe) |
 | **7.8** | **2026-09-09** | **R5.1** — upload your own MP3 as a per-tune reference recording; stored device-local per tune in IndexedDB, played inline via `blob:` (`js/referenceAudio.js`) |
+| **7.9** | **2026-09-13** | **Bebop swing groove engine** — data-driven `js/bebopGroove.js`: walking bass with chromatic approach to the next root, tempo-adaptive swing, humanized/varied comping, feel selector (Medium/Up-tempo/Ballad). Native, CSP-safe analogue of werckmeister styles |
 
 ---
 
-*Last updated: 2026-09-09*  
-*Active branch: `claude/parker-songbook-analysis-dn6g3m`*
+*Last updated: 2026-09-13*  
+*Active branch: `claude/bebop-chord-grid-midi-9i5hfd`*
