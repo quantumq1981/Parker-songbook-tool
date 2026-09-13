@@ -1943,6 +1943,12 @@ body[data-active-mode] .ref-player-row[data-modes]:not(.ra-empty) { display: fle
         <option value="random">Random</option>
         <option value="progressive">Progressive</option>
       </select>
+      <label for="bebopFeel" title="Rhythm-section feel used by the 🥁 Bebop Groove audio mode">Feel:</label>
+      <select id="bebopFeel" aria-label="Bebop groove feel">
+        <option value="medium">Medium Swing</option>
+        <option value="uptempo">Up-tempo</option>
+        <option value="ballad">Ballad</option>
+      </select>
       <button id="tempoRampBtn" class="toggle-pill" aria-pressed="false" data-toggle-label="Tempo Ramp">
         <span class="toggle-label">Tempo Ramp</span>
       </button>
@@ -2281,6 +2287,7 @@ body[data-active-mode] .ref-player-row[data-modes]:not(.ra-empty) { display: fle
 <script defer src="js/callResponse.js?v=7.4"></script>
 <script defer src="js/referenceAudio.js?v=7.8"></script>
 <script defer src="js/practiceStore.js?v=7.7"></script>
+<script defer src="js/bebopGroove.js?v=7.9"></script>
 <script>
 /* ============================================================
    SONGBOOK DATA — 22 TUNES (v6.0 data model preserved)
@@ -3393,80 +3400,84 @@ function _bbKick(ctx, t, vol) {
   o.start(t); o.stop(t + 0.22);
 }
 
-function _bbBassNote(ctx, t, freq, dur) {
+function _bbBassNote(ctx, t, freq, dur, vel) {
+  const peak = 0.32 * (vel == null ? 1 : vel);
   const o = ctx.createOscillator(), g = ctx.createGain();
   o.type = 'triangle'; o.frequency.value = freq;
   o.connect(g); g.connect(getMasterBus(ctx));
   g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(0.32, t + 0.014);
-  g.gain.setValueAtTime(0.32, t + dur * 0.72);
+  g.gain.linearRampToValueAtTime(peak, t + 0.014);
+  g.gain.setValueAtTime(peak, t + dur * 0.72);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.92);
   o.start(t); o.stop(t + dur + 0.02);
 }
 
-function _bbComp(ctx, t, root, chordSym, dur) {
-  // Rootless shell voicing: 3rd + 7th (+ 9th) — classic bebop piano comp
-  const base = FREQ[root] || 261.63;
-  let ivs;
-  if (/Δ|maj7/i.test(chordSym))     ivs = [4, 11, 14]; // M3, M7, M9
-  else if (/m7b5|ø/.test(chordSym)) ivs = [3, 10, 13]; // m3, m7, m9
-  else if (/dim/.test(chordSym))    ivs = [3, 9, 15];  // m3, dim7, m10
-  else if (/m7/.test(chordSym))     ivs = [3, 10, 14]; // m3, m7, M9
-  else                               ivs = [4, 10, 14]; // dom7: M3, m7, M9
-  ivs.forEach((semi, i) => {
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = 'sine'; o.frequency.value = base * Math.pow(2, semi / 12);
-    o.connect(g); g.connect(getMasterBus(ctx));
-    const nt = t + i * 0.007;
-    g.gain.setValueAtTime(0, nt);
-    g.gain.linearRampToValueAtTime(0.075, nt + 0.011);
-    g.gain.exponentialRampToValueAtTime(0.0001, nt + dur);
-    o.start(nt); o.stop(nt + dur + 0.01);
-  });
+function _bbCompNote(ctx, t, freq, dur, vel) {
+  // One voice of a rootless comp chord (a short, soft piano stab).
+  const peak = 0.075 * (vel == null ? 1 : vel);
+  const d = Math.max(0.08, dur);
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  o.connect(g); g.connect(getMasterBus(ctx));
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.011);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.start(t); o.stop(t + d + 0.02);
 }
 
-function playBebopBackingBar(root, chordSym, bpm) {
+// Voice-leading state carried bar-to-bar so the walking bass and comp connect
+// across the grid (reset in startPlayback / stopPlayback).
+let _bbPrevBassMidi = null;
+let _bbPrevCompTop  = null;
+let _bbBarCounter   = 0;
+let _bbSeed         = 0;
+
+const _bbMidiToFreq = m => 440 * Math.pow(2, (m - 69) / 12);
+
+// Render one bar of the BebopGroove engine's event plan to Web Audio. The
+// musical decisions (swing, walking line, comp rhythm, humanization) live in
+// js/bebopGroove.js; this function is a dumb renderer.
+function playBebopBackingBar(root, chordSym, bpm, extra) {
   if (!audioReady || !audioContext) return;
+  if (typeof BebopGroove === 'undefined') return; // module not yet loaded
   const ctx = audioContext;
   ctx.resume().catch(() => {});
-  const bd = 60 / bpm;   // beat duration in seconds
-  const sw = 0.64;        // swing: downbeat 8th = 64% of beat (2:1 triplet feel)
-  const t0 = ctx.currentTime + 0.02;
-  const B = n => t0 + n * bd;           // downbeat of beat n (0-indexed)
-  const U = n => t0 + n * bd + bd * sw; // swing upbeat of beat n
+  extra = extra || {};
+  const feelSel = document.getElementById('bebopFeel');
+  const feel = feelSel ? feelSel.value : 'medium';
 
-  // Ride cymbal: all 8 swing 8th notes per bar (the jazz ride pattern)
-  for (let i = 0; i < 4; i++) {
-    _bbRide(ctx, B(i), i === 0 ? 1.0 : 0.88);  // downbeats — beat 1 accented
-    _bbRide(ctx, U(i), 0.58);                   // swing upbeats — lighter
-  }
-
-  // Hi-hat pedal on beats 2 & 4 (the jazz "two and four" feel)
-  _bbHihat(ctx, B(1), 1.0);
-  _bbHihat(ctx, B(3), 1.0);
-
-  // Feathered bass drum (bebop style: very soft on all beats)
-  _bbKick(ctx, B(0), 0.50);
-  _bbKick(ctx, B(1), 0.18);
-  _bbKick(ctx, B(2), 0.28);
-  _bbKick(ctx, B(3), 0.18);
-
-  // Walking bass: chord tones on all 4 beats
-  const bassBase = (FREQ[root] || 261.63) / 2; // drop one octave
-  let walkIvs;
-  if (/Δ|maj7/i.test(chordSym))     walkIvs = [0, 7, 11, 4];  // R, 5, M7, 3
-  else if (/m7b5|ø/.test(chordSym)) walkIvs = [0, 6, 10, 3];  // R, b5, b7, b3
-  else if (/dim/.test(chordSym))    walkIvs = [0, 6, 9,  3];  // R, b5, dim7, b3
-  else if (/m7/.test(chordSym))     walkIvs = [0, 7, 10, 3];  // R, 5, b7, b3
-  else                               walkIvs = [0, 7, 10, 4];  // dom7: R, 5, b7, 3
-  walkIvs.forEach((semi, i) => {
-    _bbBassNote(ctx, B(i), bassBase * Math.pow(2, semi / 12), bd * 0.87);
+  const plan = BebopGroove.buildBarPlan({
+    root: root, chord: chordSym,
+    nextRoot: extra.nextRoot, nextChord: extra.nextChord,
+    bpm: bpm, barIndex: (extra.barIndex | 0), feel: feel,
+    prevBassMidi: _bbPrevBassMidi, prevCompTop: _bbPrevCompTop, seed: _bbSeed
   });
 
-  // Bebop comping: rootless shell voicings on swing upbeats of 2 & 4
-  // This is the classic "behind the beat" piano comp feel
-  _bbComp(ctx, U(1), root, chordSym, 0.13);
-  _bbComp(ctx, U(3), root, chordSym, 0.13);
+  const bd = 60 / bpm;
+  const t0 = ctx.currentTime + 0.03;
+  const swing = plan.swing;
+
+  plan.events.forEach(e => {
+    const pos = e.beat + (e.eighth ? swing : 0) + (e.micro || 0);
+    const t = t0 + pos * bd;
+    if (t < ctx.currentTime) return;          // never schedule in the past
+    const dur = (e.dur || 0.5) * bd;
+    switch (e.voice) {
+      case 'ride':  _bbRide(ctx, t, e.vel); break;
+      case 'hihat': _bbHihat(ctx, t, e.vel); break;
+      case 'kick':  _bbKick(ctx, t, e.vel); break;
+      case 'bass':  _bbBassNote(ctx, t, _bbMidiToFreq(e.midi), dur, e.vel); break;
+      case 'comp':  _bbCompNote(ctx, t, _bbMidiToFreq(e.midi), dur, e.vel); break;
+    }
+  });
+
+  // Carry voice-leading anchors into the next bar.
+  if (plan.bassMidi && plan.bassMidi.length) {
+    _bbPrevBassMidi = plan.bassMidi[plan.bassMidi.length - 1];
+  }
+  if (plan.compVoicing && plan.compVoicing.length) {
+    _bbPrevCompTop = Math.max.apply(null, plan.compVoicing);
+  }
 }
 
 /* ============================================================
@@ -5029,6 +5040,8 @@ function stopPlayback() {
   _barMask = null;
   nextBarData = null;
   _barGrades = [];
+  _bbPrevBassMidi = null;
+  _bbPrevCompTop  = null;
 }
 
 async function runCountIn(beats, bpm) {
@@ -5060,6 +5073,11 @@ async function startPlayback() {
   _lastPassClean = true;
   _barGrades = [];
   _keyStep = 0;
+  // Bebop groove: reset voice-leading state; seed once per session for variety.
+  _bbPrevBassMidi = null;
+  _bbPrevCompTop  = null;
+  _bbBarCounter   = 0;
+  _bbSeed         = (Date.now() >>> 0);
 
   // ── Tempo Ramp: init if enabled ──
   const rampBtn = document.getElementById('tempoRampBtn');
@@ -5150,7 +5168,15 @@ async function startPlayback() {
 
     try {
       if (audible) {
-        if (audioMode === 'bebop') playBebopBackingBar(root, chord, parseInt(document.getElementById('bpmInput').value) || 120);
+        if (audioMode === 'bebop') {
+          // Feed the next bar's chord so the walking bass can lead into it.
+          const nb = bars[playIdx + 1] || (loopEnabled ? bars[loopSection.startBar] : null);
+          playBebopBackingBar(root, chord, parseInt(document.getElementById('bpmInput').value) || 120, {
+            nextRoot: nb ? nb.dataset.root : null,
+            nextChord: nb ? nb.dataset.chord : null,
+            barIndex: _bbBarCounter++
+          });
+        }
         else if (audioMode === 'voicing') playChordVoicing(root, chord);
         else playScaleRun(root, scale);
       }
@@ -5360,6 +5386,21 @@ const labels = { voicing: '🎵 Audio: Chord', scale: '🎵 Audio: Scale', bebop
 e.target.textContent = labels[audioMode];
 e.target.className = audioMode === 'bebop' ? 'btn-ok' : audioMode === 'scale' ? 'btn-audio-scale' : 'btn-sec';
 });
+
+// Bebop groove "feel" selector — persisted device-local (analogue of a
+// werckmeister style: swing ratio, ride pattern, comp density, kick feel).
+(function () {
+  const sel = document.getElementById('bebopFeel');
+  if (!sel) return;
+  const KEY = 'cp_bebop_feel_v79';
+  try {
+    const saved = localStorage.getItem(KEY);
+    if (saved && sel.querySelector('option[value="' + saved + '"]')) sel.value = saved;
+  } catch (_) { /* private mode: keep default */ }
+  sel.addEventListener('change', () => {
+    try { localStorage.setItem(KEY, sel.value); } catch (_) { /* ignore */ }
+  });
+})();
 
 // Playback controls
 document.getElementById('playBtn').addEventListener('click', () => { if (isPlaying) stopPlayback(); else startPlayback(); });

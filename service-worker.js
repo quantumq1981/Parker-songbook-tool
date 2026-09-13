@@ -1,7 +1,7 @@
 'use strict';
 
 // Bump this string whenever the app shell changes to force cache refresh.
-const CACHE = 'cp-songbook-v7';
+const CACHE = 'cp-songbook-v8';
 
 // Core app shell — pre-cached at install so the page works offline from the
 // very first load after the SW is installed.
@@ -32,6 +32,7 @@ const SHELL = [
   './js/tempoRamp.js',
   './js/silentBars.js',
   './js/callResponse.js',
+  './js/bebopGroove.js',
 ];
 
 // Pinned CDN asset URLs whose responses should be cached on first use.
