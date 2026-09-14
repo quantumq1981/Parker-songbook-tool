@@ -492,6 +492,66 @@ CSS + one asset + SW shell only; no pipeline JS touched.
   200, zero console errors, no failed requests; the figure is visible behind the
   hero/gutters with hero copy still readable.
 
+### 17. Chord Voicings & Substitutions Overhaul v7.11 (user request — "of very little use")
+
+Replaces the anemic chord-voicings pop-up (one transposed shell per chord, some
+grids blank, boxes cut off) with a real voicing browser + a theory-driven
+reharmonization engine. Business logic is fully isolated into pure, headless,
+unit-tested modules; the DOM/renderer only consumes their canonical output.
+
+**Root causes fixed (all three real bugs):**
+1. **The 13-entry `jazzChordDatabase.js` shadowed the rich data.** `getChordVoicings`
+   only fell back to `data/chords.json` (the vendored tombatossals DB — 4–5 real
+   voicings per chord, each with a `midi` array) when the jazz DB had *nothing*;
+   transposition almost always produced *something*, so the good data was never
+   reached → the "1 voicings" truncation.
+2. **`chords.json` voicings rendered blank.** `renderJazzVoicing` never converted
+   the DB's flat `frets:[loE..hiE]` array into `[string,fret]` tuples, so those
+   positions drew an empty grid (the blank `Bbm7/Eb7` box).
+3. **ii–V pairs silently dropped half the chord.** `"Bbm7/Eb7"` was `split('/')`-ed
+   and only `Bbm7` was ever looked up.
+
+**New pure modules (Phase-2, headless-tested):**
+- `js/voicingLibrary.js` — converts each `chords.json` position into a canonical,
+  interval-labeled voicing (`R/3/5/b7` gold dots derived from open-string MIDI +
+  fret geometry — works for all 12 keys × all suffixes, no reliance on the DB's own
+  `midi`), merges the curated jazz shells first, dedupes by fret signature, sorts by
+  neck position, caps the count. **Validates every voicing against the chord's real
+  pitch-class set** (`ALLOWED_INTERVALS`) and drops junk — the shipped DB has a few
+  mis-filed grips (e.g. an `Am7` shape under `Bbm7 pos0`). Tests reconstruct the DB's
+  own `midi` from our geometry to prove the conversion, and assert the corrupt grip
+  is rejected.
+- `js/chordSubstitutions.js` — `getSubstitutions(root, quality)` → ranked, reasoned
+  reharm options. Dominants → **tritone sub (bII7)**, **°7 on the 3rd (rootless b9)**,
+  **m7b5 on the 3rd (rootless 9)**, related ii; **m11 ⇄ 7sus4** (a P4 apart, +5/+7);
+  relative maj/min (Cmaj7⇄Am7, m7⇄maj6); minor ii–V (m7b5→V7b9). `classifyQuality`
+  maps any suffix to a family. All the substitutions the request named are covered.
+
+**Wiring / UI (Phase-3, router-not-replacer):**
+- `ChordDataService.getRichVoicings(key, suffix)` = jazz shells + `VoicingLibrary`
+  over `chords.json`; legacy `getChordVoicings` kept as a fallback. The tests that
+  pin `getJazzVoicingsForChord` / `filterJazzVoicings` / `normalizeJazzSuffix` are
+  untouched.
+- `chordDiagram.js` hardened: renders canonical tuple voicings **and** legacy flat
+  `frets` positions (bug 2 fix) — never an empty grid for a valid voicing.
+- `chordVoicingsInit.js` `splitCompoundSymbol()` distinguishes a **ii–V/reharm pair**
+  (`Bbm7/Eb7`, `Gm7/C7` — every part after `/` carries its own quality → voice BOTH)
+  from a **slash/inversion bass** (`C/G`, `Cmaj7/E` — bare note after `/` → voice the
+  left chord). Each chord gets its own block: voicings grid + clickable substitution
+  chips that drill into the sub's own voicings.
+- `chordVoicingsModal.js` rebuilt as a renderer of a structured `{title, chords[]}`
+  payload; XSS-safe (`escapeHtml`), delegated sub-chip clicks, ARIA dialog + focus
+  trap retained.
+- **Cut-off fixed:** panel `max-height:92vh` with a sticky header and an internally
+  scrolling body; tiles shrunk (150px SVG, `minmax(148px,1fr)` grid, `minmax(128px)`
+  under 560px) so several voicings fit without the box overflowing the viewport.
+- No new CDN / library / CSP change (leverages the already-vendored `chords.json`
+  and `svguitar.umd.js`). SW `SHELL` gains the two new modules; cache `v9`→`v10`.
+- Verified headlessly (Chromium, 414×896): `Gm7` → **6 voicings / 4 subs** (was 1),
+  `Bbm7/Eb7` → **10 voicings across both chords, 0 blank grids** (was 1 blank box),
+  `G7b9` → 4 voicings + Db7/Bdim7/Bm7b5 subs, `Dm11` → 4 voicings + G7sus4 sub. No
+  pipeline console errors.
+
 ---
 
 ## Files Modified / Added
@@ -515,6 +575,15 @@ CSS + one asset + SW shell only; no pipeline JS touched.
 | `js/referenceAudio.js` | Pure validation for user-uploaded reference audio (accept/reject by type, extension, size) (R5.1) |
 | `tests/referenceAudio.test.js` | Unit tests for referenceAudio.isAcceptableAudio |
 | `tests/practiceStore.test.js` | Unit tests for practiceStore normalize/merge/dedupe/idempotency |
+| `js/voicingLibrary.js` | Pure voicing normalizer — chords.json positions → canonical interval-labeled voicings, merge/dedupe/validate (v7.11) |
+| `js/chordSubstitutions.js` | Pure reharmonization engine — tritone / diminished / half-dim / ii–V / m11⇄7sus4 / relative subs (v7.11) |
+| `js/chordDataService.js` | + `getRichVoicings()` merges jazz shells + VoicingLibrary; legacy path retained (v7.11) |
+| `js/chordDiagram.js` | Renderer hardened to draw legacy flat-`frets` positions, not just tuple voicings (v7.11) |
+| `js/chordVoicingsModal.js` | Rebuilt: per-chord blocks (ii–V pairs), clickable substitutions panel, sticky header (v7.11) |
+| `js/chordVoicingsInit.js` | + `splitCompoundSymbol()` (ii–V pair vs slash-bass), assembles voicings + subs payload (v7.11) |
+| `tests/voicingLibrary.test.js` | Unit tests — midi-reconstruction proof, corrupt-grip rejection, dedupe/limit (v7.11) |
+| `tests/chordSubstitutions.test.js` | Unit tests — tritone/dim/half-dim, m11⇄7sus4, relative, enharmonic roots (v7.11) |
+| `tests/chordVoicingsInit.test.js` | Unit tests — ii–V pair vs slash-bass disambiguation (v7.11) |
 | `CLAUDE.md` | This file |
 
 ---
@@ -574,8 +643,31 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | **7.8** | **2026-09-09** | **R5.1** — upload your own MP3 as a per-tune reference recording; stored device-local per tune in IndexedDB, played inline via `blob:` (`js/referenceAudio.js`) |
 | **7.9** | **2026-09-13** | **Bebop swing groove engine** — data-driven `js/bebopGroove.js`: walking bass with chromatic approach to the next root, tempo-adaptive swing, humanized/varied comping, feel selector (Medium/Up-tempo/Ballad). Native, CSP-safe analogue of werckmeister styles |
 | **7.10** | **2026-09-13** | **"After Hours" photo backdrop** — Charlie Parker performance photo (`images/bg-parker.jpg`, 1080×1920, 224 KB) folded into the existing fixed `body::before` backdrop under a readability tint; original gradient retained as load-failure fallback. CSS + asset + SW shell (`v8`→`v9`) only; no CSP change |
+| **7.11** | **2026-09-14** | **Chord voicings & substitutions overhaul** — pure `js/voicingLibrary.js` (chords.json → canonical interval-labeled voicings, validated/deduped, several per chord across the neck) + `js/chordSubstitutions.js` (tritone / diminished / half-dim / ii–V / m11⇄7sus4 / relative reharms). Fixes blank-grid + "1 voicing" + dropped-ii–V bugs; clickable subs panel; modal cut-off fixed. SW `v9`→`v10`. No new CDN/CSP |
 
 ---
 
-*Last updated: 2026-09-13*  
-*Active branch: `claude/app-background-image-g0aqkx`*
+## Chord Voicing Subsystem — Key Implementation Notes (v7.11)
+
+- **Data source of truth:** `data/chords.json` (vendored tombatossals DB) is the
+  primary voicing source — several real voicings per chord. `js/jazzChordDatabase.js`
+  now only contributes curated shell/drop-2 grips *on top*, it no longer shadows the
+  library.
+- **Fret geometry:** a `chords.json` position's `frets` value `N` is *relative* to
+  `baseFret` → `absFret = (N===0) ? 0 : baseFret + N - 1`. Standard-tuning open MIDI is
+  `[40,45,50,55,59,64]` (low E→high E). Interval label = `(pitch%12 - rootPc + 12) % 12`
+  indexed into `INTERVAL_LABELS`. `tests/voicingLibrary.test.js` proves this by
+  reconstructing the DB's own `midi` array.
+- **Validation, not trust:** the DB has occasional mis-filed positions. Every voicing
+  is checked against `ALLOWED_INTERVALS[quality]`; anything with an out-of-chord note
+  is dropped. Add a quality to that map when introducing a new suffix.
+- **ii–V vs slash bass:** `splitCompoundSymbol` treats `X/Y` as two chords only when
+  `Y` carries its own quality (`Bbm7/Eb7`); a bare note (`C/G`) is a bass → voice `X`.
+- **Canonical voicing shape** consumed by the renderer:
+  `{ name, baseFret, fingers:[[stringNum(6=lowE..1=hiE), absFret, label?]], barres:[], source }`.
+  `renderJazzVoicing` converts absFret→relative (`absFret - baseFret + 1`).
+
+---
+
+*Last updated: 2026-09-14*  
+*Active branch: `claude/chord-suggestions-voicings-4y26q1`*

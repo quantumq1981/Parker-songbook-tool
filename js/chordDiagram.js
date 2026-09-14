@@ -103,8 +103,20 @@
           formattedFingers.push([stringNum, fret]);
         }
       });
-    } else {
+    } else if (Array.isArray(rawVoicing.fingers) && rawVoicing.fingers.length && Array.isArray(rawVoicing.fingers[0])) {
+      // Canonical / jazz-DB tuple shape: [[string, fret, label?]]
       formattedFingers = rawVoicing.fingers;
+    } else if (Array.isArray(rawVoicing.frets)) {
+      // Legacy chords.json position: flat `frets` [LowE..HighE] with numeric
+      // `fingers` (finger numbers, not tuples). Derive tuples from `frets` so
+      // these never render as an empty grid.
+      rawVoicing.frets.forEach((fret, index) => {
+        if (fret !== 'x' && fret !== -1 && fret !== null) {
+          formattedFingers.push([6 - index, fret]);
+        }
+      });
+    } else {
+      formattedFingers = rawVoicing.fingers || [];
     }
 
     // SVGuitar chord().fingers expects RELATIVE fret positions (1–fixedFretCount)
