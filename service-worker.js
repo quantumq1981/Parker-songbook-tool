@@ -1,7 +1,7 @@
 'use strict';
 
 // Bump this string whenever the app shell changes to force cache refresh.
-const CACHE = 'cp-songbook-v11';
+const CACHE = 'cp-songbook-v12';
 
 // Core app shell — pre-cached at install so the page works offline from the
 // very first load after the SW is installed.
@@ -27,6 +27,7 @@ const SHELL = [
   './js/chordSubstitutions.js',
   './js/voicingLibrary.js',
   './js/dropVoicings.js',
+  './js/shapeGenerator.js',
   './js/chordVoicingsInit.js',
   './js/chordVoicingsModal.js',
   './js/jazzChordDatabase.js',

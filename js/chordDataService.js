@@ -293,19 +293,39 @@
     if (!library.length) library = await getChordVoicings(key, suffix); // legacy fallback
     library.forEach((v) => { if (v && !v.group) v.group = 'Library'; });
 
+    const sig = (VL && VL.signature)
+      ? VL.signature
+      : (v) => (v.fingers || []).map((f) => `${f[0]}:${f[1]}`).sort().join('|');
+    const seen = new Set(library.map(sig));
+
     // Algorithmic drop-2 / drop-3 voicings, deduped against the library shapes.
     let drops = [];
     if (global.DropVoicings && typeof global.DropVoicings.generate === 'function') {
-      const sig = (VL && VL.signature)
-        ? VL.signature
-        : (v) => (v.fingers || []).map((f) => `${f[0]}:${f[1]}`).sort().join('|');
-      const seen = new Set(library.map(sig));
       drops = global.DropVoicings.generate(key, suffix).filter((v) => {
         const s = sig(v);
         if (seen.has(s)) return false;
         seen.add(s);
         return true;
       });
+    }
+
+    // Guarantee a full set: if the curated library + drops fall short of 8 shapes
+    // (typically triads, 6ths and sus chords, which have no drop forms), top the
+    // Library group up with algorithmically generated grips across the neck.
+    const MIN_SHAPES = 8;
+    if (library.length + drops.length < MIN_SHAPES
+        && global.ShapeGenerator && typeof global.ShapeGenerator.generateShapes === 'function') {
+      const need = MIN_SHAPES - (library.length + drops.length);
+      const extra = global.ShapeGenerator.generateShapes(key, suffix, { max: need + 6 })
+        .filter((v) => {
+          const s = sig(v);
+          if (seen.has(s)) return false;
+          seen.add(s);
+          return true;
+        })
+        .slice(0, need);
+      extra.forEach((v, i) => { v.name = `${key}${suffix} · pos ${library.length + i + 1}`; });
+      library = library.concat(extra);
     }
 
     return [...library, ...drops];

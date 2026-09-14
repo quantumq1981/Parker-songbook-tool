@@ -136,9 +136,12 @@
   }
 
   function tileTitle(chord, v, idx) {
-    if (!v || !v.name) return `${chord.symbol} #${idx + 1}`;
-    // Group header already names the drop type; drop the redundant prefix.
-    return v.name.replace(/^Drop \d+ · /, '');
+    if (!v || !v.name) return `#${idx + 1}`;
+    // The section header already shows the chord symbol and the group, so strip
+    // the leading chord-name / "Drop N" prefix and keep the distinguishing part:
+    //   "Cmajor · pos 3"            → "pos 3"
+    //   "Drop 2 · 3 in bass · 5-4-3-2" → "3 in bass · 5-4-3-2"
+    return v.name.replace(/^[^·]*·\s*/, '') || v.name;
   }
 
   function rerender() {
