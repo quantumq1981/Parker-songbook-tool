@@ -591,10 +591,21 @@ inversions and string sets, in all 12 keys.
   the neck position is unambiguous even for open-position shapes (SVGuitar only
   prints its own marker for baseFret > 1). The **Fingers ⇄ Intervals** toggle drives
   the generated voicings too (finger heuristic vs. interval labels).
-- No new CDN / library / CSP change. SW `SHELL` gains `js/dropVoicings.js`; cache
-  `v10`→`v11`. Verified headlessly (Chromium, 414×896): `Cmaj7` 15 / `Dm7` 16 / `G7`
-  16 voicings across Library|Drop 2|Drop 3, a fret badge on every tile, 0 blank
-  grids, no pipeline console errors.
+- **Guarantee ≥8 shapes** `js/shapeGenerator.js` (pure): the drop generator only
+  covers seventh chords, so triads / 6ths / sus / add9 would otherwise show just the
+  4–6 chords.json library shapes. This general enumerator walks each neck window ×
+  each contiguous string block, keeps only real playable grips (contiguous sounding
+  strings, all required tones present, only chord tones, span ≤ 4, ≤ 4 fingers, ≤ 4
+  strings so the standard 5–6 string barre/open shapes stay the library's job), then
+  ranks (complete, root-in-bass, fuller, lower) and diversifies across positions.
+  `getRichVoicings` tops the Library group up to 8 with these only when
+  `library + drops < 8`. `tests/shapeGenerator.test.js` proves spelling, required
+  tones, playability, contiguity and position spread. A `C` triad now shows 8 grips
+  spread open→10fr.
+- No new CDN / library / CSP change. SW `SHELL` gains `js/dropVoicings.js` +
+  `js/shapeGenerator.js`; cache `v10`→`v12`. Verified headlessly (Chromium, 414×896):
+  `C` 8 / `Cmaj7` 15 / `Dm7` 16 / `G7` 16 voicings, a fret badge on every tile, 0
+  blank grids, no pipeline console errors.
 - **Next tier (not yet built):** rootless drop-2 of the *extended* upper structures
   (e.g. voicing a 13 as 3-13-b7-9 rather than the 7th core), and drop-2&4. Noted for
   a future pass; the current core covers standard drop-2/drop-3 comping.
@@ -625,6 +636,8 @@ inversions and string sets, in all 12 keys.
 | `js/dropVoicings.js` | Pure drop-2/drop-3 generator — close-position inversions → drop transforms → string-set fretboard mapping (v7.12) |
 | `tests/dropVoicings.test.js` | Unit tests — chord spelling, playability, drop-3 string skip, drop-2 adjacency across keys/qualities (v7.12) |
 | `js/chordVoicingsModal.js` | + voicing-type grouping (Library/Drop 2/Drop 3) and per-tile starting-fret badge (v7.12) |
+| `js/shapeGenerator.js` | Pure general voicing enumerator — playable 3–4 string grips across the neck; tops the Library group up to ≥8 shapes for triads/6ths/sus etc. (v7.12) |
+| `tests/shapeGenerator.test.js` | Unit tests — spelling, required tones, playability, contiguity, position spread (v7.12) |
 | `js/voicingLibrary.js` | Pure voicing normalizer — chords.json positions → canonical interval-labeled voicings, merge/dedupe/validate (v7.11) |
 | `js/chordSubstitutions.js` | Pure reharmonization engine — tritone / diminished / half-dim / ii–V / m11⇄7sus4 / relative subs (v7.11) |
 | `js/chordDataService.js` | + `getRichVoicings()` merges jazz shells + VoicingLibrary; legacy path retained (v7.11) |
@@ -694,7 +707,7 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | **7.9** | **2026-09-13** | **Bebop swing groove engine** — data-driven `js/bebopGroove.js`: walking bass with chromatic approach to the next root, tempo-adaptive swing, humanized/varied comping, feel selector (Medium/Up-tempo/Ballad). Native, CSP-safe analogue of werckmeister styles |
 | **7.10** | **2026-09-13** | **"After Hours" photo backdrop** — Charlie Parker performance photo (`images/bg-parker.jpg`, 1080×1920, 224 KB) folded into the existing fixed `body::before` backdrop under a readability tint; original gradient retained as load-failure fallback. CSS + asset + SW shell (`v8`→`v9`) only; no CSP change |
 | **7.11** | **2026-09-14** | **Chord voicings & substitutions overhaul** — pure `js/voicingLibrary.js` (chords.json → canonical interval-labeled voicings, validated/deduped, several per chord across the neck) + `js/chordSubstitutions.js` (tritone / diminished / half-dim / ii–V / m11⇄7sus4 / relative reharms). Fixes blank-grid + "1 voicing" + dropped-ii–V bugs; clickable subs panel; modal cut-off fixed. Finger numbers + ○/✕ markers + Fingers⇄Intervals toggle. SW `v9`→`v10`. No new CDN/CSP |
-| **7.12** | **2026-09-14** | **Drop-2 / Drop-3 generator** — pure `js/dropVoicings.js` derives the four close-position inversions, applies drop-2/drop-3, maps to standard string sets (all 12 keys, all seventh qualities). Modal groups Library/Drop 2/Drop 3; every chart gets an always-on starting-fret badge. `Cmaj7` → ~15 voicings. SW `v10`→`v11`. No new CDN/CSP |
+| **7.12** | **2026-09-14** | **Drop-2 / Drop-3 generator** — pure `js/dropVoicings.js` derives the four close-position inversions, applies drop-2/drop-3, maps to standard string sets (all 12 keys, all seventh qualities). Modal groups Library/Drop 2/Drop 3; every chart gets an always-on starting-fret badge. Plus `js/shapeGenerator.js` guarantees ≥8 shapes for triads/6ths/sus (tops up the Library group). `Cmaj7` → ~15 voicings, `C` triad → 8. SW `v10`→`v12`. No new CDN/CSP |
 
 ---
 
