@@ -545,6 +545,17 @@ unit-tested modules; the DOM/renderer only consumes their canonical output.
 - **Cut-off fixed:** panel `max-height:92vh` with a sticky header and an internally
   scrolling body; tiles shrunk (150px SVG, `minmax(148px,1fr)` grid, `minmax(128px)`
   under 560px) so several voicings fit without the box overflowing the viewport.
+- **Chord-dictionary parity + jazz bonus:** diagrams now render the fretting-hand
+  **finger numbers** (1–4) from `chords.json.fingers`, **open (○) / muted (✕)
+  markers** above the nut, and the base-fret label — matching a standard chord
+  dictionary — with a header **Fingers ⇄ Intervals** segmented control that swaps the
+  dot labels to `R/3/5/b7` (the theory view a plain dictionary lacks). `chords.json`
+  is now used *alone* for common qualities (clean per-position names + real finger
+  data); the curated jazz shells are a fallback only for qualities the library lacks.
+  Substitution reasons are parameterized to the actual roots (e.g. "Bbm7 = Db6",
+  "B°7 = rootless G7b9"), not fixed examples. Up to **8 shapes**, ordered open/low
+  first. `buildDisplayVoicing()` in `chordDiagram.js` builds the exact SVGuitar
+  `fingers` array (label choice + `[string,'x']` mutes) from a canonical voicing.
 - No new CDN / library / CSP change (leverages the already-vendored `chords.json`
   and `svguitar.umd.js`). SW `SHELL` gains the two new modules; cache `v9`→`v10`.
 - Verified headlessly (Chromium, 414×896): `Gm7` → **6 voicings / 4 subs** (was 1),

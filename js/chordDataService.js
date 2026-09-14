@@ -280,8 +280,15 @@
     }
 
     if (VL && typeof VL.buildVoicings === 'function') {
-      const built = VL.buildVoicings({ key, suffix, chordsDb, jazzList });
-      if (built.length) return built;
+      // Prefer the chords.json library alone: clean per-position names + real
+      // fretting-hand finger numbers, matching a standard chord dictionary.
+      const fromLibrary = VL.buildVoicings({ key, suffix, chordsDb, jazzList: [] });
+      if (fromLibrary.length) return fromLibrary;
+
+      // Only for qualities the library lacks do we fall back to the curated
+      // jazz shells (transposed shapes, no finger data).
+      const withJazz = VL.buildVoicings({ key, suffix, chordsDb, jazzList });
+      if (withJazz.length) return withJazz;
     }
 
     // Legacy fallback (older bundle / missing VoicingLibrary).

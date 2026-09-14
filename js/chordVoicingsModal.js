@@ -1,6 +1,7 @@
 (function (global) {
-  let modal, backdrop, body, titleEl, closeBtn, toggleEl, countEl;
+  let modal, backdrop, body, titleEl, closeBtn, countEl, labelModeEl;
   let lastTrigger = null;
+  let labelMode = 'finger'; // 'finger' (finger numbers) | 'interval' (R/3/5/b7)
   // state.chords: [{ symbol, key, suffix, voicings:[canonical], subs:[], message? }]
   let state = { title: '', chords: [] };
 
@@ -18,7 +19,10 @@
         <div class="chord-voicings-head">
           <h3 id="chordVoicingsTitle">Chord Voicings</h3>
           <div class="chord-voicings-controls">
-            <label class="cv-toggle"><input type="checkbox" id="jazzVoicingsToggle" checked/> Compact grips first</label>
+            <div class="cv-labelmode" role="group" aria-label="Dot labels">
+              <button type="button" class="cv-seg active" data-mode="finger" aria-pressed="true">Fingers</button>
+              <button type="button" class="cv-seg" data-mode="interval" aria-pressed="false">Intervals</button>
+            </div>
             <span id="chordVoicingsCount"></span>
             <button type="button" id="chordVoicingsClose" aria-label="Close chord voicings">✕</button>
           </div>
@@ -30,12 +34,22 @@
     body = modal.querySelector('#chordVoicingsBody');
     titleEl = modal.querySelector('#chordVoicingsTitle');
     closeBtn = modal.querySelector('#chordVoicingsClose');
-    toggleEl = modal.querySelector('#jazzVoicingsToggle');
+    labelModeEl = modal.querySelector('.cv-labelmode');
     countEl = modal.querySelector('#chordVoicingsCount');
 
     closeBtn.addEventListener('click', close);
     backdrop.addEventListener('click', close);
-    toggleEl.addEventListener('change', rerender);
+    labelModeEl.addEventListener('click', (e) => {
+      const seg = e.target.closest('.cv-seg');
+      if (!seg || seg.dataset.mode === labelMode) return;
+      labelMode = seg.dataset.mode;
+      labelModeEl.querySelectorAll('.cv-seg').forEach((b) => {
+        const on = b.dataset.mode === labelMode;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      rerender();
+    });
     modal.addEventListener('keydown', trapFocus);
     // Delegate substitution clicks: drill into the sub's own voicings.
     body.addEventListener('click', (e) => {
@@ -70,11 +84,9 @@
   }
 
   function orderVoicings(voicings) {
-    if (!Array.isArray(voicings)) return [];
-    if (toggleEl.checked && global.ChordDataService?.filterJazzVoicings) {
-      return global.ChordDataService.filterJazzVoicings(voicings);
-    }
-    return voicings;
+    // VoicingLibrary already returns them in neck-position order (open/low
+    // shapes first), matching a standard chord dictionary.
+    return Array.isArray(voicings) ? voicings : [];
   }
 
   function renderSubs(subs) {
@@ -130,7 +142,7 @@
           const title = position && position.name
             ? position.name
             : `${chord.symbol} #${idx + 1}`;
-          renderTasks.push(global.ChordDiagram.renderChordDiagram(tile, { title, position, index: idx }));
+          renderTasks.push(global.ChordDiagram.renderChordDiagram(tile, { title, position, index: idx, labelMode }));
         });
       }
 

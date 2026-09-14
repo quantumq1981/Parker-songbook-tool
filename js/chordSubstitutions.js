@@ -112,63 +112,66 @@
     const rootPc = pcOf(root);
     if (rootPc === null) return [];
     const family = classifyQuality(quality);
+    const srcRoot = NAMES_FLAT[rootPc];
+    const src = `${srcRoot}${quality || ''}`;
+    const at = (semis) => NAMES_FLAT[((rootPc + semis) % 12 + 12) % 12];
     const out = [];
 
     switch (family) {
       case FAMILY.DOM:
       case FAMILY.DOM_ALT: {
-        out.push(sub(rootPc, 6, '7', 'Tritone', 'Tritone sub (bII7): shares the 3rd & b7 — swap them and the guide tones barely move.'));
-        out.push(sub(rootPc, 4, 'dim7', 'Diminished', 'Rootless 7b9 sound — the °7 on the 3rd is the vii°7 that implies this dominant.'));
-        out.push(sub(rootPc, 4, 'm7b5', 'Half-diminished', 'Rootless 9 colour — the m7b5 on the 3rd voices this dominant without its root.'));
-        out.push(sub(rootPc, 7, 'm7', 'Make it a ii–V', 'Precede with its related ii (a 5th above) for a full ii–V into the target.'));
+        out.push(sub(rootPc, 6, '7', 'Tritone', `${src} → ${at(6)}7: shares the 3rd & b7 (guide tones) — the classic bebop reharm.`));
+        out.push(sub(rootPc, 4, 'dim7', 'Diminished', `${at(4)}°7 = rootless ${srcRoot}7b9 (the vii°7 on the 3rd) — implies this dominant.`));
+        out.push(sub(rootPc, 4, 'm7b5', 'Half-diminished', `${at(4)}m7b5 = rootless ${srcRoot}9 — voices this dominant without its root.`));
+        out.push(sub(rootPc, 7, 'm7', 'Make it a ii–V', `Precede ${src} with ${at(7)}m7 (a 5th above) for a full ii–V.`));
         if (family === FAMILY.DOM) {
-          out.push(sub(rootPc, 0, '7b9', 'Alteration', 'Add a b9 for extra tension pulling to a minor target.'));
-          out.push(sub(rootPc, 0, '7#11', 'Alteration', 'Lydian-dominant colour (#11) — same function, brighter.'));
+          out.push(sub(rootPc, 0, '7b9', 'Alteration', `${srcRoot}7b9 — add a b9 for tension pulling to a minor target.`));
+          out.push(sub(rootPc, 0, '7#11', 'Alteration', `${srcRoot}7#11 — lydian-dominant colour, same function, brighter.`));
         }
         break;
       }
 
       case FAMILY.DOM_SUS: {
-        out.push(sub(rootPc, 7, 'm11', 'Modal swap', 'G7sus4 = D–11 — the sus is the ii voiced over the V root.'));
-        out.push(sub(rootPc, 0, '7', 'Resolve the sus', 'Drop the 4th to the 3rd for the plain dominant.'));
-        out.push(sub(rootPc, 6, '7', 'Tritone', 'Tritone sub of the underlying dominant.'));
+        out.push(sub(rootPc, 7, 'm11', 'Modal swap', `${src} = ${at(7)}m11 — the sus is the ii voiced over the V root.`));
+        out.push(sub(rootPc, 0, '7', 'Resolve the sus', `Drop the 4th to the 3rd for the plain ${srcRoot}7.`));
+        out.push(sub(rootPc, 6, '7', 'Tritone', `${at(6)}7 — tritone sub of the underlying dominant.`));
         break;
       }
 
       case FAMILY.MIN11: {
-        out.push(sub(rootPc, 5, '7sus4', 'Sus equivalent', 'D–11 = G7sus4 — identical pitch collection, a 4th above.'));
-        out.push(sub(rootPc, 5, '7', 'Its ii–V', 'Treat as the ii of a ii–V; here is the V7 it resolves to.'));
-        out.push(sub(rootPc, 3, '6', 'Relative major', 'Shares notes with the maj6 a minor 3rd up.'));
+        out.push(sub(rootPc, 5, '7sus4', 'Sus equivalent', `${src} = ${at(5)}7sus4 — identical pitch collection, a 4th above.`));
+        out.push(sub(rootPc, 5, '7', 'Its ii–V', `As the ii of a ii–V, ${src} leads to ${at(5)}7.`));
+        out.push(sub(rootPc, 3, '6', 'Relative major', `${at(3)}6 — the relative major a minor 3rd up shares its notes.`));
         break;
       }
 
       case FAMILY.MIN7: {
-        out.push(sub(rootPc, 3, '6', 'Relative major', 'A–7 = C6 — the relative major 6 a minor 3rd up (same notes).'));
-        out.push(sub(rootPc, 5, '7', 'Its ii–V', 'As the ii of a ii–V, here is the dominant it leads to.'));
-        out.push(sub(rootPc, 0, 'm11', 'Extension', 'Stack the 11th for a modern rootless colour.'));
-        out.push(sub(rootPc, 5, '7sus4', 'Sus equivalent', 'Voiced a 4th above, this m7 becomes a 7sus4.'));
+        out.push(sub(rootPc, 3, '6', 'Relative major', `${src} = ${at(3)}6 — the relative major 6 a minor 3rd up (same notes).`));
+        out.push(sub(rootPc, 5, '7', 'Its ii–V', `As the ii of a ii–V, ${src} leads to ${at(5)}7.`));
+        out.push(sub(rootPc, 0, 'm11', 'Extension', `${srcRoot}m11 — stack the 11th for a modern rootless colour.`));
+        out.push(sub(rootPc, 5, '7sus4', 'Sus equivalent', `Voiced a 4th above, ${src} becomes ${at(5)}7sus4.`));
         break;
       }
 
       case FAMILY.MIN7B5: {
-        out.push(sub(rootPc, 5, '7b9', 'Minor ii–V', 'The half-dim is the ii of a minor key — resolve it to this V7b9.'));
-        out.push(sub(rootPc, 8, '9', 'Upper structure', 'Bm7b5 = rootless G9 — the dominant a major 3rd below.'));
-        out.push(sub(rootPc, 3, 'm6', 'Relative minor 6', 'Shares three notes with the m6 a minor 3rd up.'));
+        out.push(sub(rootPc, 5, '7b9', 'Minor ii–V', `${src} is the ii of a minor key — resolve it to ${at(5)}7b9.`));
+        out.push(sub(rootPc, 8, '9', 'Upper structure', `${src} = rootless ${at(8)}9 — the dominant a major 3rd below.`));
+        out.push(sub(rootPc, 3, 'm6', 'Relative minor 6', `${at(3)}m6 a minor 3rd up shares three of its notes.`));
         break;
       }
 
       case FAMILY.DIM7: {
-        out.push(sub(rootPc, 8, '7b9', 'Dominant function', '°7 = rootless 7b9 — resolves like the dominant a major 3rd below.'));
-        out.push(sub(rootPc, 11, '7b9', 'Dominant function', 'Also functions as the vii°7 of the chord a half-step above.'));
-        out.push(sub(rootPc, 1, 'm7', 'Chromatic target', 'Common passing use: resolves up a half-step into this m7.'));
+        out.push(sub(rootPc, 8, '7b9', 'Dominant function', `${src} = rootless ${at(8)}7b9 — resolves like that dominant.`));
+        out.push(sub(rootPc, 11, '7b9', 'Dominant function', `Also the vii°7 of ${at(11)}7b9 (a half-step above).`));
+        out.push(sub(rootPc, 1, 'm7', 'Chromatic target', `Common passing use: resolves up a half-step into ${at(1)}m7.`));
         break;
       }
 
       case FAMILY.MAJ7: {
-        out.push(sub(rootPc, 9, 'm7', 'Relative minor', 'Cmaj7 ⇄ A–7 — the vi shares three of four notes.'));
-        out.push(sub(rootPc, 4, 'm7', 'iii for I', 'The iii–7 substitutes for a tonic major (rootless maj9 sound).'));
-        out.push(sub(rootPc, 0, '6', 'Colour swap', 'Trade the maj7 for a 6 to lose the b2-against-root rub.'));
-        out.push(sub(rootPc, 2, '7sus4', 'Backdoor set-up', 'Approach from the II7sus for a gospel/backdoor lead-in.'));
+        out.push(sub(rootPc, 9, 'm7', 'Relative minor', `${src} ⇄ ${at(9)}m7 — the relative vi shares three of four notes.`));
+        out.push(sub(rootPc, 4, 'm7', 'iii for I', `${at(4)}m7 — the iii substitutes for a tonic major (rootless maj9).`));
+        out.push(sub(rootPc, 0, '6', 'Colour swap', `${srcRoot}6 — trade the maj7 for a 6 to lose the b2-against-root rub.`));
+        out.push(sub(rootPc, 2, '7sus4', 'Backdoor set-up', `${at(2)}7sus4 — a gospel/backdoor lead-in to ${src}.`));
         break;
       }
 

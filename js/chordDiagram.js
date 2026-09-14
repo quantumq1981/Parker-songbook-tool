@@ -91,6 +91,63 @@
     });
   }
 
+  function fretsToTuples(frets) {
+    const out = [];
+    frets.forEach((f, idx) => {
+      if (f !== 'x' && f !== -1 && f != null) out.push([6 - idx, f]);
+    });
+    return out;
+  }
+
+  /**
+   * Turn a canonical voicing into the exact `fingers` array SVGuitar draws:
+   *  · dot label = fretting-hand finger number (labelMode 'finger', default) or
+   *    the interval name (labelMode 'interval'); finger mode falls back to the
+   *    interval when a voicing carries no finger data (e.g. curated jazz shells).
+   *  · every string not fretted/open is emitted as [string,'x'] so the muted (✕)
+   *    and open (○) markers render above the nut, matching a chord dictionary.
+   */
+  function buildDisplayVoicing(position, labelMode) {
+    if (Array.isArray(position)) return position; // legacy flat frets array
+
+    const hasTuples = Array.isArray(position.fingers)
+      && position.fingers.length && Array.isArray(position.fingers[0]);
+    const src = hasTuples
+      ? position.fingers
+      : (Array.isArray(position.frets) ? fretsToTuples(position.frets) : []);
+    const fingerMap = position.fingerMap || {};
+    const used = new Set();
+
+    const display = src.map((tuple) => {
+      const [s, f, interval] = tuple;
+      used.add(s);
+      const intervalText = typeof interval === 'string' ? interval : '';
+      let text = '';
+      if (labelMode === 'interval') {
+        text = intervalText; // label every sounding string, open strings included
+      } else if (fingerMap[s]) {
+        text = String(fingerMap[s]); // fretting-hand finger number
+      } else if (f > 0) {
+        text = intervalText; // fretted note with no finger data (jazz shell) → interval
+      }
+      // open strings in finger mode get no text — just the ○ marker above the nut
+      return text ? [s, f, { text, textColor: '#0b1220', color: '#f1c40f' }] : [s, f];
+    });
+
+    for (let s = 1; s <= 6; s += 1) {
+      if (!used.has(s)) display.push([s, 'x']);
+    }
+
+    return {
+      // The tile heading already shows the voicing name; keep SVGuitar's own
+      // in-diagram title empty so it isn't drawn twice.
+      name: '',
+      baseFret: position.baseFret || 1,
+      fingers: display,
+      barres: position.barres || []
+    };
+  }
+
   // Mapping Function
   function renderJazzVoicing(targetId, rawVoicing) {
     let formattedFingers = [];
@@ -246,7 +303,7 @@
     });
   }
 
-  async function renderChordDiagram(container, { title, position }) {
+  async function renderChordDiagram(container, { title, position, labelMode = 'finger' }) {
     container.innerHTML = '';
     container.className = 'chord-diagram-tile';
 
@@ -267,15 +324,7 @@
     try {
       await waitForSvguitar();
 
-      const fingerTuples = Array.isArray(position?.fingers)
-        ? asFingerTuples(position.fingers)
-        : [];
-      const rawVoicing = Array.isArray(position)
-        ? position
-        : {
-          ...position,
-          fingers: withIntervalLabels(fingerTuples, position)
-        };
+      const rawVoicing = buildDisplayVoicing(position, labelMode);
 
       await drawWithRecovery(svgHolder, rawVoicing);
     } catch (err) {
@@ -288,7 +337,7 @@
     }
   }
 
-  const api = { renderChordDiagram, waitForSvguitar, renderJazzVoicing };
+  const api = { renderChordDiagram, waitForSvguitar, renderJazzVoicing, buildDisplayVoicing };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.ChordDiagram = api;
 })(typeof window !== 'undefined' ? window : globalThis);

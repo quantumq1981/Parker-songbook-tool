@@ -373,7 +373,12 @@ align-items:center;flex-wrap:wrap;padding:12px 14px;background:linear-gradient(1
 border-bottom:1px solid #263a5c;}
 .chord-voicings-head h3{margin:0;font-size:17px;color:var(--sym);letter-spacing:.5px;}
 .chord-voicings-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ink-dim);}
-.chord-voicings-controls .cv-toggle{display:flex;gap:6px;align-items:center;cursor:pointer;}
+.cv-labelmode{display:inline-flex;border:1px solid #33507d;border-radius:8px;overflow:hidden;}
+.cv-seg{background:#141d31;border:none;color:var(--ink-dim);font-size:11px;font-family:inherit;
+padding:6px 12px;min-height:34px;cursor:pointer;transition:background .12s,color .12s;}
+.cv-seg+.cv-seg{border-left:1px solid #33507d;}
+.cv-seg.active{background:var(--accent2);color:#0b1220;font-weight:700;}
+.cv-seg:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
 #chordVoicingsCount{font-size:11px;color:var(--accent2);white-space:nowrap;}
 #chordVoicingsClose{background:#1e2a42;border:1px solid var(--accent);color:var(--sym);border-radius:8px;
 padding:6px 11px;cursor:pointer;min-height:36px;min-width:36px;font-size:14px;}
