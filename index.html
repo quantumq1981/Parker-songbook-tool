@@ -373,7 +373,12 @@ align-items:center;flex-wrap:wrap;padding:12px 14px;background:linear-gradient(1
 border-bottom:1px solid #263a5c;}
 .chord-voicings-head h3{margin:0;font-size:17px;color:var(--sym);letter-spacing:.5px;}
 .chord-voicings-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ink-dim);}
-.chord-voicings-controls .cv-toggle{display:flex;gap:6px;align-items:center;cursor:pointer;}
+.cv-labelmode{display:inline-flex;border:1px solid #33507d;border-radius:8px;overflow:hidden;}
+.cv-seg{background:#141d31;border:none;color:var(--ink-dim);font-size:11px;font-family:inherit;
+padding:6px 12px;min-height:34px;cursor:pointer;transition:background .12s,color .12s;}
+.cv-seg+.cv-seg{border-left:1px solid #33507d;}
+.cv-seg.active{background:var(--accent2);color:#0b1220;font-weight:700;}
+.cv-seg:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
 #chordVoicingsCount{font-size:11px;color:var(--accent2);white-space:nowrap;}
 #chordVoicingsClose{background:#1e2a42;border:1px solid var(--accent);color:var(--sym);border-radius:8px;
 padding:6px 11px;cursor:pointer;min-height:36px;min-width:36px;font-size:14px;}
@@ -385,11 +390,18 @@ display:flex;flex-direction:column;gap:18px;}
 .cv-chord-head{display:flex;align-items:baseline;gap:8px;border-bottom:1px solid #22314c;padding-bottom:6px;}
 .cv-chord-name{margin:0;font-size:20px;color:var(--sym);font-weight:700;}
 .cv-chord-tag{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-dim);}
-.cv-voicings{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;}
+.cv-voicings{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:4px;}
 
-.chord-diagram-tile,.chord-diagram-empty{background:#18233a;border:1px solid #355a8f;border-radius:10px;
+/* Voicing-type group headers (Library / Drop 2 / Drop 3) */
+.cv-group-head{display:flex;flex-direction:column;gap:1px;margin:12px 0 6px;}
+.cv-group-name{font-size:12px;font-weight:700;color:var(--sym);text-transform:uppercase;letter-spacing:.7px;}
+.cv-group-blurb{font-size:10px;color:var(--ink-dim);line-height:1.35;}
+
+.chord-diagram-tile,.chord-diagram-empty{position:relative;background:#18233a;border:1px solid #355a8f;border-radius:10px;
 padding:8px 8px 6px;min-height:172px;display:flex;flex-direction:column;justify-content:flex-start;}
-.chord-diagram-title{font-size:11px;color:var(--accent2);margin-bottom:4px;text-align:center;min-height:14px;}
+.chord-diagram-title{font-size:11px;color:var(--accent2);margin-bottom:4px;text-align:center;min-height:14px;padding:0 46px;line-height:1.3;}
+.chord-diagram-fret{position:absolute;top:6px;right:6px;font-size:10px;font-weight:700;color:#0b1220;
+background:var(--sym);border-radius:6px;padding:2px 6px;letter-spacing:.3px;}
 .chord-diagram-svg{width:100%;height:150px;display:flex;justify-content:center;align-items:center;overflow:hidden;}
 .chord-diagram-svg svg{width:100%!important;height:auto!important;max-height:150px;display:block;}
 .chord-voicings-empty{padding:16px;font-size:13px;color:var(--ink-dim);background:#141d31;border-radius:10px;}
@@ -2322,14 +2334,15 @@ body[data-active-mode] .ref-player-row[data-modes]:not(.ra-empty) { display: fle
      execution order and the guarantee that they run before DOMContentLoaded —
      so the parser is no longer blocked waiting on ~50 KB of module JS. -->
 <script defer src="js/resonanceEngine.js?v=1.0"></script>
-<script defer src="js/chordParser.js?v=7.11"></script>
+<script defer src="js/chordParser.js?v=7.12"></script>
 <script defer src="js/jazzChordDatabase.js?v=7.2"></script>
-<script defer src="js/voicingLibrary.js?v=7.11"></script>
-<script defer src="js/chordSubstitutions.js?v=7.11"></script>
-<script defer src="js/chordDataService.js?v=7.11"></script>
-<script defer src="js/chordDiagram.js?v=7.11"></script>
-<script defer src="js/chordVoicingsModal.js?v=7.11"></script>
-<script defer src="js/chordVoicingsInit.js?v=7.11"></script>
+<script defer src="js/voicingLibrary.js?v=7.12"></script>
+<script defer src="js/dropVoicings.js?v=7.12"></script>
+<script defer src="js/chordSubstitutions.js?v=7.12"></script>
+<script defer src="js/chordDataService.js?v=7.12"></script>
+<script defer src="js/chordDiagram.js?v=7.12"></script>
+<script defer src="js/chordVoicingsModal.js?v=7.12"></script>
+<script defer src="js/chordVoicingsInit.js?v=7.12"></script>
 <script defer src="js/pitchScoring.js?v=7.4"></script>
 <script defer src="js/tempoRamp.js?v=7.4"></script>
 <script defer src="js/silentBars.js?v=7.4"></script>

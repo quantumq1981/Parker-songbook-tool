@@ -1,6 +1,7 @@
 (function (global) {
-  let modal, backdrop, body, titleEl, closeBtn, toggleEl, countEl;
+  let modal, backdrop, body, titleEl, closeBtn, countEl, labelModeEl;
   let lastTrigger = null;
+  let labelMode = 'finger'; // 'finger' (finger numbers) | 'interval' (R/3/5/b7)
   // state.chords: [{ symbol, key, suffix, voicings:[canonical], subs:[], message? }]
   let state = { title: '', chords: [] };
 
@@ -18,7 +19,10 @@
         <div class="chord-voicings-head">
           <h3 id="chordVoicingsTitle">Chord Voicings</h3>
           <div class="chord-voicings-controls">
-            <label class="cv-toggle"><input type="checkbox" id="jazzVoicingsToggle" checked/> Compact grips first</label>
+            <div class="cv-labelmode" role="group" aria-label="Dot labels">
+              <button type="button" class="cv-seg active" data-mode="finger" aria-pressed="true">Fingers</button>
+              <button type="button" class="cv-seg" data-mode="interval" aria-pressed="false">Intervals</button>
+            </div>
             <span id="chordVoicingsCount"></span>
             <button type="button" id="chordVoicingsClose" aria-label="Close chord voicings">✕</button>
           </div>
@@ -30,12 +34,22 @@
     body = modal.querySelector('#chordVoicingsBody');
     titleEl = modal.querySelector('#chordVoicingsTitle');
     closeBtn = modal.querySelector('#chordVoicingsClose');
-    toggleEl = modal.querySelector('#jazzVoicingsToggle');
+    labelModeEl = modal.querySelector('.cv-labelmode');
     countEl = modal.querySelector('#chordVoicingsCount');
 
     closeBtn.addEventListener('click', close);
     backdrop.addEventListener('click', close);
-    toggleEl.addEventListener('change', rerender);
+    labelModeEl.addEventListener('click', (e) => {
+      const seg = e.target.closest('.cv-seg');
+      if (!seg || seg.dataset.mode === labelMode) return;
+      labelMode = seg.dataset.mode;
+      labelModeEl.querySelectorAll('.cv-seg').forEach((b) => {
+        const on = b.dataset.mode === labelMode;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      rerender();
+    });
     modal.addEventListener('keydown', trapFocus);
     // Delegate substitution clicks: drill into the sub's own voicings.
     body.addEventListener('click', (e) => {
@@ -70,11 +84,9 @@
   }
 
   function orderVoicings(voicings) {
-    if (!Array.isArray(voicings)) return [];
-    if (toggleEl.checked && global.ChordDataService?.filterJazzVoicings) {
-      return global.ChordDataService.filterJazzVoicings(voicings);
-    }
-    return voicings;
+    // VoicingLibrary already returns them in neck-position order (open/low
+    // shapes first), matching a standard chord dictionary.
+    return Array.isArray(voicings) ? voicings : [];
   }
 
   function renderSubs(subs) {
@@ -93,6 +105,40 @@
         <div class="cv-subs-head">Substitutions &amp; reharmonization <span class="cv-subs-hint">tap to explore</span></div>
         <div class="cv-subs-list">${chips}</div>
       </div>`;
+  }
+
+  const GROUP_ORDER = ['Library', 'Drop 2', 'Drop 3'];
+  const GROUP_BLURB = {
+    Library: 'Common dictionary shapes across the neck.',
+    'Drop 2': 'Four-note voicings — 2nd voice from the top dropped an octave (adjacent strings).',
+    'Drop 3': 'Four-note voicings — 3rd voice from the top dropped an octave (one string skipped).'
+  };
+
+  function groupVoicings(voicings) {
+    const groups = new Map();
+    (voicings || []).forEach((v) => {
+      const g = (v && v.group) || 'Library';
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push(v);
+    });
+    return [...groups.keys()]
+      .sort((a, b) => {
+        const ia = GROUP_ORDER.indexOf(a);
+        const ib = GROUP_ORDER.indexOf(b);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      })
+      .map((g) => ({ group: g, items: groups.get(g) }));
+  }
+
+  function fretLabelFor(v) {
+    const base = (v && v.baseFret) || 1;
+    return base <= 1 ? 'open' : `${base}fr`;
+  }
+
+  function tileTitle(chord, v, idx) {
+    if (!v || !v.name) return `${chord.symbol} #${idx + 1}`;
+    // Group header already names the drop type; drop the redundant prefix.
+    return v.name.replace(/^Drop \d+ · /, '');
   }
 
   function rerender() {
@@ -119,18 +165,29 @@
         empty.textContent = chord.message || `No voicings found for ${chord.symbol}.`;
         section.appendChild(empty);
       } else {
-        const grid = document.createElement('div');
-        grid.className = 'cv-voicings';
-        section.appendChild(grid);
-        ordered.forEach((position, idx) => {
-          const tile = document.createElement('div');
-          tile.dataset.voicingIndex = String(idx);
-          tile.id = `cv-${chordIdx}-${idx}`;
-          grid.appendChild(tile);
-          const title = position && position.name
-            ? position.name
-            : `${chord.symbol} #${idx + 1}`;
-          renderTasks.push(global.ChordDiagram.renderChordDiagram(tile, { title, position, index: idx }));
+        groupVoicings(ordered).forEach((grp) => {
+          const gh = document.createElement('div');
+          gh.className = 'cv-group-head';
+          gh.innerHTML = `<span class="cv-group-name">${escapeHtml(grp.group)}</span>
+            <span class="cv-group-blurb">${escapeHtml(GROUP_BLURB[grp.group] || '')}</span>`;
+          section.appendChild(gh);
+
+          const grid = document.createElement('div');
+          grid.className = 'cv-voicings';
+          section.appendChild(grid);
+
+          grp.items.forEach((position, idx) => {
+            const tile = document.createElement('div');
+            tile.id = `cv-${chordIdx}-${grp.group.replace(/\s+/g, '')}-${idx}`;
+            grid.appendChild(tile);
+            renderTasks.push(global.ChordDiagram.renderChordDiagram(tile, {
+              title: tileTitle(chord, position, idx),
+              fretLabel: fretLabelFor(position),
+              position,
+              index: idx,
+              labelMode
+            }));
+          });
         });
       }
 

@@ -545,12 +545,59 @@ unit-tested modules; the DOM/renderer only consumes their canonical output.
 - **Cut-off fixed:** panel `max-height:92vh` with a sticky header and an internally
   scrolling body; tiles shrunk (150px SVG, `minmax(148px,1fr)` grid, `minmax(128px)`
   under 560px) so several voicings fit without the box overflowing the viewport.
+- **Chord-dictionary parity + jazz bonus:** diagrams now render the fretting-hand
+  **finger numbers** (1–4) from `chords.json.fingers`, **open (○) / muted (✕)
+  markers** above the nut, and the base-fret label — matching a standard chord
+  dictionary — with a header **Fingers ⇄ Intervals** segmented control that swaps the
+  dot labels to `R/3/5/b7` (the theory view a plain dictionary lacks). `chords.json`
+  is now used *alone* for common qualities (clean per-position names + real finger
+  data); the curated jazz shells are a fallback only for qualities the library lacks.
+  Substitution reasons are parameterized to the actual roots (e.g. "Bbm7 = Db6",
+  "B°7 = rootless G7b9"), not fixed examples. Up to **8 shapes**, ordered open/low
+  first. `buildDisplayVoicing()` in `chordDiagram.js` builds the exact SVGuitar
+  `fingers` array (label choice + `[string,'x']` mutes) from a canonical voicing.
 - No new CDN / library / CSP change (leverages the already-vendored `chords.json`
   and `svguitar.umd.js`). SW `SHELL` gains the two new modules; cache `v9`→`v10`.
 - Verified headlessly (Chromium, 414×896): `Gm7` → **6 voicings / 4 subs** (was 1),
   `Bbm7/Eb7` → **10 voicings across both chords, 0 blank grids** (was 1 blank box),
   `G7b9` → 4 voicings + Db7/Bdim7/Bm7b5 subs, `Dm11` → 4 voicings + G7sus4 sub. No
   pipeline console errors.
+
+### 18. Drop-2 / Drop-3 Voicing Generator + Fret Position Labels v7.12 (user request)
+
+Positions the app as an advanced/conservatory jazz tool: instead of only the
+dictionary shapes, it now *derives* the classic four-note jazz voicings from
+theory, so every seventh-chord quality shows real drop-2 and drop-3 grips in all
+inversions and string sets, in all 12 keys.
+
+- **Pure generator** `js/dropVoicings.js` (`generate(root, suffix)`): builds the
+  four close-position inversions of the chord's four-note core, applies the drop-2
+  (2nd voice from top down an octave → adjacent strings) and drop-3 (3rd voice from
+  top → one string skipped) transforms, then solves each onto the standard guitar
+  string sets (drop-2: 6-5-4-3 / 5-4-3-2 / 4-3-2-1; drop-3: 6-4-3-2 / 5-3-2-1) with
+  a compact-fingering search (span ≤ 5). Emits canonical voicings with interval
+  labels, a distinct-fret finger heuristic, `group` ('Drop 2'/'Drop 3'), `bass`
+  (which tone is lowest) and `stringSet`. Extended/altered qualities resolve to
+  their seventh-chord core (`13`→`7`, `m11`→`m7`, …); triads/sus produce none.
+  Zero DOM/IO → `tests/dropVoicings.test.js` proves chord spelling, 4 distinct
+  tones, playability, the drop-3 string skip, and the drop-2 adjacency across
+  qualities and keys.
+- **Merged + grouped:** `getRichVoicings` now returns Library shapes (chords.json)
+  **plus** generated Drop 2 / Drop 3, deduped by fret signature (library wins), each
+  tagged with a `group`. The modal renders one labeled sub-section per group with a
+  one-line explanation. A `Cmaj7` now shows ~15 voicings across the three groups.
+- **Starting-fret label on every chart** (user request): `renderChordDiagram` draws
+  an always-present fret badge (`open` / `Nfr`) in the tile's top-right corner, so
+  the neck position is unambiguous even for open-position shapes (SVGuitar only
+  prints its own marker for baseFret > 1). The **Fingers ⇄ Intervals** toggle drives
+  the generated voicings too (finger heuristic vs. interval labels).
+- No new CDN / library / CSP change. SW `SHELL` gains `js/dropVoicings.js`; cache
+  `v10`→`v11`. Verified headlessly (Chromium, 414×896): `Cmaj7` 15 / `Dm7` 16 / `G7`
+  16 voicings across Library|Drop 2|Drop 3, a fret badge on every tile, 0 blank
+  grids, no pipeline console errors.
+- **Next tier (not yet built):** rootless drop-2 of the *extended* upper structures
+  (e.g. voicing a 13 as 3-13-b7-9 rather than the 7th core), and drop-2&4. Noted for
+  a future pass; the current core covers standard drop-2/drop-3 comping.
 
 ---
 
@@ -575,6 +622,9 @@ unit-tested modules; the DOM/renderer only consumes their canonical output.
 | `js/referenceAudio.js` | Pure validation for user-uploaded reference audio (accept/reject by type, extension, size) (R5.1) |
 | `tests/referenceAudio.test.js` | Unit tests for referenceAudio.isAcceptableAudio |
 | `tests/practiceStore.test.js` | Unit tests for practiceStore normalize/merge/dedupe/idempotency |
+| `js/dropVoicings.js` | Pure drop-2/drop-3 generator — close-position inversions → drop transforms → string-set fretboard mapping (v7.12) |
+| `tests/dropVoicings.test.js` | Unit tests — chord spelling, playability, drop-3 string skip, drop-2 adjacency across keys/qualities (v7.12) |
+| `js/chordVoicingsModal.js` | + voicing-type grouping (Library/Drop 2/Drop 3) and per-tile starting-fret badge (v7.12) |
 | `js/voicingLibrary.js` | Pure voicing normalizer — chords.json positions → canonical interval-labeled voicings, merge/dedupe/validate (v7.11) |
 | `js/chordSubstitutions.js` | Pure reharmonization engine — tritone / diminished / half-dim / ii–V / m11⇄7sus4 / relative subs (v7.11) |
 | `js/chordDataService.js` | + `getRichVoicings()` merges jazz shells + VoicingLibrary; legacy path retained (v7.11) |
@@ -643,7 +693,8 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | **7.8** | **2026-09-09** | **R5.1** — upload your own MP3 as a per-tune reference recording; stored device-local per tune in IndexedDB, played inline via `blob:` (`js/referenceAudio.js`) |
 | **7.9** | **2026-09-13** | **Bebop swing groove engine** — data-driven `js/bebopGroove.js`: walking bass with chromatic approach to the next root, tempo-adaptive swing, humanized/varied comping, feel selector (Medium/Up-tempo/Ballad). Native, CSP-safe analogue of werckmeister styles |
 | **7.10** | **2026-09-13** | **"After Hours" photo backdrop** — Charlie Parker performance photo (`images/bg-parker.jpg`, 1080×1920, 224 KB) folded into the existing fixed `body::before` backdrop under a readability tint; original gradient retained as load-failure fallback. CSS + asset + SW shell (`v8`→`v9`) only; no CSP change |
-| **7.11** | **2026-09-14** | **Chord voicings & substitutions overhaul** — pure `js/voicingLibrary.js` (chords.json → canonical interval-labeled voicings, validated/deduped, several per chord across the neck) + `js/chordSubstitutions.js` (tritone / diminished / half-dim / ii–V / m11⇄7sus4 / relative reharms). Fixes blank-grid + "1 voicing" + dropped-ii–V bugs; clickable subs panel; modal cut-off fixed. SW `v9`→`v10`. No new CDN/CSP |
+| **7.11** | **2026-09-14** | **Chord voicings & substitutions overhaul** — pure `js/voicingLibrary.js` (chords.json → canonical interval-labeled voicings, validated/deduped, several per chord across the neck) + `js/chordSubstitutions.js` (tritone / diminished / half-dim / ii–V / m11⇄7sus4 / relative reharms). Fixes blank-grid + "1 voicing" + dropped-ii–V bugs; clickable subs panel; modal cut-off fixed. Finger numbers + ○/✕ markers + Fingers⇄Intervals toggle. SW `v9`→`v10`. No new CDN/CSP |
+| **7.12** | **2026-09-14** | **Drop-2 / Drop-3 generator** — pure `js/dropVoicings.js` derives the four close-position inversions, applies drop-2/drop-3, maps to standard string sets (all 12 keys, all seventh qualities). Modal groups Library/Drop 2/Drop 3; every chart gets an always-on starting-fret badge. `Cmaj7` → ~15 voicings. SW `v10`→`v11`. No new CDN/CSP |
 
 ---
 
@@ -669,5 +720,5 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 
 ---
 
-*Last updated: 2026-09-14*  
+*Last updated: 2026-09-14 (v7.12 — drop-2/drop-3 generator + fret labels)*  
 *Active branch: `claude/chord-suggestions-voicings-4y26q1`*

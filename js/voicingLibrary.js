@@ -155,20 +155,23 @@
     const rootPc = pcOf(key);
     const baseFret = position.baseFret || 1;
     const fingers = [];
+    const fingerMap = {}; // stringNum → fretting-hand finger (1–4) from chords.json
 
     position.frets.forEach((fret, idx) => {
-      if (fret === -1 || fret === 'x' || fret == null) return; // muted
+      if (fret === -1 || fret === 'x' || fret == null) return; // muted → omitted here
       const stringNum = 6 - idx;
       const absFret = fret === 0 ? 0 : baseFret + fret - 1;
       const pitch = OPEN_MIDI[idx] + absFret; // absFret 0 → open string pitch
       const label = labelFor(pitch, rootPc);
+      const fingerNum = Array.isArray(position.fingers) ? position.fingers[idx] : 0;
+      if (fret > 0 && fingerNum) fingerMap[stringNum] = fingerNum;
       fingers.push(label ? [stringNum, absFret, label] : [stringNum, absFret]);
     });
 
     if (!fingers.some(([, f]) => typeof f === 'number' && f > 0) && baseFret > 1) return null;
     if (!fingers.length) return null;
 
-    return { name: name || '', baseFret, fingers, barres: [], source: 'lib' };
+    return { name: name || '', baseFret, fingers, fingerMap, barres: [], source: 'lib' };
   }
 
   /** Canonicalize a jazz-DB voicing (already tuple-shaped) — clone + tag. */
@@ -178,6 +181,7 @@
       name: voicing.name || '',
       baseFret: voicing.baseFret || 1,
       fingers: voicing.fingers.map((f) => f.slice()),
+      fingerMap: {}, // curated shells carry no fretting-hand finger data
       barres: Array.isArray(voicing.barres) ? voicing.barres.slice() : [],
       source: 'jazz'
     };
@@ -242,11 +246,13 @@
    * @param {number} [opts.limit]   max voicings returned (default 10)
    * @returns {Array<object>} canonical voicings
    */
-  function buildVoicings({ key, suffix, chordsDb, jazzList, limit = 10 }) {
+  function buildVoicings({ key, suffix, chordsDb, jazzList, limit = 8 }) {
     const seen = new Set();
     const merged = [];
 
-    // Jazz shells first (idiomatic), then library positions sorted low → high.
+    // Jazz shells are added first so they win ties during dedupe, but the final
+    // list is ordered by neck position (open / low shapes first) to match a
+    // standard chord dictionary.
     const jazz = (Array.isArray(jazzList) ? jazzList : [])
       .map(jazzToVoicing)
       .filter(Boolean)
@@ -255,8 +261,7 @@
     const lib = resolveEntries(chordsDb, key, suffix)
       .map((p, i) => positionToVoicing(p, key, `${key}${suffix} · pos ${i + 1}`))
       .filter(Boolean)
-      .filter((v) => isValidVoicing(v, key, suffix))
-      .sort((a, b) => lowestFret(a) - lowestFret(b));
+      .filter((v) => isValidVoicing(v, key, suffix));
 
     [...jazz, ...lib].forEach((v) => {
       const sig = signature(v);
@@ -265,6 +270,7 @@
       merged.push(v);
     });
 
+    merged.sort((a, b) => lowestFret(a) - lowestFret(b));
     return merged.slice(0, limit);
   }
 

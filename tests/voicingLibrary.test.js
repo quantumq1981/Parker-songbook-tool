@@ -56,14 +56,34 @@ assert.ok(
   'corrupt Am7-as-Bbm7 grip should be rejected'
 );
 
+// ── fingerMap: chords.json finger numbers are carried onto voicings ──────────
+const cmaj = lib.buildVoicings({ key: 'C', suffix: 'major', chordsDb });
+assert.ok(cmaj.some((v) => v.fingerMap && Object.keys(v.fingerMap).length >= 2),
+  'C major voicings should carry fretting-hand finger numbers');
+// Finger numbers are valid (1–4), keyed by string number (1–6).
+cmaj.forEach((v) => {
+  Object.entries(v.fingerMap || {}).forEach(([s, fin]) => {
+    assert.ok(Number(s) >= 1 && Number(s) <= 6, `bad string ${s}`);
+    assert.ok(fin >= 1 && fin <= 4, `bad finger ${fin}`);
+  });
+});
+
+// Voicings come back in neck-position order (open/low first) and capped at 8.
+const c7 = lib.buildVoicings({ key: 'C', suffix: '7', chordsDb });
+assert.ok(c7.length <= 8, 'default cap is 8');
+for (let i = 1; i < c7.length; i += 1) {
+  const lo = (v) => Math.min(...v.fingers.map((f) => f[1]).filter((n) => typeof n === 'number' && n > 0));
+  assert.ok(lo(c7[i - 1]) <= lo(c7[i]), 'voicings should be ordered low → high');
+}
+
 // ── ii–V chord that previously rendered blank now yields voicings ────────────
 const eb7 = lib.buildVoicings({ key: 'Eb', suffix: '7', chordsDb });
 assert.ok(eb7.length >= 3, `expected >=3 Eb7 voicings, got ${eb7.length}`);
 
-// ── Jazz shells are placed first and deduped ─────────────────────────────────
+// ── Jazz shells are merged in and the whole set is deduped ───────────────────
 const jazzList = [{ name: 'Cm7 (Shell)', fingers: [[6, 8, 'R'], [4, 8, 'b7'], [3, 8, 'b3']], baseFret: 8 }];
 const cm7 = lib.buildVoicings({ key: 'C', suffix: 'm7', chordsDb, jazzList });
-assert.equal(cm7[0].source, 'jazz', 'jazz shell should sort first');
+assert.ok(cm7.some((v) => v.source === 'jazz'), 'jazz shell should be present');
 const sigs = cm7.map(lib.signature);
 assert.equal(new Set(sigs).size, sigs.length, 'voicings should be deduped');
 

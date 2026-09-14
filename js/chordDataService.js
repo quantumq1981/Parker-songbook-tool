@@ -260,10 +260,14 @@
   }
 
   /**
-   * Primary voicing lookup used by the modal. Returns a rich, merged, interval-
-   * labeled, de-junked set of canonical voicings (jazz shells first, then the
-   * chords.json library across the neck) via VoicingLibrary. Falls back to the
-   * legacy single-source path if the library module is unavailable.
+   * Primary voicing lookup used by the modal. Returns a flat, ordered array of
+   * canonical voicings, each tagged with a `group` for sectioned display:
+   *   · 'Library' — dictionary shapes from chords.json (finger numbers), across
+   *                 the neck; the curated jazz shells only when the library lacks
+   *                 the quality.
+   *   · 'Drop 2' / 'Drop 3' — algorithmically generated four-note voicings in all
+   *                 inversions and string sets (DropVoicings), for seventh-chord
+   *                 qualities. Deduped against the library.
    * @param {string} key    chord root, e.g. 'Bb'
    * @param {string} suffix parser-normalized suffix, e.g. 'm7'
    * @returns {Promise<Array<object>>}
@@ -279,13 +283,32 @@
       chordsDb = null; // library still works from jazzList alone
     }
 
+    let library = [];
     if (VL && typeof VL.buildVoicings === 'function') {
-      const built = VL.buildVoicings({ key, suffix, chordsDb, jazzList });
-      if (built.length) return built;
+      // Prefer the chords.json library alone (clean names + real finger numbers);
+      // fall back to the curated jazz shells only for qualities it lacks.
+      library = VL.buildVoicings({ key, suffix, chordsDb, jazzList: [] });
+      if (!library.length) library = VL.buildVoicings({ key, suffix, chordsDb, jazzList });
+    }
+    if (!library.length) library = await getChordVoicings(key, suffix); // legacy fallback
+    library.forEach((v) => { if (v && !v.group) v.group = 'Library'; });
+
+    // Algorithmic drop-2 / drop-3 voicings, deduped against the library shapes.
+    let drops = [];
+    if (global.DropVoicings && typeof global.DropVoicings.generate === 'function') {
+      const sig = (VL && VL.signature)
+        ? VL.signature
+        : (v) => (v.fingers || []).map((f) => `${f[0]}:${f[1]}`).sort().join('|');
+      const seen = new Set(library.map(sig));
+      drops = global.DropVoicings.generate(key, suffix).filter((v) => {
+        const s = sig(v);
+        if (seen.has(s)) return false;
+        seen.add(s);
+        return true;
+      });
     }
 
-    // Legacy fallback (older bundle / missing VoicingLibrary).
-    return getChordVoicings(key, suffix);
+    return [...library, ...drops];
   }
 
   const api = {
