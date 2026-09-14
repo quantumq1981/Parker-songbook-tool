@@ -303,7 +303,7 @@
     });
   }
 
-  async function renderChordDiagram(container, { title, position, labelMode = 'finger' }) {
+  async function renderChordDiagram(container, { title, position, labelMode = 'finger', fretLabel }) {
     container.innerHTML = '';
     container.className = 'chord-diagram-tile';
 
@@ -311,6 +311,15 @@
     heading.className = 'chord-diagram-title';
     heading.textContent = title || 'Voicing';
     container.appendChild(heading);
+
+    // Explicit starting-fret badge — always shown so the neck position is never
+    // ambiguous (SVGuitar only prints a position marker for baseFret > 1).
+    if (fretLabel) {
+      const badge = document.createElement('div');
+      badge.className = 'chord-diagram-fret';
+      badge.textContent = fretLabel;
+      container.appendChild(badge);
+    }
 
     const svgHolder = document.createElement('div');
     svgHolder.className = 'chord-diagram-svg';
