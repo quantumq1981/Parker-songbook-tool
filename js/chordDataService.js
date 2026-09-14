@@ -259,9 +259,39 @@
       .map((v) => v.position);
   }
 
+  /**
+   * Primary voicing lookup used by the modal. Returns a rich, merged, interval-
+   * labeled, de-junked set of canonical voicings (jazz shells first, then the
+   * chords.json library across the neck) via VoicingLibrary. Falls back to the
+   * legacy single-source path if the library module is unavailable.
+   * @param {string} key    chord root, e.g. 'Bb'
+   * @param {string} suffix parser-normalized suffix, e.g. 'm7'
+   * @returns {Promise<Array<object>>}
+   */
+  async function getRichVoicings(key, suffix) {
+    const VL = global.VoicingLibrary;
+    const jazzList = getJazzVoicingsForChord(key, suffix);
+
+    let chordsDb = null;
+    try {
+      chordsDb = await loadChordData();
+    } catch (err) {
+      chordsDb = null; // library still works from jazzList alone
+    }
+
+    if (VL && typeof VL.buildVoicings === 'function') {
+      const built = VL.buildVoicings({ key, suffix, chordsDb, jazzList });
+      if (built.length) return built;
+    }
+
+    // Legacy fallback (older bundle / missing VoicingLibrary).
+    return getChordVoicings(key, suffix);
+  }
+
   const api = {
     loadChordData,
     getChordVoicings,
+    getRichVoicings,
     filterJazzVoicings,
     normalizeJazzSuffix,
     normalizeChordSymbol,
