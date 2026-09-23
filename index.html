@@ -1087,7 +1087,8 @@ details.panel.heads-panel summary { color: var(--legacy-purple-lt); }
 /* Outrank the [data-modes] reveal's `display:revert` (specificity ~0,2,1) so the
    header lays out as flex in-mode — same trick the nav.mode-nav note documents
    and the .playback-bar[data-modes] stub below uses. */
-body[data-active-mode] .sheet-view-header[data-modes] { display: flex; }
+body[data-active-mode="learn"] .sheet-view-header[data-modes],
+body[data-active-mode="practice"] .sheet-view-header[data-modes] { display: flex; }
 .sheet-view-label {
   font-size: 10px; font-weight: 700; letter-spacing: .6px;
   text-transform: uppercase; color: var(--ink-dim); white-space: nowrap;
@@ -1337,13 +1338,8 @@ body[data-active-mode="improvise"] [data-modes~="improvise"],
 body[data-active-mode="journal"]   [data-modes~="journal"],
 [data-modes~="all"] { display: revert; }
 
-/* ── is-armed / is-disarmed: JS-driven visibility without touching inline style ──
-   Previously fbSection, resonancePanel, voiceLeadPanel, and sectionLickPanel were
-   toggled with element.style.display='block'/'none'. Inline styles beat the
-   [data-modes] cascade at any specificity, so once shown they leaked across
-   modes forever (P0-3 in the audit). Class-based state at (0,2,0) beats the
-   (0,1,0) [data-modes] hide rule without ever writing to element.style. */
-[data-modes].is-armed    { display: revert; }
+/* Arming removes the disarm, but only the active workflow mode reveals a panel.
+   An unconditional .is-armed display leaked panels into other modes. */
 [data-modes].is-disarmed { display: none !important; }
 
 /* Restore flex/grid displays for containers that use them */
@@ -1717,7 +1713,8 @@ body:not([data-active-mode]) .global-transport { display: none; }
   margin: 6px 0 0; font-size: 11px; color: var(--ink-dim);
 }
 /* Outrank the [data-modes] reveal's display:revert (see nav.mode-nav note). */
-body[data-active-mode] .ref-row[data-modes] { display: flex; }
+body[data-active-mode="learn"] .ref-row[data-modes],
+body[data-active-mode="practice"] .ref-row[data-modes] { display: flex; }
 .ref-label { font-weight: 700; letter-spacing: .3px; }
 .ref-link {
   display: inline-flex; align-items: center; gap: 4px;
@@ -1732,7 +1729,9 @@ body[data-active-mode] .ref-row[data-modes] { display: flex; }
 /* Uploaded reference-audio player row (R5.1). Shown only in-mode AND when a clip
    exists — JS toggles .ra-empty, so an empty row never occupies space. */
 .ref-player-row { align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 0; }
-body[data-active-mode] .ref-player-row[data-modes]:not(.ra-empty) { display: flex; }
+.ref-player-row.ra-empty { display: none !important; }
+body[data-active-mode="learn"] .ref-player-row[data-modes]:not(.ra-empty),
+body[data-active-mode="practice"] .ref-player-row[data-modes]:not(.ra-empty) { display: flex; }
 #refPlayer { height: 34px; max-width: 100%; vertical-align: middle; }
 .ref-clip-name {
   font-size: 11px; color: var(--ink-dim); max-width: 200px;
@@ -2106,7 +2105,7 @@ body[data-active-mode] .ref-player-row[data-modes]:not(.ra-empty) { display: fle
   </div>
 
   <!-- ── AlphaTab main notation/tab viewer (replaces chord grid when active) ── -->
-  <div id="alphatab-container" class="is-disarmed" data-modes="practice"
+  <div id="alphatab-container" class="is-disarmed" data-modes="learn practice"
        role="tabpanel" aria-labelledby="atTabNotation atTabTab">
     <div id="atMainScore"></div>
     <div class="at-main-overlay at-hidden" id="atMainOverlay">
@@ -3871,8 +3870,8 @@ function applyResonanceOverlays(root, scaleName) {
 /* ---- Mode on/off ---- */
 function activateResonanceMode() {
   resonanceModeEnabled = true;
-  // Class-based arm state: revert display via [data-modes].is-armed rather than
-  // inline style.display='block' (which used to override the mode cascade forever).
+  // Class-based arm state: the matching data-modes rule reveals this panel;
+  // inline style.display='block' would override the mode cascade forever.
   const rp = document.getElementById('resonancePanel');
   rp.classList.add('is-armed'); rp.classList.remove('is-disarmed');
   window.updateResonanceLock?.();
@@ -7914,6 +7913,7 @@ async function suggestNext() {
 
   // ── Switch the visible view (chord grid / notation / tab) ─────────────
   function switchView(view) {
+    if (!['grid', 'notation', 'tab'].includes(view)) return;
     currentView = view;
 
     const sheet     = document.getElementById('sheet');
@@ -7927,13 +7927,13 @@ async function suggestNext() {
     });
 
     if (view === 'grid') {
-      if (sheet)     sheet.style.display     = '';
+      if (sheet)     sheet.classList.remove('is-disarmed');
       if (container) {
         container.classList.add('is-disarmed');
         container.classList.remove('is-armed');
       }
     } else {
-      if (sheet)     sheet.style.display     = 'none';
+      if (sheet)     sheet.classList.add('is-disarmed');
       if (container) {
         container.classList.add('is-armed');
         container.classList.remove('is-disarmed');
@@ -7956,6 +7956,7 @@ async function suggestNext() {
       prefs.notationView = view;
       localStorage.setItem('cp_songbook_v7_prefs', JSON.stringify(prefs));
     } catch (e) {}
+    document.dispatchEvent(new Event('cp:navigation'));
   }
 
   // Expose the view switcher + current-view read for the deep-link router.
@@ -8857,6 +8858,7 @@ async function suggestNext() {
       try { refreshDashboard(); } catch (e) {}
     }
     try { localStorage.setItem('cp_active_mode_v73', mode); } catch (e) {}
+    document.dispatchEvent(new Event('cp:navigation'));
   }
   document.querySelectorAll('.mode-nav-btn').forEach(b =>
     b.addEventListener('click', () => setActiveMode(b.dataset.mode)));
@@ -9165,6 +9167,8 @@ async function suggestNext() {
       return;
     }
     setActiveMode('learn');
+    // A saved Notation/Tab view hides the bar picker; show the chord grid.
+    window.__cpApplyView?.('grid');
     // Nothing to pick a bar from yet — render the sheet first.
     if (!document.querySelector('#sheet .bar')) {
       document.getElementById('generateBtn')?.click();
@@ -9247,6 +9251,7 @@ async function suggestNext() {
 (function deepLinkRouter() {
   const VIEWS = ['grid', 'notation', 'tab'];
   let _applyingHash = false;
+  let _routerReady  = false;
   let _writeTimer   = null;
 
   function parseHash() {
@@ -9324,7 +9329,7 @@ async function suggestNext() {
   // Coalesce bursts (e.g. tune-change also resets key) into one write next tick,
   // after all synchronous change handlers have settled.
   function scheduleWrite() {
-    if (_applyingHash) return;
+    if (_applyingHash || !_routerReady) return;
     clearTimeout(_writeTimer);
     _writeTimer = setTimeout(writeHash, 0);
   }
@@ -9336,6 +9341,9 @@ async function suggestNext() {
     b.addEventListener('click', scheduleWrite, { passive: true }));
   document.querySelectorAll('.at-view-tab').forEach(t =>
     t.addEventListener('click', scheduleWrite, { passive: true }));
+  // Programmatic navigation (tour and locked-feature shortcuts) updates the URL.
+  // Initial preference restoration waits for load so a shared hash still wins.
+  document.addEventListener('cp:navigation', scheduleWrite);
 
   // Inbound: manual URL edits / bookmark loads. (replaceState does not fire this.)
   window.addEventListener('hashchange', applyHash);
@@ -9346,6 +9354,7 @@ async function suggestNext() {
   window.addEventListener('load', () => {
     if (location.hash && location.hash.length > 1) applyHash();
     else writeHash();
+    _routerReady = true;
   });
 })();
 

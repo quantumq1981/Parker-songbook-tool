@@ -1,5 +1,16 @@
 # Parker-songbook-tool
 Jazz guitar practice app using Charlie Parker songbook and theory
+
+## Navigation
+
+Choose Learn, Practice, Improvise, or Journal in the workflow bar. In Learn or
+Practice, use Chord Grid / Notation / Tab above the sheet. Switching modes keeps
+the selected sheet view; the Resonance prompt in Improvise opens Learn's chord
+grid so you can select a bar. A shared URL stores mode, tune, key, and view.
+
+Phase 1 navigation fixes were applied on 2026-09-23. The proposed Phase 2
+startup coordinator (DOM, first-party modules, CDN libraries, IndexedDB) has
+not been implemented; the current CDN loader fetches libraries on demand.
 Here’s how I’d pitch it to each audience:
 
 For Musicians 🎷

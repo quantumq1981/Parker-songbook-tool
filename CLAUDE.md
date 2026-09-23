@@ -286,7 +286,7 @@ or render logic touched.
   recipient's last session). No hash → existing prefs restore is untouched, then the URL is seeded from
   restored state so it is always shareable.
 - **Outbound** writes use `history.replaceState` (no history spam, does not fire `hashchange`) via a
-  next-tick debounce, on additive `change`/`click` listeners. **Inbound** `applyHash` runs on `hashchange`
+  next-tick debounce, on additive `change`/`click` listeners and `cp:navigation` events from the mode/view setters. The router ignores events until `load` so preference restoration cannot replace an incoming shared hash. **Inbound** `applyHash` runs on `hashchange`
   (manual edits / bookmarks) and once on `window.load` (after mode init, `_loadAndApplyPrefs`, and all
   DOMContentLoaded wiring have settled).
 - **Edge cases:** invalid tune (not in `SONGS` after `canonicalTuneTitle`) → ignored; invalid key (no
@@ -313,7 +313,7 @@ no JS logic touched.
   `#atViewTabs` to the `.sheet-view-header` wrapper, freeing the inner control
   from the progressive-disclosure cascade (its `display:inline-flex` now applies
   unconditionally). The header's in-mode `display:flex` is set via
-  `body[data-active-mode] .sheet-view-header[data-modes]` (~0,3,1) to outrank the
+  separate `body[data-active-mode="learn"]` and `body[data-active-mode="practice"]` rules to outrank the
   `[data-modes]` reveal's `display:revert` (~0,2,1) — the same specificity trick
   documented for `nav.mode-nav` and the `.playback-bar[data-modes]` stub.
 - **ARIA:** `#sheet` is now a proper `role="tabpanel"` (`aria-labelledby="atTabGrid"`)
@@ -669,7 +669,12 @@ The `#randomTune` click handler is registered with `{capture: true}` and calls `
 Increment `CACHE = 'cp-songbook-vN'` in `service-worker.js` whenever any app shell file changes. The activate handler deletes all caches not matching the current version string.
 
 ### v7.3 Progressive Disclosure — Why `display: revert`
-The `[data-modes]` CSS system starts every tagged element at `display: none` and then, via `body[data-active-mode="learn"] [data-modes~="learn"] { display: revert; }`, restores the browser default for the active mode. `revert` is used instead of `block` because many panels (`.playback-bar`, `.global-transport`, `.fb-section`) are flex/grid containers — `display: block` would break their layout. Any legacy JS that writes an inline `style.display = 'block'|'grid'` still wins (inline > CSS), which is intentional: it lets the existing tab-view switcher swap `#sheet` and `#alphatab-container` regardless of the active workflow mode.
+The `[data-modes]` CSS system starts every tagged element at `display: none` and then, via `body[data-active-mode="learn"] [data-modes~="learn"] { display: revert; }`, restores the browser default for the active mode. Feature panels use `.is-disarmed` to hide and remove it when armed. There is no unconditional `.is-armed { display: revert }`: that used to expose panels in unrelated modes. The lead-sheet switcher disarms the inactive tabpanel, and both tabpanels are eligible in Learn and Practice. Any display rules for flex rows must name the modes they belong to; a generic `body[data-active-mode]` selector leaks them into Journal/Improvise. Empty reference-audio rows remain hidden.
+
+### Phase 1 navigation repair (2026-09-23)
+- `#alphatab-container` now allows Learn and Practice, matching the visible Grid/Notation/Tab switcher. `switchView()` rejects invalid values and toggles both tabpanels with disarm classes, not an inline `display:none` on `#sheet`.
+- The locked Resonance prompt switches to Learn **and** the chord grid before scrolling to the bar picker. Programmatic mode/view changes emit `cp:navigation` so the deep-link hash stays current, without overwriting a shared hash during startup.
+- The PWA shell cache advances to `v13`. Phase 2 initialization coordination remains separate: the current first-party `defer` scripts, inline main script, lazy CDN loader, and IndexedDB entry points need an explicit readiness contract before a centralized coordinator can be installed safely. Preserve lazy CDNs or clearly account for startup cost and offline behavior when implementing that phase.
 
 ### v7.3 Global Transport — Router-Not-Replacer Pattern
 The global transport bar never reimplements audio pipelines. `routePlay()` / `routeStop()` call `.click()` on the pre-existing legacy buttons (`#playBtn`, `#headPlayBtn`, `#atMainPlayBtn`, `#resonancePlayBtn`, etc.), which keep their original handlers intact. The legacy buttons themselves are hidden (`display:none`) so users only see the unified transport, but their handlers keep firing exactly as before. Same principle for BPM / Speed: the global inputs write into the legacy inputs and `dispatchEvent()` the corresponding `input` / `change` event so downstream code (metronome, tempo trainer, AlphaTab `api.playbackSpeed`) reacts as it always did.
@@ -708,6 +713,7 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | **7.10** | **2026-09-13** | **"After Hours" photo backdrop** — Charlie Parker performance photo (`images/bg-parker.jpg`, 1080×1920, 224 KB) folded into the existing fixed `body::before` backdrop under a readability tint; original gradient retained as load-failure fallback. CSS + asset + SW shell (`v8`→`v9`) only; no CSP change |
 | **7.11** | **2026-09-14** | **Chord voicings & substitutions overhaul** — pure `js/voicingLibrary.js` (chords.json → canonical interval-labeled voicings, validated/deduped, several per chord across the neck) + `js/chordSubstitutions.js` (tritone / diminished / half-dim / ii–V / m11⇄7sus4 / relative reharms). Fixes blank-grid + "1 voicing" + dropped-ii–V bugs; clickable subs panel; modal cut-off fixed. Finger numbers + ○/✕ markers + Fingers⇄Intervals toggle. SW `v9`→`v10`. No new CDN/CSP |
 | **7.12** | **2026-09-14** | **Drop-2 / Drop-3 generator** — pure `js/dropVoicings.js` derives the four close-position inversions, applies drop-2/drop-3, maps to standard string sets (all 12 keys, all seventh qualities). Modal groups Library/Drop 2/Drop 3; every chart gets an always-on starting-fret badge. Plus `js/shapeGenerator.js` guarantees ≥8 shapes for triads/6ths/sus (tops up the Library group). `Cmaj7` → ~15 voicings, `C` triad → 8. SW `v10`→`v12`. No new CDN/CSP |
+| Phase 1 | 2026-09-23 | Workflow/view visibility and deep-link synchronization repair; shell cache `v13`. Phase 2 coordinator scoped but not implemented. |
 
 ---
 
