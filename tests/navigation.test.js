@@ -65,4 +65,25 @@ assert(/id="alphatab-container"[^>]*data-modes="learn practice"/.test(html));
 assert(/body\[data-active-mode="learn"\] \.sheet-view-header/.test(html));
 assert(!/body\[data-active-mode\] \.sheet-view-header\[data-modes\]\s*\{/.test(html));
 
+// Learn's Notation/Tab panel must use the notation player, not hidden grid audio.
+const playStart = html.indexOf('  function routePlay() {');
+const playEnd = html.indexOf('  function routeStop() {', playStart);
+assert(playStart >= 0 && playEnd > playStart);
+let mode = 'learn', view = 'notation';
+const played = [];
+const buttons = Object.fromEntries(['playBtn', 'atMainPlayBtn', 'headPlayBtn', 'resonancePlayBtn']
+  .map(id => [id, { click: () => played.push(id) }]));
+const router = {
+  currentMode: () => mode,
+  activeSheetView: () => view,
+  document: { getElementById: id => buttons[id] }
+};
+vm.createContext(router);
+vm.runInContext(html.slice(playStart, playEnd), router);
+router.routePlay();
+view = 'grid'; router.routePlay();
+mode = 'practice'; router.routePlay();
+view = 'tab'; router.routePlay();
+assert.deepStrictEqual(played, ['atMainPlayBtn', 'playBtn', 'headPlayBtn', 'atMainPlayBtn']);
+
 console.log('navigation state and mode gate tests passed');
