@@ -682,6 +682,12 @@ The `[data-modes]` CSS system starts every tagged element at `display: none` and
 - Learn's global transport now routes to AlphaTab when Notation/Tab is selected; view and mode changes stop hidden notation playback and the transport label/state follows the active view.
 - The current structural findings, confirmed behavior, and phased recommendations are in `docs/STRUCTURAL_AUDIT_2026-09-23.md`. Shell cache `v14`. Phase 2 coordinator remains proposed, not implemented.
 
+### Notation request ordering and Scale Library pitch context (2026-09-23)
+- Both AlphaTab score download paths abort superseded requests and check an incrementing request ID before calling `api.load()`/`api.tex()` or showing a fetch error. This covers delayed network responses that arrive after a newer selection even if the abort is ignored. The Heads player also keeps the most recent requested action while its AlphaTab CDN script is still loading; imports and lick previews invalidate an earlier head download.
+- The main notation player invalidates pending downloads when a tune has no transcription, the user returns to Grid, or the page unloads. A key change during score loading starts a new request using the new key.
+- Selecting a Scale Library entry sets `activeScalePractice` to its exact pitch classes. The microphone's in-scale meter uses that scale and resets when the practice context changes. Bar chord/guide-tone scoring runs only in bar context; `lastBarData` remains available to Resonance and other chord tools. Selecting a bar or rendering a different lead sheet restores bar context.
+- `tests/notationRace.test.js` exercises delayed responses, stale errors, and first-use CDN retries; `tests/scaleScoring.test.js` checks the visible scale against microphone feedback and the return to bar scoring. Service-worker shell cache `v15`. The Phase 2 initialization coordinator is still a separate task.
+
 ### v7.3 Global Transport — Router-Not-Replacer Pattern
 The global transport bar never reimplements audio pipelines. `routePlay()` / `routeStop()` call `.click()` on the pre-existing legacy buttons (`#playBtn`, `#headPlayBtn`, `#atMainPlayBtn`, `#resonancePlayBtn`, etc.), which keep their original handlers intact. The legacy buttons themselves are hidden (`display:none`) so users only see the unified transport, but their handlers keep firing exactly as before. Same principle for BPM / Speed: the global inputs write into the legacy inputs and `dispatchEvent()` the corresponding `input` / `change` event so downstream code (metronome, tempo trainer, AlphaTab `api.playbackSpeed`) reacts as it always did.
 
@@ -721,6 +727,7 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | **7.12** | **2026-09-14** | **Drop-2 / Drop-3 generator** — pure `js/dropVoicings.js` derives the four close-position inversions, applies drop-2/drop-3, maps to standard string sets (all 12 keys, all seventh qualities). Modal groups Library/Drop 2/Drop 3; every chart gets an always-on starting-fret badge. Plus `js/shapeGenerator.js` guarantees ≥8 shapes for triads/6ths/sus (tops up the Library group). `Cmaj7` → ~15 voicings, `C` triad → 8. SW `v10`→`v12`. No new CDN/CSP |
 | Phase 1 | 2026-09-23 | Workflow/view visibility and deep-link synchronization repair; shell cache `v13`. Phase 2 coordinator scoped but not implemented. |
 | Scale access | 2026-09-23 | Scale Library available in Stand mode and one tap from Improvise; reusable fretboard SVG; Learn notation transport routing; shell cache `v14` |
+| Score ordering | 2026-09-23 | Stale notation/head downloads guarded; library scale controls mic in-scale feedback; shell cache `v15` |
 
 ---
 
@@ -746,4 +753,4 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 
 ---
 
-*Last updated: 2026-09-23 (Scale Library access and structural audit)*
+*Last updated: 2026-09-23 (notation race and Scale Library pitch context)*
