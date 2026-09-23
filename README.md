@@ -13,8 +13,11 @@ startup coordinator (DOM, first-party modules, CDN libraries, IndexedDB) has
 not been implemented; the current CDN loader fetches libraries on demand.
 
 In Improvise, tap **Open Scale Library** just below the workflow
-tabs. The scale library stays available in Stand mode; selecting a scale shows
-it on the fretboard. See `docs/STRUCTURAL_AUDIT_2026-09-23.md` for the current
+tabs. Choose a Scale key, then tap a scale to hear and see it in that key. Switch
+the fretboard between **Note names**, **Intervals**, and **Scale steps**; steps
+repeat 1–6 for whole tone, 1–7 for seven-note scales, or 1–8 for bebop scales. The selected scale
+also drives the mic's in-scale meter. The library stays available in Stand mode.
+See `docs/STRUCTURAL_AUDIT_2026-09-23.md` for the current
 architecture and prioritized follow-up work.
 Here’s how I’d pitch it to each audience:
 

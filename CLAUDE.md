@@ -688,6 +688,12 @@ The `[data-modes]` CSS system starts every tagged element at `display: none` and
 - Selecting a Scale Library entry sets `activeScalePractice` to its exact pitch classes. The microphone's in-scale meter uses that scale and resets when the practice context changes. Bar chord/guide-tone scoring runs only in bar context; `lastBarData` remains available to Resonance and other chord tools. Selecting a bar or rendering a different lead sheet restores bar context.
 - `tests/notationRace.test.js` exercises delayed responses, stale errors, and first-use CDN retries; `tests/scaleScoring.test.js` checks the visible scale against microphone feedback and the return to bar scoring. Service-worker shell cache `v15`. The Phase 2 initialization coordinator is still a separate task.
 
+### Scale Library key and fretboard label views (2026-09-23)
+- `#libraryKey` is an independent tonic selector inside the Improvise Scale Library. It offers all 12 pitch classes plus useful sharp/flat enharmonic spellings; it does not rewrite the tune or lead-sheet key. Catalog notes stay in C reference as source data. `transposeLibraryNotes()` shifts their pitch classes and diatonic letters into the selected key (for example, C♯ major uses E♯/B♯, G♭ major uses C♭). When a double accidental would be required, it uses a short chromatic enharmonic instead. Each scale card updates its note list when the key changes.
+- Choosing a scale paints the cached fretboard with those exact note names, plays the transposed pitches, and sets the microphone's in-scale pitch classes. `libraryScaleFrequencies()` derives ascending notes from the selected tonic so E♭ major does not drop back to C4 after B♭4. Changing the key with a selected scale repaints the board and changes the mic target without autoplaying an overlapping scale run.
+- Three `data-lib-label` controls select **Note names**, **Intervals** (`R`, `b2`, `3`, etc.), or **Scale steps** (the index of each pitch in the selected scale, repeating at the octave). The interval view retains the source scale's chromatic spelling: Major Bebop G# reads `#5`, while Harmonic Minor Ab reads `b6`, even though both have pitch class 8 in C. A six-note whole-tone scale uses 1–6, seven-note scales use 1–7, and eight-note bebop scales use 1–8. Repainting for a label change preserves the mic meter when the scale pitches are unchanged; color coding stays relative to the selected root. The SVG grid is reused, not reconstructed.
+- `tests/scaleLibrary.test.js` checks all 25 catalog scales in 17 root spellings, selected-key changes, fretboard view controls, and ascending playback in every key. `tests/scaleScoring.test.js` checks the labels, repeated steps, enharmonic fret labels, and mic continuity. Shell cache `v16`.
+
 ### v7.3 Global Transport — Router-Not-Replacer Pattern
 The global transport bar never reimplements audio pipelines. `routePlay()` / `routeStop()` call `.click()` on the pre-existing legacy buttons (`#playBtn`, `#headPlayBtn`, `#atMainPlayBtn`, `#resonancePlayBtn`, etc.), which keep their original handlers intact. The legacy buttons themselves are hidden (`display:none`) so users only see the unified transport, but their handlers keep firing exactly as before. Same principle for BPM / Speed: the global inputs write into the legacy inputs and `dispatchEvent()` the corresponding `input` / `change` event so downstream code (metronome, tempo trainer, AlphaTab `api.playbackSpeed`) reacts as it always did.
 
@@ -728,6 +734,7 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | Phase 1 | 2026-09-23 | Workflow/view visibility and deep-link synchronization repair; shell cache `v13`. Phase 2 coordinator scoped but not implemented. |
 | Scale access | 2026-09-23 | Scale Library available in Stand mode and one tap from Improvise; reusable fretboard SVG; Learn notation transport routing; shell cache `v14` |
 | Score ordering | 2026-09-23 | Stale notation/head downloads guarded; library scale controls mic in-scale feedback; shell cache `v15` |
+| Scale keys and views | 2026-09-23 | Library tonic selector transposes fretboard, card notes, audio, and mic target; note/interval/scale-step labels; shell cache `v16` |
 
 ---
 
@@ -753,4 +760,4 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 
 ---
 
-*Last updated: 2026-09-23 (notation race and Scale Library pitch context)*
+*Last updated: 2026-09-23 (Scale Library key and fretboard label views)*

@@ -347,6 +347,17 @@ font-size:11px;margin:6px 0;padding:4px 0;}
 /* Scale Library */
 .scale-shortcut{min-height:44px;margin:0 0 10px;padding:9px 14px;cursor:pointer;}
 .scale-lib{scroll-margin-top:120px;}
+.lib-key-control{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0;}
+.lib-key-control label{font-size:13px;font-weight:bold;color:var(--ink);}
+.lib-key-control select{min-height:44px;min-width:105px;background:var(--panel-2);color:var(--sym);
+border:1px solid var(--accent);border-radius:6px;padding:8px;font:inherit;}
+.lib-key-control select:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px;}
+.lib-label-controls{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:10px 0;}
+.lib-label-controls>span{font-size:12px;color:var(--ink-dim);margin-right:3px;}
+.lib-label-btn{min-height:44px;padding:7px 11px;border:1px solid var(--barline);
+border-radius:6px;background:var(--panel-2);color:var(--ink);font:inherit;cursor:pointer;}
+.lib-label-btn.lib-view-active{border-color:var(--accent);color:var(--sym);background:#2a1a00;}
+.lib-label-btn:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px;}
 .lib-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
 gap:10px;margin-top:10px;}
 .lib-cat{background:#252525;border-radius:6px;padding:10px;}
@@ -2256,8 +2267,23 @@ body[data-active-mode="practice"] .ref-player-row[data-modes]:not(.ra-empty) { d
   </div>
 
   <details class="panel scale-lib" id="scaleLibraryPanel" data-modes="improvise" style="margin-top:10px;">
-    <summary>📖 Bebop Scale Library — Click any scale to visualise &amp; hear</summary>
-    <div class="lib-note">All scales shown in C as a reference. Functional harmony colouring: <span class="fl-root">Root</span> · <span class="fl-sub">Subdominant</span> · <span class="fl-dom">Dominant</span> · <span class="fl-other">Mediant</span></div>
+    <summary>📖 Bebop Scale Library — Choose a key, then tap a scale</summary>
+    <div class="lib-key-control">
+      <label for="libraryKey">Scale key</label>
+      <select id="libraryKey" aria-label="Scale Library key">
+        <option>C</option><option>C#</option><option>Db</option><option>D</option>
+        <option>D#</option><option>Eb</option><option>E</option><option>F</option>
+        <option>F#</option><option>Gb</option><option>G</option><option>G#</option>
+        <option>Ab</option><option>A</option><option>A#</option><option>Bb</option><option>B</option>
+      </select>
+    </div>
+    <div class="lib-label-controls" role="group" aria-label="Scale fretboard labels">
+      <span>Fretboard labels</span>
+      <button type="button" class="lib-label-btn lib-view-active" data-lib-label="notes" aria-pressed="true">Note names</button>
+      <button type="button" class="lib-label-btn" data-lib-label="intervals" aria-pressed="false">Intervals</button>
+      <button type="button" class="lib-label-btn" data-lib-label="steps" aria-pressed="false">Scale steps</button>
+    </div>
+    <div class="lib-note">Tap a scale to hear it. Functional harmony colouring: <span class="fl-root">Root</span> · <span class="fl-sub">Subdominant</span> · <span class="fl-dom">Dominant</span> · <span class="fl-other">Mediant</span></div>
     <div class="lib-grid" id="libGrid"></div>
   </details>
 
@@ -3393,15 +3419,22 @@ function playScaleRun(root, scaleName) {
   });
 }
 
-// LAYER 2C — Library scale playback (ascending, note names as input)
-function playLibraryScale(noteNames) {
+// Keep each pitch above the selected root, even when note names wrap at C.
+function libraryScaleFrequencies(noteNames, rootName) {
+  const rootPc = NOTE_IDX[rootName];
+  const rootHz = FREQ[rootName];
+  return noteNames.map(n => rootHz * 2 ** (((NOTE_IDX[n] - rootPc + 12) % 12) / 12))
+    .concat(rootHz * 2);
+}
+
+// LAYER 2C — Library scale playback (ascending from the selected tonic)
+function playLibraryScale(noteNames, rootName = noteNames[0]) {
   if (!audioReady) {
     console.warn('⚠️ Audio not ready - attempting auto-enable for library scale playback');
     enableAudio();
     return;
   }
-  const freqs = noteNames.map(n => FREQ[n] || 261.63);
-  freqs.push((FREQ[noteNames[0]] || 261.63) * 2); // octave root
+  const freqs = libraryScaleFrequencies(noteNames, rootName);
   const dur = 60 / 200;
   initAudio().then(ctx => {
     freqs.forEach((freq, i) => {
@@ -3557,8 +3590,12 @@ const STRING_NOTES = ['E','B','G','D','A','E'];
 let lastBarData = null;
 let prevBarData = null; // bar before the currently selected one (for voice leading)
 let activeScalePractice = null; // selected library scale; separate from chord/bar harmony
+let libraryLabelMode = 'notes'; // 'notes' | 'intervals' | 'steps'
 function setActiveScalePractice(context) {
   if (!context && !activeScalePractice) return;
+  if (context && activeScalePractice && context.name === activeScalePractice.name &&
+      context.root === activeScalePractice.root && context.pcs.size === activeScalePractice.pcs.size &&
+      [...context.pcs].every(pc => activeScalePractice.pcs.has(pc))) return;
   activeScalePractice = context;
   document.dispatchEvent(new Event('cp:pitch-context-change'));
 }
@@ -4562,6 +4599,7 @@ function clearFretboard() {
       fr._label.setAttribute('fill', fr.dataset.fp === '0' ? '#6a5040' : '#fff');
     }
     fr.textContent = fr.dataset.fp === '0' ? fr.dataset.open : '';
+    fr.removeAttribute('aria-label');
     fr.removeAttribute('data-res-degree');
     fr.removeAttribute('data-pulse');
     delete fr.dataset.resDegree;
@@ -4696,7 +4734,14 @@ function showFretboard(root, scaleName, chordSym) {
   if (fbMode === 'guide-tones') updateVoiceLeadingPanel(root, chordSym, _gtThird, _gtSeventh);
 }
 
-// Scale Library fretboard display — always functional coloring in C reference
+// Preserve the source scale's chromatic spelling for interval labels. A Major
+// Bebop G# is #5, while an Ab in Harmonic Minor is b6 at the same fret.
+const LIBRARY_INTERVAL_NAMES = {
+  C:'R', 'C#':'#1', Db:'b2', D:'2', 'D#':'#2', Eb:'b3', E:'3', F:'4',
+  'F#':'#4', Gb:'b5', G:'5', 'G#':'#5', Ab:'b6', A:'6', 'A#':'#6', Bb:'b7', B:'7'
+};
+
+// Scale Library fretboard display — notes and function relative to selected key
 function showLibraryScale(scaleName, noteNames, rootName) {
   setActiveScalePractice({ name: scaleName, root: rootName,
     pcs: new Set(noteNames.map(n => NOTE_IDX[n])) });
@@ -4704,9 +4749,20 @@ function showLibraryScale(scaleName, noteNames, rootName) {
   const fbLib = document.getElementById('fbSection');
   fbLib.classList.add('is-armed'); fbLib.classList.remove('is-disarmed');
   document.getElementById('funcLegend').style.display = 'flex';
-  document.getElementById('fbTitle').textContent = `📖 ${scaleName}  (C reference — functional harmony)`;
+  const labelName = { notes: 'Note names', intervals: 'Intervals', steps: 'Scale steps' }[libraryLabelMode];
+  document.getElementById('fbTitle').textContent = `📖 ${rootName} ${scaleName} — ${labelName}`;
   const rootIdx = NOTE_IDX[rootName] || 0;
   const noteSet = new Set(noteNames.map(n => (NOTE_IDX[n] + 12) % 12));
+  const noteByPc = new Map(noteNames.map(n => [NOTE_IDX[n], n]));
+  const steps = new Map(noteNames.map((n, i) => [NOTE_IDX[n], i + 1]));
+  const catalogScale = typeof SCALE_LIBRARY === 'undefined' ? null
+    : Object.values(SCALE_LIBRARY).flat().find(sc => sc.name === scaleName);
+  const source = catalogScale || { root: rootName, notes: noteNames };
+  const intervalLabels = new Map(source.notes.map(n => [
+    (NOTE_IDX[n] - NOTE_IDX[source.root] + rootIdx + 12) % 12,
+    LIBRARY_INTERVAL_NAMES[n]
+  ]));
+  const useFlats = FLAT_KEYS.includes(rootName) || rootName.endsWith('b');
   _fretGrid.forEach(fr => {   // iterate cached grid (Map.forEach → value=<g.fret>); avoids a full-DOM .fret query
     const idx = parseInt(fr.dataset.idx, 10);
     if (isNaN(idx) || !noteSet.has(idx)) return;
@@ -4714,7 +4770,11 @@ function showLibraryScale(scaleName, noteNames, rootName) {
     const fc = FUNC_CLASS[iv] || 'other';
     fr.classList.add('hl');
     const degree = intervalDegree(iv);
-    fr.textContent = fr.dataset.ns + '\n' + `${degree} (${INT_NUMERIC[iv] || degree})`; // sharps for C reference
+    const name = noteByPc.get(idx) || fr.dataset[useFlats ? 'nf' : 'ns'];
+    const interval = intervalLabels.get(idx) || INT_NUMERIC[iv] || degree;
+    fr.textContent = libraryLabelMode === 'intervals' ? interval
+      : libraryLabelMode === 'steps' ? String(steps.get(idx)) : name;
+    fr.setAttribute('aria-label', `${name}, interval ${interval}, step ${steps.get(idx)}`);
     if (fr._circle) fr._circle.setAttribute('fill', FUNC_COLORS[fc]);
     if (fr._label)  fr._label.setAttribute('fill', '#000');
     if (iv === 0) fr.classList.add('rt');
@@ -4760,8 +4820,30 @@ const SCALE_LIBRARY = {
   ]
 };
 
+// The catalog stores C-reference notes; keep the same interval order in every
+// key, including its chromatic bebop passing notes and enharmonic root choices.
+function transposeLibraryNotes(scale, targetRoot) {
+  const semitones = (NOTE_IDX[targetRoot] - NOTE_IDX[scale.root] + 12) % 12;
+  const useFlats = FLAT_KEYS.includes(targetRoot) || targetRoot.endsWith('b');
+  const letters = 'CDEFGAB';
+  const letterShift = (letters.indexOf(targetRoot[0]) - letters.indexOf(scale.root[0]) + 7) % 7;
+  return scale.notes.map(n => {
+    const pc = (NOTE_IDX[n] + semitones) % 12;
+    const letter = letters[(letters.indexOf(n[0]) + letterShift) % 7];
+    const delta = (pc - NOTE_IDX[letter] + 18) % 12 - 6;
+    const spelled = delta === 0 ? letter : delta === 1 ? letter + '#' : delta === -1 ? letter + 'b' : null;
+    // Extreme keys can require double accidentals. Prefer a short playable
+    // chromatic spelling in those cases; NOTE_IDX still supplies the pitch.
+    return spelled && NOTE_IDX[spelled] === pc ? spelled : noteName(pc, useFlats);
+  });
+}
+
 function buildScaleLibrary() {
   const grid = document.getElementById('libGrid');
+  const keySelect = document.getElementById('libraryKey');
+  const root = () => keySelect?.value || 'C';
+  const entries = [];
+  let selected = null;
   grid.innerHTML = '';
   Object.entries(SCALE_LIBRARY).forEach(([catName, scales]) => {
     const cat = document.createElement('div'); cat.className = 'lib-cat';
@@ -4772,7 +4854,7 @@ function buildScaleLibrary() {
       item.className = 'lib-item'; item.setAttribute('aria-pressed', 'false');
       const nm   = document.createElement('div'); nm.className = 'lib-name'; nm.textContent = sc.name;
       const nts  = document.createElement('div'); nts.className = 'lib-notes';
-      nts.textContent = sc.notes.join(' - ');
+      nts.textContent = transposeLibraryNotes(sc, root()).join(' - ');
       const ivs = document.createElement('div'); ivs.className = 'lib-ivs';
       ivs.textContent = `Intervals: ${sc.notes.map(n => intervalDegree((NOTE_IDX[n] - NOTE_IDX[sc.root] + 12) % 12)).join(' - ')}`;
       item.append(nm, nts, ivs);
@@ -4781,16 +4863,35 @@ function buildScaleLibrary() {
           el.classList.remove('lib-active'); el.setAttribute('aria-pressed', 'false');
         });
         item.classList.add('lib-active'); item.setAttribute('aria-pressed', 'true');
+        selected = sc;
+        const notes = transposeLibraryNotes(sc, root());
         // showLibraryScale clears and repaints the cached fretboard cells.
         // Rebuilding the entire SVG on every tap was unnecessary on mobile.
-        showLibraryScale(sc.name, sc.notes, sc.root);
-        playLibraryScale(sc.notes);
+        showLibraryScale(sc.name, notes, root());
+        playLibraryScale(notes, root());
         // Scroll fretboard into view
         document.getElementById('fbSection').scrollIntoView({behavior:'smooth',block:'nearest'});
       });
+      entries.push({ sc, nts });
       cat.appendChild(item);
     });
     grid.appendChild(cat);
+  });
+  keySelect?.addEventListener('change', () => {
+    for (const { sc, nts } of entries) nts.textContent = transposeLibraryNotes(sc, root()).join(' - ');
+    if (selected) showLibraryScale(selected.name, transposeLibraryNotes(selected, root()), root());
+  });
+  document.querySelectorAll('.lib-label-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!['notes', 'intervals', 'steps'].includes(btn.dataset.libLabel)) return;
+      libraryLabelMode = btn.dataset.libLabel;
+      document.querySelectorAll('.lib-label-btn').forEach(other => {
+        const active = other === btn;
+        other.classList.toggle('lib-view-active', active);
+        other.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      if (selected) showLibraryScale(selected.name, transposeLibraryNotes(selected, root()), root());
+    });
   });
 }
 
