@@ -42,7 +42,8 @@ const localStorage = {
   setItem: (key, value) => storage.set(key, value)
 };
 const context = { document, localStorage, Event: class {}, api: null, atScore: null,
-  loadNotation: () => { throw Error('No tune selected'); }, currentView: 'grid' };
+  loadNotation: () => { throw Error('No tune selected'); }, currentView: 'grid',
+  pendingLoad: null, notationAbort: null, invalidateNotationLoad() { this.pendingLoad = null; } };
 vm.createContext(context);
 vm.runInContext(html.slice(start, end), context);
 

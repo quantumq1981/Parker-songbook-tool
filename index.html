@@ -3556,6 +3556,12 @@ function playBebopBackingBar(root, chordSym, bpm, extra) {
 const STRING_NOTES = ['E','B','G','D','A','E'];
 let lastBarData = null;
 let prevBarData = null; // bar before the currently selected one (for voice leading)
+let activeScalePractice = null; // selected library scale; separate from chord/bar harmony
+function setActiveScalePractice(context) {
+  if (!context && !activeScalePractice) return;
+  activeScalePractice = context;
+  document.dispatchEvent(new Event('cp:pitch-context-change'));
+}
 let fbMode = 'chord'; // 'chord' | 'scale' | 'guide-tones' | 'function'
 let audioMode = 'voicing'; // 'voicing' | 'scale'
 let showScales = false;
@@ -4581,6 +4587,7 @@ function updateFuncLegend() {
 const GT_IVLS = { maj7:[4,11], m7:[3,10], dom7:[4,10], halfdim:[3,10], dim:[3,9] };
 
 function showFretboard(root, scaleName, chordSym) {
+  setActiveScalePractice(null); // the visible fretboard is back to a lead-sheet bar
   clearFretboard();
   const fbEl = document.getElementById('fbSection');
   fbEl.classList.add('is-armed'); fbEl.classList.remove('is-disarmed');
@@ -4691,6 +4698,8 @@ function showFretboard(root, scaleName, chordSym) {
 
 // Scale Library fretboard display — always functional coloring in C reference
 function showLibraryScale(scaleName, noteNames, rootName) {
+  setActiveScalePractice({ name: scaleName, root: rootName,
+    pcs: new Set(noteNames.map(n => NOTE_IDX[n])) });
   clearFretboard();
   const fbLib = document.getElementById('fbSection');
   fbLib.classList.add('is-armed'); fbLib.classList.remove('is-disarmed');
@@ -4801,6 +4810,7 @@ function renderLeadSheet(tuneName, targetKey) {
   stopPlayback();
   stopResonanceLick(); // ST4: cancel in-flight lick timers — they reference fret cells we're about to rebuild
   lastBarData = null;
+  setActiveScalePractice(null);
   const fbHide = document.getElementById('fbSection');
   fbHide.classList.add('is-disarmed'); fbHide.classList.remove('is-armed');
   document.getElementById('funcLegend').style.display = 'none';
@@ -6958,17 +6968,28 @@ async function suggestNext() {
   // iOS user-gesture chain for AudioContext); otherwise the action is replayed
   // once the download finishes.
   let atLibPending = false;
+  let pendingHeadRetry = null;
+  let headRequest = 0;
+  let headAbort = null;
+
+  function beginHeadLoad() {
+    ++headRequest;
+    if (headAbort) headAbort.abort();
+    headAbort = null;
+    return headRequest;
+  }
 
   function atEnsure(retry) {
     if (api) return true;
     if (window.alphaTab) { atInit(); return !!api; }
-    if (atLibPending) return false;
+    if (atLibPending) { pendingHeadRetry = retry; return false; }
     if (typeof window.loadCdnLib !== 'function') {
       const msg = document.getElementById('atLoadingMsg');
       if (msg) msg.textContent = 'alphaTab unavailable — check network';
       return false;
     }
     atLibPending = true;
+    pendingHeadRetry = retry;
     const bar     = document.getElementById('headMelodyBar');
     const wrap    = document.getElementById('atScoreWrap');
     const overlay = document.getElementById('atLoadingOverlay');
@@ -6983,10 +7004,13 @@ async function suggestNext() {
     window.loadCdnLib('alphatab').then(
       () => {
         atLibPending = false;
-        if (typeof retry === 'function') retry();
+        const latest = pendingHeadRetry;
+        pendingHeadRetry = null;
+        if (typeof latest === 'function') latest();
       },
       err => {
         atLibPending = false;
+        pendingHeadRetry = null;
         console.warn('[Heads] alphaTab failed to load.', err);
         if (loadMsg) loadMsg.textContent = 'alphaTab unavailable — check network';
         if (typeof showToast === 'function') showToast('alphaTab unavailable — check network', 'error');
@@ -7198,6 +7222,8 @@ async function suggestNext() {
 
   // ── Destroy instance cleanly (no orphaned audio contexts / listeners) ─
   function atDestroy() {
+    beginHeadLoad();
+    pendingHeadRetry = null;
     if (!api) return;
     try { api.stop(); } catch(e) {}
     try { api.destroy(); } catch(e) {}
@@ -7251,6 +7277,7 @@ async function suggestNext() {
   }
 
   function hdFetch(tune, btn) {
+    const requestId = beginHeadLoad();
     // Auto-select the matching lead-sheet chart first, independent of the audio
     // engine, so the chart follows the head even if alphaTab isn't ready yet.
     hdSyncChart(tune.name);
@@ -7302,10 +7329,15 @@ async function suggestNext() {
     // All other formats (GP, MusicXML) are fetched as ArrayBuffer and loaded via api.load().
     const url = OMNIBOOK_BASE + encodeURIComponent(tune.file);
     const isAlphaTex = tune.file.endsWith('.alphatex');
-    fetch(url)
+    const controller = new AbortController();
+    headAbort = controller;
+    fetch(url, { signal: controller.signal })
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return isAlphaTex ? r.text() : r.arrayBuffer(); })
-      .then(data => { if (api) { isAlphaTex ? api.tex(data) : api.load(data); } })
+      .then(data => {
+        if (requestId === headRequest && api) isAlphaTex ? api.tex(data) : api.load(data);
+      })
       .catch(err => {
+        if (requestId !== headRequest || err.name === 'AbortError') return;
         if (currentBtn) {
           currentBtn.classList.remove('hd-loading');
           currentBtn.classList.add('hd-error');
@@ -7314,6 +7346,8 @@ async function suggestNext() {
         if (bar)     bar.classList.remove('hd-visible');
         if (overlay) overlay.classList.add('at-hidden');
         if (typeof showToast === 'function') showToast('Could not load ' + currentTuneName + ': ' + err.message, 'error');
+      }).finally(() => {
+        if (headAbort === controller) headAbort = null;
       });
   }
 
@@ -7364,6 +7398,7 @@ async function suggestNext() {
   // for uploaded .gp/.gp3/.gp4/.gp5/.gp7/.gpx files. alphaTab auto-detects the
   // format from the binary header — no AlphaTex conversion required.
   window.hdLoadArrayBuffer = function(buf, displayName) {
+    beginHeadLoad();
     if (!atEnsure(() => window.hdLoadArrayBuffer(buf, displayName))) return;
     const name = (displayName || 'Imported head').toString();
     currentBtn      = null;
@@ -7424,6 +7459,7 @@ async function suggestNext() {
 
   // Load an AlphaTex string into the player (for lick/section preview).
   window.hdPreviewLick = function(alphaTex, displayName) {
+    const requestId = beginHeadLoad();
     const panel   = document.getElementById('headsPanel');
     const wasOpen = panel && panel.open;
 
@@ -7433,6 +7469,7 @@ async function suggestNext() {
     if (panel && !panel.open) panel.open = true;
 
     function doLoad() {
+      if (requestId !== headRequest) return;
       if (!atEnsure(doLoad)) return;
       try { api.stop(); } catch(e) {}
       hdClearFb();
@@ -7676,6 +7713,18 @@ async function suggestNext() {
   let loadedTuneName = '';     // Friendly name of the currently loaded GP tune
   let pendingLoad    = null;   // { tune, semitones } deferred until atInit() completes
   let savedAtSpeed   = 100;   // persisted playback speed %
+  let notationRequest = 0;
+  let notationAbort = null;
+
+  function invalidateNotationLoad() {
+    ++notationRequest;
+    if (notationAbort) notationAbort.abort();
+    notationAbort = null;
+    pendingLoad = null;
+    atScore = null;
+    loadedTuneName = '';
+    return notationRequest;
+  }
 
   // ── Speed helper ────────────────────────────────────────────────────────
   function atApplySpeed(val) {
@@ -7839,14 +7888,15 @@ async function suggestNext() {
 
     // Drain any load that was queued during init
     if (pendingLoad) {
-      const { tune, semitones } = pendingLoad;
+      const { tune, semitones, requestId } = pendingLoad;
       pendingLoad = null;
-      _fetchAndLoad(tune, semitones);
+      _fetchAndLoad(tune, semitones, requestId);
     }
   }
 
   // ── Fetch GP file and pass ArrayBuffer to api.load() ──────────────────
-  function _fetchAndLoad(tune, semitones) {
+  function _fetchAndLoad(tune, semitones, requestId) {
+    if (requestId !== notationRequest) return;
     const overlay = document.getElementById('atMainOverlay');
     const loadMsg = document.getElementById('atMainLoadMsg');
     if (overlay) overlay.classList.remove('at-hidden');
@@ -7857,10 +7907,12 @@ async function suggestNext() {
 
     const url = OMNIBOOK_BASE + encodeURIComponent(tune.file);
     const isAlphaTex = tune.file.endsWith('.alphatex');
-    fetch(url)
+    const controller = new AbortController();
+    notationAbort = controller;
+    fetch(url, { signal: controller.signal })
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return isAlphaTex ? r.text() : r.arrayBuffer(); })
       .then(data => {
-        if (!api) return;
+        if (!api || requestId !== notationRequest) return;
         if (isAlphaTex) {
           // AlphaTex chord charts are in concert pitch — transposition not applied
           api.settings.display.transpositionPitches = [0];
@@ -7876,21 +7928,25 @@ async function suggestNext() {
         loadedTuneName = tune.name;
       })
       .catch(err => {
+        if (requestId !== notationRequest || err.name === 'AbortError') return;
         if (overlay) overlay.classList.add('at-hidden');
         if (typeof showToast === 'function')
           showToast('Notation load failed: ' + err.message, 'error');
+      }).finally(() => {
+        if (notationAbort === controller) notationAbort = null;
       });
   }
 
   // ── Public: load notation for tuneName transposed to targetKey ─────────
   function loadNotation(tuneName, targetKey) {
+    const requestId = invalidateNotationLoad();
     const tune    = findOmnibookTune(tuneName);
     const emptyEl = document.getElementById('atMainEmpty');
 
     if (!tune) {
       // No GP file for this tune — show the "not available" message
       if (emptyEl) emptyEl.style.display = '';
-      atScore = null; loadedTuneName = '';
+      document.getElementById('atMainOverlay')?.classList.add('at-hidden');
       return;
     }
     if (emptyEl) emptyEl.style.display = 'none';
@@ -7900,10 +7956,10 @@ async function suggestNext() {
 
     if (!api) {
       // Queue the load; atInit() will drain it once the instance is ready
-      pendingLoad = { tune, semitones };
+      pendingLoad = { tune, semitones, requestId };
       atInit();
     } else {
-      _fetchAndLoad(tune, semitones);
+      _fetchAndLoad(tune, semitones, requestId);
     }
   }
 
@@ -7945,6 +8001,7 @@ async function suggestNext() {
     });
 
     if (view === 'grid') {
+      if (pendingLoad || notationAbort) invalidateNotationLoad();
       if (previousView !== 'grid' && api) {
         try { api.stop(); } catch (e) {} // do not leave hidden notation playback running
         window.reportTransportState?.(false);
@@ -8010,10 +8067,13 @@ async function suggestNext() {
       if (tuneSel?.value) loadNotation(tuneSel.value, keySel?.value);
     }, { passive: true });
 
-    // Key change → live transposition on already-loaded score
+    // Key change → transpose the loaded score, or replace an in-flight load.
     document.getElementById('keySel')?.addEventListener('change', e => {
-      if (currentView === 'grid' || !atScore) return;
-      applyTranspose(e.target.value);
+      if (currentView === 'grid') return;
+      if (!atScore) {
+        const tuneName = document.getElementById('tuneSel')?.value;
+        if (tuneName) loadNotation(tuneName, e.target.value);
+      } else if (atScore) applyTranspose(e.target.value);
     }, { passive: true });
 
     // Play / Pause
@@ -8075,6 +8135,7 @@ async function suggestNext() {
 
     // Lifecycle cleanup — destroy API on unload to free AudioContext
     window.addEventListener('pagehide', () => {
+      invalidateNotationLoad();
       if (!api) return;
       try { api.stop(); } catch (e) {}
       try { api.destroy(); } catch (e) {}
@@ -8124,8 +8185,10 @@ async function suggestNext() {
     return { pc, midi, cents, name: NOTE_NAMES_SHARP[pc], nameFlat: NOTE_NAMES_FLAT[pc] };
   }
 
-  // ── In-scale check using lastBarData + SCALE_IVS ─────────────────────
+  // Grade against the visible library scale when one is selected; otherwise
+  // use the selected lead-sheet bar. A library scale has no chord/guide tones.
   function getScalePcs() {
+    if (activeScalePractice) return activeScalePractice.pcs;
     if (typeof lastBarData === 'undefined' || !lastBarData) return null;
     const { root, scale } = lastBarData;
     if (!root || !scale) return null;
@@ -8219,7 +8282,7 @@ async function suggestNext() {
     highlightPc(note.pc);
 
     // ── Pitch Scoring: grade each detected note against bar context ──
-    if (typeof PitchScoring !== 'undefined' && typeof lastBarData !== 'undefined' && lastBarData) {
+    if (!activeScalePractice && typeof PitchScoring !== 'undefined' && typeof lastBarData !== 'undefined' && lastBarData) {
       try {
         const bd = lastBarData;
         const ri = (typeof NOTE_IDX !== 'undefined' && NOTE_IDX[bd.root]) ?? 0;
@@ -8303,6 +8366,16 @@ async function suggestNext() {
   function init() {
     const btn = document.getElementById('togglePitch');
     if (!btn) return;
+
+    document.addEventListener('cp:pitch-context-change', () => {
+      _inCount = 0; _totCount = 0;
+      const meter = document.getElementById('pitchMeterBar');
+      const score = document.getElementById('pitchScore');
+      const inScale = document.getElementById('pitchInScale');
+      if (meter) meter.style.width = '0%';
+      if (score) score.textContent = '';
+      if (inScale) { inScale.textContent = ''; inScale.className = 'pitch-inscale'; }
+    });
 
     btn.addEventListener('click', async () => {
       if (isListening) {

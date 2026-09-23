@@ -64,15 +64,23 @@ AlphaTab for notation, SVGuitar for voicings, and JSZip for ZIP import/export
 only when those features are requested. A single `Promise.all()` over all CDNs
 and IndexedDB would turn one blocked service into a blank or stuck app.
 
-### 2. Cancel stale notation/head requests
+### 2. Stale notation/head requests — repaired after this audit
 
-`_fetchAndLoad()` in the notation module and `hdFetch()` in the Heads module
-start `fetch()` requests without an abort controller or generation check. If
-the user selects tune B before tune A's request finishes, A can finish last
-and replace B's score. The 60 ms deferred tune-change reload adds another
-ordering edge. Give each player a request sequence/abort controller, and ignore
-results and errors from older requests. Test rapid A→B→A selections with delayed
-responses before changing the loading path.
+The original `_fetchAndLoad()` and `hdFetch()` started `fetch()` requests
+without an abort controller or request ID. They now abort older downloads and
+discard late responses/errors before loading a score. The Heads player keeps
+the latest action while AlphaTab itself downloads. Delayed-response tests cover
+both players. This resolves the *network response ordering* issue; a separate
+browser check remains useful for any AlphaTab-internal parsing/rendering overlap.
+
+### Scale Library microphone context — repaired after this audit
+
+The library originally repainted the fretboard without updating the pitch
+detector's scale, which kept reading `lastBarData` from a prior lead-sheet bar.
+It now supplies the library's exact pitch classes to the in-scale meter and
+resets the meter on context change. Chord/guide-tone scoring remains limited to
+lead-sheet bars. Focused tests verify the extra bebop pitch, scale changes,
+and a return to bar practice.
 
 ### 3. Reduce startup parse and event fan-out
 
