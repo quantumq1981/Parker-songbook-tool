@@ -345,14 +345,18 @@ font-size:11px;margin:6px 0;padding:4px 0;}
 .fl-other{color:#ffee58;font-weight:bold;}
 
 /* Scale Library */
+.scale-shortcut{min-height:44px;margin:0 0 10px;padding:9px 14px;cursor:pointer;}
+.scale-lib{scroll-margin-top:120px;}
 .lib-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
 gap:10px;margin-top:10px;}
 .lib-cat{background:#252525;border-radius:6px;padding:10px;}
 .lib-cat-title{color:var(--green);font-size:12px;font-weight:bold;
 margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--barline);}
-.lib-item{padding:6px 8px;margin:3px 0;background:#1e1e1e;border:1px solid var(--barline);
+.lib-item{display:block;width:100%;text-align:left;font:inherit;color:inherit;
+padding:6px 8px;margin:3px 0;background:#1e1e1e;border:1px solid var(--barline);
 border-radius:4px;cursor:pointer;transition:.15s;}
 .lib-item:hover{border-color:var(--accent2);background:#252525;}
+.lib-item:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px;}
 .lib-item.lib-active{border-color:var(--accent);background:#2a1a00;}
 .lib-name{font-size:12px;font-weight:bold;color:var(--ink);}
 .lib-notes{font-size:10px;color:var(--accent2);margin-top:2px;}
@@ -1199,7 +1203,7 @@ body.stand-mode .roman,
 body.stand-mode .scale-sug,
 body.stand-mode .bar-number { display: none; }
 body.stand-mode .gt-btn     { min-height: 64px; font-size: 18px; padding: 16px 22px; }
-body.stand-mode details,
+body.stand-mode details:not(.scale-lib),
 body.stand-mode .tips-card,
 body.stand-mode .analysis-panel,
 body.stand-mode .stats-bar,
@@ -1809,6 +1813,10 @@ body[data-active-mode="practice"] .ref-player-row[data-modes]:not(.ra-empty) { d
   <div class="mode-hint" data-modes="all" id="modeHint" aria-live="polite">
     Read the lead sheet, hear each chord, and see the fretboard visualiser.
   </div>
+  <button type="button" class="btn-sec scale-shortcut" id="openScaleLibraryBtn"
+          data-modes="improvise" aria-controls="scaleLibraryPanel">
+    📖 Open Scale Library
+  </button>
 
   <details class="panel filter-panel" data-modes="all">
     <summary>🔧 Advanced Filters</summary>
@@ -2247,7 +2255,7 @@ body[data-active-mode="practice"] .ref-player-row[data-modes]:not(.ra-empty) { d
     <pre id="sectionTabDisplay" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:11px;overflow-x:auto;white-space:pre;color:var(--ink);max-height:220px;line-height:1.5;margin:0;"></pre>
   </div>
 
-  <details class="panel scale-lib" data-modes="improvise" style="margin-top:10px;">
+  <details class="panel scale-lib" id="scaleLibraryPanel" data-modes="improvise" style="margin-top:10px;">
     <summary>📖 Bebop Scale Library — Click any scale to visualise &amp; hear</summary>
     <div class="lib-note">All scales shown in C as a reference. Functional harmony colouring: <span class="fl-root">Root</span> · <span class="fl-sub">Subdominant</span> · <span class="fl-dom">Dominant</span> · <span class="fl-other">Mediant</span></div>
     <div class="lib-grid" id="libGrid"></div>
@@ -4751,7 +4759,8 @@ function buildScaleLibrary() {
     const title = document.createElement('div'); title.className = 'lib-cat-title';
     title.textContent = catName; cat.appendChild(title);
     scales.forEach(sc => {
-      const item = document.createElement('div'); item.className = 'lib-item';
+      const item = document.createElement('button'); item.type = 'button';
+      item.className = 'lib-item'; item.setAttribute('aria-pressed', 'false');
       const nm   = document.createElement('div'); nm.className = 'lib-name'; nm.textContent = sc.name;
       const nts  = document.createElement('div'); nts.className = 'lib-notes';
       nts.textContent = sc.notes.join(' - ');
@@ -4759,9 +4768,12 @@ function buildScaleLibrary() {
       ivs.textContent = `Intervals: ${sc.notes.map(n => intervalDegree((NOTE_IDX[n] - NOTE_IDX[sc.root] + 12) % 12)).join(' - ')}`;
       item.append(nm, nts, ivs);
       item.addEventListener('click', () => {
-        document.querySelectorAll('.lib-item.lib-active').forEach(el => el.classList.remove('lib-active'));
-        item.classList.add('lib-active');
-        buildFretboard(); // reset fretboard first
+        document.querySelectorAll('.lib-item.lib-active').forEach(el => {
+          el.classList.remove('lib-active'); el.setAttribute('aria-pressed', 'false');
+        });
+        item.classList.add('lib-active'); item.setAttribute('aria-pressed', 'true');
+        // showLibraryScale clears and repaints the cached fretboard cells.
+        // Rebuilding the entire SVG on every tap was unnecessary on mobile.
         showLibraryScale(sc.name, sc.notes, sc.root);
         playLibraryScale(sc.notes);
         // Scroll fretboard into view
@@ -5396,6 +5408,11 @@ populateTuneDropdown();
 renderStats();
 buildFretboard();
 buildScaleLibrary();
+document.getElementById('openScaleLibraryBtn').addEventListener('click', () => {
+  const panel = document.getElementById('scaleLibraryPanel');
+  panel.open = true;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 initFretboardResizeObserver();
 
 function updateGpBadge() {
@@ -7803,13 +7820,13 @@ async function suggestNext() {
     api.playerStateChanged.on(args => {
       const btn = document.getElementById('atMainPlayBtn');
       if (btn) btn.textContent = args.state === 1 ? '⏸ Pause' : '▶ Play';
-      window.reportTransportState?.(args.state === 1, 'practice');
+      window.reportTransportState?.(args.state === 1, 'notation');
     });
 
     api.playerFinished.on(() => {
       const btn = document.getElementById('atMainPlayBtn');
       if (btn) btn.textContent = '▶ Play';
-      window.reportTransportState?.(false, 'practice');
+      window.reportTransportState?.(false, 'notation');
     });
 
     // Error
@@ -7914,6 +7931,7 @@ async function suggestNext() {
   // ── Switch the visible view (chord grid / notation / tab) ─────────────
   function switchView(view) {
     if (!['grid', 'notation', 'tab'].includes(view)) return;
+    const previousView = currentView;
     currentView = view;
 
     const sheet     = document.getElementById('sheet');
@@ -7927,6 +7945,10 @@ async function suggestNext() {
     });
 
     if (view === 'grid') {
+      if (previousView !== 'grid' && api) {
+        try { api.stop(); } catch (e) {} // do not leave hidden notation playback running
+        window.reportTransportState?.(false);
+      }
       if (sheet)     sheet.classList.remove('is-disarmed');
       if (container) {
         container.classList.add('is-disarmed');
@@ -8823,6 +8845,16 @@ async function suggestNext() {
     journal:   '—'
   };
 
+  function activeSheetView() {
+    return window.__cpGetView?.() || 'grid';
+  }
+  function updateTransportTarget() {
+    const mode = document.body.getAttribute('data-active-mode');
+    const target = document.getElementById('gtTarget');
+    if (target) target.textContent = mode === 'learn' && activeSheetView() !== 'grid'
+      ? 'Learn · Notation / Tab' : TRANSPORT_TARGETS[mode] || '—';
+  }
+
   function setActiveMode(mode) {
     if (!MODE_HINTS[mode]) mode = 'learn';
     document.body.setAttribute('data-active-mode', mode);
@@ -8832,8 +8864,7 @@ async function suggestNext() {
     });
     const hint = document.getElementById('modeHint');
     if (hint) hint.textContent = MODE_HINTS[mode];
-    const tgt = document.getElementById('gtTarget');
-    if (tgt) tgt.textContent = TRANSPORT_TARGETS[mode];
+    updateTransportTarget();
     // Disable transport controls in Journal mode — there's no playback target.
     const play = document.getElementById('gtPlayBtn');
     const stop = document.getElementById('gtStopBtn');
@@ -8845,6 +8876,7 @@ async function suggestNext() {
     });
     // Auto-stop any active playback when switching modes to prevent audible collisions.
     try { document.getElementById('stopBtn')?.click(); } catch (e) {}
+    try { document.getElementById('atMainStopBtn')?.click(); } catch (e) {}
     try {
       if (window.hdStop) window.hdStop();
       if (typeof stopResonanceLick === 'function') stopResonanceLick();
@@ -8870,6 +8902,7 @@ async function suggestNext() {
   // without reaching into this IIFE's scope — same window-hook pattern the
   // AlphaTab loader (hdLoadArrayBuffer) and transport mirror (reportTransportState) use.
   window.__cpApplyMode = setActiveMode;
+  document.addEventListener('cp:navigation', updateTransportTarget);
 
   /* ── 3. Global transport router ───────────────────────────── */
   // Route the global Play/Stop/Loop to the correct legacy handler by mode.
@@ -8913,7 +8946,12 @@ async function suggestNext() {
    *   overwrite the state of the one that actually matters.
    */
   window.reportTransportState = function (playing, source) {
-    if (source && source !== currentMode()) return;
+    const mode = currentMode();
+    if (source === 'notation') {
+      if (!['learn', 'practice'].includes(mode) || activeSheetView() === 'grid') return;
+    } else if (source === 'learn' && (mode !== 'learn' || activeSheetView() !== 'grid')) return;
+    else if (source === 'practice' && (mode !== 'practice' || activeSheetView() !== 'grid')) return;
+    else if (source && source !== mode) return;
     const next = !!playing;
     if (next === transportPlaying) return;
     transportPlaying = next;
@@ -8924,15 +8962,11 @@ async function suggestNext() {
   function routePlay() {
     const m = currentMode();
     if (m === 'learn') {
-      document.getElementById('playBtn')?.click();
+      document.getElementById(activeSheetView() === 'grid' ? 'playBtn' : 'atMainPlayBtn')?.click();
     } else if (m === 'practice') {
       // Route to AlphaTab main viewer when Notation or Tab tab is active,
       // otherwise fall back to the Parker Heads player.
-      const notationTab = document.querySelector('.at-view-tab[data-view="notation"]');
-      const tabTab      = document.querySelector('.at-view-tab[data-view="tab"]');
-      const notationActive = (notationTab && notationTab.classList.contains('active'))
-                         || (tabTab && tabTab.classList.contains('active'));
-      if (notationActive) {
+      if (activeSheetView() !== 'grid') {
         document.getElementById('atMainPlayBtn')?.click();
       } else {
         document.getElementById('headPlayBtn')?.click();

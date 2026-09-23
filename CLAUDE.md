@@ -247,7 +247,7 @@ Seven real-time practice features plus pitch scoring, implemented as four pure J
 - Integrates with existing pitch detection: `onFrequency()` feeds detected PCs to `_crMatcher`
 
 #### 8f. Stand Mode
-- `body.stand-mode` CSS: hides detail panels, enlarges chord cells to 1.45×, 120px min bar height
+- `body.stand-mode` CSS: hides most detail panels but keeps the Scale Library available in Improvise; enlarges chord cells to 1.45×, 120px min bar height
 - `navigator.wakeLock.request('screen')` prevents display sleep; re-acquires on `visibilitychange`
 - UI: `#gtStandModeBtn` toggle in global transport
 - `enterStandMode()` / `exitStandMode()` functions with graceful fallback when Wake Lock API unavailable
@@ -676,6 +676,12 @@ The `[data-modes]` CSS system starts every tagged element at `display: none` and
 - The locked Resonance prompt switches to Learn **and** the chord grid before scrolling to the bar picker. Programmatic mode/view changes emit `cp:navigation` so the deep-link hash stays current, without overwriting a shared hash during startup.
 - The PWA shell cache advances to `v13`. Phase 2 initialization coordination remains separate: the current first-party `defer` scripts, inline main script, lazy CDN loader, and IndexedDB entry points need an explicit readiness contract before a centralized coordinator can be installed safely. Preserve lazy CDNs or clearly account for startup cost and offline behavior when implementing that phase.
 
+### Scale Library and structural audit follow-up (2026-09-23)
+- `body.stand-mode details:not(.scale-lib)` keeps the 25-scale library available in Improvise. `#openScaleLibraryBtn` opens and scrolls to it from immediately below the mode tabs, including in Stand mode.
+- Scale entries are native buttons with `aria-pressed`. Selection reuses the existing fretboard SVG instead of rebuilding it before repainting.
+- Learn's global transport now routes to AlphaTab when Notation/Tab is selected; view and mode changes stop hidden notation playback and the transport label/state follows the active view.
+- The current structural findings, confirmed behavior, and phased recommendations are in `docs/STRUCTURAL_AUDIT_2026-09-23.md`. Shell cache `v14`. Phase 2 coordinator remains proposed, not implemented.
+
 ### v7.3 Global Transport — Router-Not-Replacer Pattern
 The global transport bar never reimplements audio pipelines. `routePlay()` / `routeStop()` call `.click()` on the pre-existing legacy buttons (`#playBtn`, `#headPlayBtn`, `#atMainPlayBtn`, `#resonancePlayBtn`, etc.), which keep their original handlers intact. The legacy buttons themselves are hidden (`display:none`) so users only see the unified transport, but their handlers keep firing exactly as before. Same principle for BPM / Speed: the global inputs write into the legacy inputs and `dispatchEvent()` the corresponding `input` / `change` event so downstream code (metronome, tempo trainer, AlphaTab `api.playbackSpeed`) reacts as it always did.
 
@@ -714,6 +720,7 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 | **7.11** | **2026-09-14** | **Chord voicings & substitutions overhaul** — pure `js/voicingLibrary.js` (chords.json → canonical interval-labeled voicings, validated/deduped, several per chord across the neck) + `js/chordSubstitutions.js` (tritone / diminished / half-dim / ii–V / m11⇄7sus4 / relative reharms). Fixes blank-grid + "1 voicing" + dropped-ii–V bugs; clickable subs panel; modal cut-off fixed. Finger numbers + ○/✕ markers + Fingers⇄Intervals toggle. SW `v9`→`v10`. No new CDN/CSP |
 | **7.12** | **2026-09-14** | **Drop-2 / Drop-3 generator** — pure `js/dropVoicings.js` derives the four close-position inversions, applies drop-2/drop-3, maps to standard string sets (all 12 keys, all seventh qualities). Modal groups Library/Drop 2/Drop 3; every chart gets an always-on starting-fret badge. Plus `js/shapeGenerator.js` guarantees ≥8 shapes for triads/6ths/sus (tops up the Library group). `Cmaj7` → ~15 voicings, `C` triad → 8. SW `v10`→`v12`. No new CDN/CSP |
 | Phase 1 | 2026-09-23 | Workflow/view visibility and deep-link synchronization repair; shell cache `v13`. Phase 2 coordinator scoped but not implemented. |
+| Scale access | 2026-09-23 | Scale Library available in Stand mode and one tap from Improvise; reusable fretboard SVG; Learn notation transport routing; shell cache `v14` |
 
 ---
 
@@ -739,5 +746,4 @@ The two `<details>` panels sharing `id="practicePanel"` served different feature
 
 ---
 
-*Last updated: 2026-09-14 (v7.12 — drop-2/drop-3 generator + fret labels)*  
-*Active branch: `claude/chord-suggestions-voicings-4y26q1`*
+*Last updated: 2026-09-23 (Scale Library access and structural audit)*

@@ -11,6 +11,11 @@ grid so you can select a bar. A shared URL stores mode, tune, key, and view.
 Phase 1 navigation fixes were applied on 2026-09-23. The proposed Phase 2
 startup coordinator (DOM, first-party modules, CDN libraries, IndexedDB) has
 not been implemented; the current CDN loader fetches libraries on demand.
+
+In Improvise, tap **Open Scale Library** just below the workflow
+tabs. The scale library stays available in Stand mode; selecting a scale shows
+it on the fretboard. See `docs/STRUCTURAL_AUDIT_2026-09-23.md` for the current
+architecture and prioritized follow-up work.
 Here’s how I’d pitch it to each audience:
 
 For Musicians 🎷
