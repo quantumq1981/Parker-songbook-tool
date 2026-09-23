@@ -82,6 +82,12 @@ resets the meter on context change. Chord/guide-tone scoring remains limited to
 lead-sheet bars. Focused tests verify the extra bebop pitch, scale changes,
 and a return to bar practice.
 
+The library subsequently gained its own tonic selector and three fretboard
+label views (note name, interval from root, scale step). Transposition preserves
+the C-reference catalog's interval sequence, and the mic target follows the
+selected key. Switching label views keeps the current mic tally. Key changes
+refresh the selected fretboard without triggering overlapping audio runs.
+
 ### 3. Reduce startup parse and event fan-out
 
 The half-megabyte HTML contains chart data and most app logic in one inline
