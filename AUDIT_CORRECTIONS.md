@@ -108,6 +108,14 @@ The one predicate check at line 4743 —
 `is-disarmed` on `#alphatab-container` too, so switching to Chord Grid view
 while in Practice mode leaves no inline residue.
 
+**Follow-up, 2026-09-23:** The unconditional `[data-modes].is-armed { display: revert; }`
+above bypassed the workflow gate. It has been removed: `.is-armed` only records
+feature state; the active `body[data-active-mode] [data-modes~="…"]` selector
+controls visibility. `switchView` also disarms `#sheet` instead of writing
+inline `display:none`, and notation is eligible in both Learn and Practice.
+Flex display overrides for the lead-sheet header and reference rows now name
+their allowed modes, and the empty reference-audio row is hidden explicitly.
+
 ### P1-4 · Space bar double-fires on focused summaries and drop zones
 ### P1-5 · Space bypasses the transport router
 **File:** `index.html` — legacy `kbShortcuts` at line 5287, v7.3 IIFE handler

@@ -51,7 +51,7 @@ The task brief asks me to `git checkout claude/alphatab-notation-integration-QkY
 
 ### 1.2 State / routing / DOM model
 
-- **No router.** It is a single screen; "navigation" is DOM show/hide via `style.display`.
+- **Historical snapshot:** This section predates the v7.3 workflow modes and v7.5 deep-link router. Current mode/view navigation uses `data-active-mode`, `data-modes`, disarm classes, and the hash router; see `CLAUDE.md` for the current contract.
 - **State** lives in module-scoped `let`/`const` globals inside the one big `<script>`: `SONGS`, `IMPORTED_SONGS`, `lastBarData`, `prevBarData`, `fbMode`, `audioMode`, `showScales`, and ~15 `resonance*` variables (`index.html:2523-2546`, `4941`). There is no store/observer; mutations are imperative and the relevant render function is called by hand.
 - **DOM updates** are a mix of `document.createElement` building (`renderLeadSheet`, `index.html:3701`) and template-string `innerHTML` assignment (27 sites). Element handles are re-queried on nearly every operation — `getElementById`/`querySelector` appears **333 times** in `index.html`.
 
